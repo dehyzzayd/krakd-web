@@ -19,13 +19,13 @@ export function Drawer({
   return (
     <div className="fixed inset-0 z-50">
       <div className="overlay-in absolute inset-0 bg-n950/20 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="drawer-in absolute inset-y-0 right-0 flex w-full max-w-[460px] flex-col border-l border-n200 bg-n50 shadow-[-16px_0_40px_-16px_rgba(0,0,0,0.25)]">
-        <div className="flex items-center justify-between border-b border-n200 bg-white px-5 py-3.5">
+      <div className="drawer-in absolute inset-y-0 right-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden border-l border-n200 bg-n50 shadow-[-16px_0_40px_-16px_rgba(0,0,0,0.25)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-n200 bg-white px-5 py-3.5">
           <h3 className="text-[15px] font-semibold text-n900">{title}</h3>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-[15px] text-n500 transition hover:bg-n100" aria-label="Close">✕</button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
-        {footer && <div className="border-t border-n200 bg-white px-5 py-3">{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+        {footer && <div className="shrink-0 border-t border-n200 bg-white px-5 py-3">{footer}</div>}
       </div>
     </div>
   );
