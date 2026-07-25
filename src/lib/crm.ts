@@ -51,17 +51,21 @@ export function inboxUnread() {
 }
 
 /* ── appointments ── */
-export type Appt = { id: string; name: string; leadId: string; type: string; day: string; time: string; status: string; vehicle: string; owner: string };
+export type Appt = { id: string; name: string; leadId: string; type: string; day: string; date: number; time: string; status: string; vehicle: string; owner: string };
 
 const DAYS = ["Today", "Tomorrow", "Thu · Jul 27", "Fri · Jul 28", "Sat · Jul 29"];
+const DATES = [25, 26, 27, 28, 29];
 export const APPOINTMENTS: Appt[] = LEADS.flatMap((l, i) => {
   const prof = leadProfile(l.id);
   if (!prof || !prof.appointments.length) return [];
-  return prof.appointments.map((a, j): Appt => ({
-    id: `ap-${l.id}-${j}`, name: l.name, leadId: l.id, type: a.type,
-    day: DAYS[(i + j) % DAYS.length], time: a.when.includes("11") ? "11:00 AM" : ["9:30 AM", "1:00 PM", "2:00 PM", "3:30 PM", "5:00 PM"][(i + j) % 5],
-    status: a.status, vehicle: l.vehicle, owner: l.owner,
-  }));
+  return prof.appointments.map((a, j): Appt => {
+    const k = (i + j) % DAYS.length;
+    return {
+      id: `ap-${l.id}-${j}`, name: l.name, leadId: l.id, type: a.type,
+      day: DAYS[k], date: DATES[k], time: a.when.includes("11") ? "11:00 AM" : ["9:30 AM", "1:00 PM", "2:00 PM", "3:30 PM", "5:00 PM"][(i + j) % 5],
+      status: a.status, vehicle: l.vehicle, owner: l.owner,
+    };
+  });
 });
 
 export function apptStats() {

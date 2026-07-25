@@ -144,25 +144,23 @@ export default function Home() {
 
         {/* STAT STRIP */}
         <section className="shell px-5 py-10 sm:px-8 lg:py-14">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[
-              { v: "6 → 1", l: "vendors replaced" },
-              { v: "40+", l: "channels, one click", accent: true },
-              { v: "12 min", l: "AI lead response" },
-              { v: "$0", l: "setup, no contract" },
-            ].map((s) => (
-              <div
-                key={s.l}
-                className={`rounded-[22px] p-6 ${s.accent ? "bg-accent" : "bg-card lift"}`}
-              >
-                <div className={`text-[34px] font-semibold leading-none tracking-[-0.03em] ${s.accent ? "text-accent-ink" : "text-ink"}`}>
-                  {s.v}
+          <div className="overflow-hidden rounded-[26px] bg-card lift">
+            <div className="grid grid-cols-2 divide-x divide-y divide-line lg:grid-cols-4 lg:divide-y-0">
+              {[
+                { v: "6→1", l: "vendors replaced", note: "one login, one bill" },
+                { v: "40+", l: "channels · one click", note: "FB · Google · Cars.com", accent: true },
+                { v: "12 min", l: "avg AI lead response", note: "day or night" },
+                { v: "$0", l: "setup, no contract", note: "live in a weekend" },
+              ].map((s) => (
+                <div key={s.l} className="p-7 lg:p-8">
+                  <div className={`text-[44px] font-semibold leading-none tracking-[-0.04em] lg:text-[52px] ${s.accent ? "text-accent" : "text-ink"}`}>
+                    {s.v}
+                  </div>
+                  <div className="mt-3 text-[13.5px] font-medium text-ink">{s.l}</div>
+                  <div className="mt-1 text-[12.5px] text-muted">{s.note}</div>
                 </div>
-                <div className={`mt-2.5 text-[12px] font-medium uppercase tracking-[0.1em] ${s.accent ? "text-[#7a3410]" : "text-muted"}`}>
-                  {s.l}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 

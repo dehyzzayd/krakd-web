@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Topbar, AppMain } from "@/components/app/Topbar";
-import { Card, Dot } from "@/components/app/AppKit";
+import { Card, Badge, Dot, type Tone } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
-import { LEADS, STAGES, TEMP_TONE, crmStats, money, type Lead, type Stage } from "@/lib/leads";
+import { LEADS, STAGES, TEMP_TONE, crmStats, money, leadProfile, type Lead, type Stage } from "@/lib/leads";
 
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
 const avatarBg = (n: string) => ["#3c7cab", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][n.charCodeAt(0) % 5];
+const STAGE_LABEL = Object.fromEntries(STAGES.map((s) => [s.id, s.label]));
+const CREDIT_TONE: Record<string, Tone> = { not_started: "neutral", submitted: "brand", approved: "ok", declined: "err" };
+const CREDIT_LABEL: Record<string, string> = { not_started: "—", submitted: "Submitted", approved: "Approved", declined: "Declined" };
 
 function Score({ n }: { n: number }) {
   const tone = n >= 80 ? "text-ok" : n >= 60 ? "text-warn" : "text-n500";
@@ -37,6 +41,7 @@ function LeadCard({ l }: { l: Lead }) {
 
 export default function LeadsPage() {
   const s = crmStats();
+  const [view, setView] = useState<"board" | "table">("board");
   const byStage = (st: Stage) => LEADS.filter((l) => l.stage === st);
 
   return (
@@ -55,24 +60,71 @@ export default function LeadsPage() {
           ))}
         </div>
 
-        <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-          {STAGES.map((st) => {
-            const items = byStage(st.id);
-            const total = items.reduce((a, l) => a + l.value, 0);
-            return (
-              <div key={st.id} className="flex w-[260px] shrink-0 flex-col rounded-[10px] bg-n100/70 p-2">
-                <div className="flex items-center justify-between px-1.5 py-1.5">
-                  <span className="flex items-center gap-2 text-[12.5px] font-semibold text-n800">{st.label}<span className="tnum rounded-full bg-white px-1.5 text-[11px] font-semibold text-n600 sh-card">{items.length}</span></span>
-                  <span className="tnum text-[11px] text-n500">{money(total)}</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {items.map((l) => <LeadCard key={l.id} l={l} />)}
-                  {items.length === 0 && <p className="px-1.5 py-4 text-center text-[12px] text-n400">Nothing here</p>}
-                </div>
-              </div>
-            );
-          })}
+        {/* toolbar */}
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-[12px] text-n500">{LEADS.length} leads</p>
+          <div className="flex items-center rounded-lg border border-n200 bg-white p-0.5">
+            {(["board", "table"] as const).map((m) => (
+              <button key={m} onClick={() => setView(m)} className={cn("h-8 rounded-[7px] px-3 text-[12.5px] font-medium capitalize transition", view === m ? "bg-n100 text-n900" : "text-n600 hover:text-n900")}>{m}</button>
+            ))}
+          </div>
         </div>
+
+        {view === "board" ? (
+          <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+            {STAGES.map((st) => {
+              const items = byStage(st.id);
+              const total = items.reduce((a, l) => a + l.value, 0);
+              return (
+                <div key={st.id} className="flex w-[260px] shrink-0 flex-col rounded-[10px] bg-n100/70 p-2">
+                  <div className="flex items-center justify-between px-1.5 py-1.5">
+                    <span className="flex items-center gap-2 text-[12.5px] font-semibold text-n800">{st.label}<span className="tnum rounded-full bg-white px-1.5 text-[11px] font-semibold text-n600 sh-card">{items.length}</span></span>
+                    <span className="tnum text-[11px] text-n500">{money(total)}</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {items.map((l) => <LeadCard key={l.id} l={l} />)}
+                    {items.length === 0 && <p className="px-1.5 py-4 text-center text-[12px] text-n400">Nothing here</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="mt-3">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1040px] text-left">
+                <thead><tr className="text-[11px] uppercase tracking-[0.04em] text-n500">
+                  <th className="px-4 py-2.5 font-medium">Lead</th><th className="px-3 py-2.5 font-medium">Source</th>
+                  <th className="px-3 py-2.5 font-medium">Stage</th><th className="px-3 py-2.5 font-medium">Interest</th>
+                  <th className="px-3 py-2.5 font-medium">Credit</th><th className="px-3 py-2.5 font-medium">Trade</th>
+                  <th className="px-3 py-2.5 font-medium">Assigned</th><th className="px-3 py-2.5 text-right font-medium">Last</th>
+                  <th className="px-4 py-2.5 font-medium">SLA</th>
+                </tr></thead>
+                <tbody>
+                  {LEADS.map((l) => {
+                    const p = leadProfile(l.id)!;
+                    return (
+                      <tr key={l.id} className="border-t border-n200 transition hover:bg-n50">
+                        <td className="px-4 py-2.5"><Link href={`/dashboard/leads/${l.id}`} className="flex items-center gap-2.5">
+                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white" style={{ background: avatarBg(l.name) }}>{initials(l.name)}</span>
+                          <span><span className="flex items-center gap-1.5 text-[13px] font-medium text-n900">{l.name}<span className={cn("h-1.5 w-1.5 rounded-full", { err: "bg-err", warn: "bg-warn", neutral: "bg-n300" }[TEMP_TONE[l.temp]])} /></span><span className="block text-[11.5px] text-n500">score {l.score}</span></span>
+                        </Link></td>
+                        <td className="px-3 py-2.5 text-[12.5px] text-n600">{l.source}</td>
+                        <td className="px-3 py-2.5"><Badge tone="neutral">{STAGE_LABEL[l.stage]}</Badge></td>
+                        <td className="px-3 py-2.5 text-[12.5px] text-n700">{l.vehicle}</td>
+                        <td className="px-3 py-2.5">{p.creditStatus === "not_started" ? <span className="text-[12px] text-n400">—</span> : <Badge tone={CREDIT_TONE[p.creditStatus]}>{CREDIT_LABEL[p.creditStatus]}</Badge>}</td>
+                        <td className="px-3 py-2.5 text-[12.5px]">{p.hasTrade ? <span className="text-n700">Yes</span> : <span className="text-n400">—</span>}</td>
+                        <td className="px-3 py-2.5 text-[12.5px]">{l.ai ? <span className="inline-flex items-center gap-1 text-brand"><Dot tone="brand" />AI</span> : <span className="text-n700">{l.owner}</span>}</td>
+                        <td className="tnum px-3 py-2.5 text-right text-[12px] text-n400">{l.last}</td>
+                        <td className="px-4 py-2.5">{l.needsYou ? <Badge tone="err"><Dot tone="err" />Overdue</Badge> : <Badge tone="ok"><Dot tone="ok" />On time</Badge>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
       </AppMain>
     </>
   );

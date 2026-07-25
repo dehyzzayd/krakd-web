@@ -19,6 +19,7 @@ export default function InboxPage() {
   const [filter, setFilter] = useState<"all" | "unread" | Channel>("all");
   const [q, setQ] = useState("");
   const [selId, setSelId] = useState(CONVERSATIONS[0]?.id);
+  const [showLead, setShowLead] = useState(false);
 
   const list = useMemo(() => CONVERSATIONS.filter((c) => {
     if (filter === "unread" && !c.unread) return false;
@@ -61,7 +62,7 @@ export default function InboxPage() {
             <div className="flex items-center gap-3 border-b border-n200 bg-n50 px-5 py-3">
               <span className="grid h-9 w-9 place-items-center rounded-full text-[11px] font-semibold text-white" style={{ background: avatarBg(sel.name) }}>{initials(sel.name)}</span>
               <div className="mr-auto"><p className="text-[14px] font-semibold text-n900">{sel.name}</p><p className="text-[12px] text-n500">{sel.vehicle} · via {CHANNEL_LABEL[sel.channel]}</p></div>
-              <Link href={`/dashboard/leads/${sel.leadId}`} className="h-8 rounded-lg border border-n200 bg-white px-3 text-[12.5px] font-semibold leading-8 text-n700 transition hover:bg-n100">Open lead</Link>
+              <button onClick={() => setShowLead((v) => !v)} className={cn("h-8 rounded-lg border px-3 text-[12.5px] font-semibold transition", showLead ? "border-brand bg-brand-soft text-brand" : "border-n200 bg-white text-n700 hover:bg-n100")}>{showLead ? "Hide lead" : "See lead"}</button>
             </div>
             <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-5">
               {sel.messages.map((m, i) => (
@@ -84,9 +85,9 @@ export default function InboxPage() {
           </section>
         ) : <section className="flex-1 bg-n100/40" />}
 
-        {/* context */}
-        {sel && (
-          <aside className="hidden w-[300px] shrink-0 flex-col border-l border-n200 bg-n50 xl:flex">
+        {/* context — hidden until "See lead" */}
+        {sel && showLead && (
+          <aside className="flex w-[300px] shrink-0 flex-col border-l border-n200 bg-n50">
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
               <div className="text-center">
                 <span className="mx-auto grid h-14 w-14 place-items-center rounded-full text-[16px] font-semibold text-white" style={{ background: avatarBg(sel.name) }}>{initials(sel.name)}</span>
