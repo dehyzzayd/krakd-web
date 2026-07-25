@@ -1,22 +1,25 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { useSidebar } from "./SidebarContext";
 import { NotificationBell } from "./NotificationBell";
 import { IconSearch, IconPlus, IconPanel } from "./AppIcons";
 
-/** App top bar — sidebar toggle, search, notifications, primary action. */
+/** App top bar — sidebar toggle, breadcrumbs/title, search, notifications. */
 export function Topbar({
   title,
+  crumbs,
   action,
 }: {
-  title: string;
+  title?: string;
+  crumbs?: { label: string; href?: string }[];
   action?: { label: string; href?: string };
 }) {
   const { toggle } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-n200 bg-n50/85 px-4 backdrop-blur sm:px-5">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#eceef2] bg-n50/85 px-4 backdrop-blur sm:px-5">
       <button
         onClick={toggle}
         aria-label="Toggle sidebar"
@@ -24,7 +27,18 @@ export function Topbar({
       >
         <IconPanel className="h-[18px] w-[18px]" />
       </button>
-      <h1 className="text-[15px] font-semibold text-n900">{title}</h1>
+      {crumbs ? (
+        <nav className="flex items-center gap-1.5 text-[14px]">
+          {crumbs.map((c, i) => (
+            <span key={i} className="flex items-center gap-1.5">
+              {i > 0 && <span className="text-n300">/</span>}
+              {c.href ? <Link href={c.href} className="font-medium text-n500 transition hover:text-n800">{c.label}</Link> : <span className="font-semibold text-n900">{c.label}</span>}
+            </span>
+          ))}
+        </nav>
+      ) : (
+        <h1 className="text-[15px] font-semibold text-n900">{title}</h1>
+      )}
 
       <div className="relative ml-auto hidden w-[280px] md:block">
         <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-n400" />
