@@ -3,245 +3,231 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { Card, Badge, Dot, type Tone } from "@/components/app/AppKit";
+import { Card, CardHead, Badge, Dot, type Tone } from "@/components/app/AppKit";
 import { CHECKLIST, STAGES, TEMP_TONE, money, type LeadProfile } from "@/lib/leads";
 
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
-const avatarBg = (n: string) => ["#3c7cab", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][n.charCodeAt(0) % 5];
+const avatarBg = (n: string) => ["#2563eb", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][n.charCodeAt(0) % 5];
 
-const TABS = ["Overview", "Credit application", "Documents", "Communications", "Activity", "Deal"] as const;
+const TABS = ["Overview", "Activities", "Communications", "Documents", "Notes"] as const;
 type Tab = (typeof TABS)[number];
+const PRIO_DOT: Record<string, string> = { High: "bg-err", Medium: "bg-warn", Low: "bg-n400" };
 
-const CREDIT_TONE: Record<string, Tone> = { not_started: "neutral", submitted: "brand", approved: "ok", declined: "err" };
-const CREDIT_LABEL: Record<string, string> = { not_started: "Not started", submitted: "Submitted", approved: "Approved", declined: "Declined" };
-
-function Field({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+function ScoreRing({ score }: { score: number }) {
+  const r = 32, c = 2 * Math.PI * r;
   return (
-    <div className={wide ? "col-span-2" : ""}>
-      <label className="mb-1 block text-[11.5px] font-medium text-n500">{label}</label>
-      <input defaultValue={value} className="tnum h-9 w-full rounded-lg border border-n200 bg-white px-2.5 text-[13px] text-n800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15" />
+    <svg viewBox="0 0 80 80" className="h-[88px] w-[88px]">
+      <circle cx="40" cy="40" r={r} stroke="#eef0f3" strokeWidth="8" fill="none" />
+      <circle cx="40" cy="40" r={r} stroke="#2563eb" strokeWidth="8" fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)} transform="rotate(-90 40 40)" />
+      <text x="40" y="38" textAnchor="middle" className="fill-n900 tnum text-[16px] font-semibold">{score}</text>
+      <text x="40" y="52" textAnchor="middle" className="fill-n500 text-[8px] uppercase tracking-wide">score</text>
+    </svg>
+  );
+}
+
+const SPARK = [3, 5, 4, 8, 6, 4, 5];
+function Interaction() {
+  const max = Math.max(...SPARK), W = 560, H = 90, step = W / (SPARK.length - 1);
+  const pts = SPARK.map((v, i) => `${i * step},${H - (v / max) * (H - 14) - 7}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-[90px] w-full" preserveAspectRatio="none" aria-hidden>
+      {[0.5].map((g) => <line key={g} x1="0" y1={H * g} x2={W} y2={H * g} stroke="#eef0f3" strokeWidth="1" strokeDasharray="3 4" />)}
+      <polyline fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={pts} />
+      {SPARK.map((v, i) => <circle key={i} cx={i * step} cy={H - (v / max) * (H - 14) - 7} r="2.5" fill="#fff" stroke="#2563eb" strokeWidth="1.6" />)}
+    </svg>
+  );
+}
+
+function Composer({ placeholder, cta }: { placeholder: string; cta: string }) {
+  return (
+    <div className="mt-3 rounded-xl border border-[#eceef2] bg-white p-2.5">
+      <textarea placeholder={placeholder} rows={3} className="w-full resize-none bg-transparent text-[13px] text-n800 outline-none placeholder:text-n400" />
+      <div className="flex justify-end gap-2"><button className="h-8 rounded-lg bg-n100 px-3 text-[12.5px] font-semibold text-n600 hover:bg-n200">AI draft</button><button className="h-8 rounded-lg bg-brand px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-hover">{cta}</button></div>
     </div>
   );
 }
-function SectionTitle({ children }: { children: ReactNode }) {
-  return <p className="mb-2.5 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em] text-n500 first:mt-0">{children}</p>;
-}
-function Composer({ placeholder, cta }: { placeholder: string; cta: string }) {
+
+function FileRow({ d }: { d: { name: string; size: string; date: string; status: string } }) {
+  const tone: Tone = d.status === "verified" ? "ok" : d.status === "received" ? "brand" : "warn";
   return (
-    <div className="mt-3 rounded-lg border border-n200 bg-white p-2.5">
-      <textarea placeholder={placeholder} rows={3} className="w-full resize-none bg-transparent text-[13px] text-n800 outline-none placeholder:text-n400" />
-      <div className="flex justify-end"><button className="h-8 rounded-lg bg-brand px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-hover">{cta}</button></div>
+    <div className="flex items-center gap-3 rounded-xl border border-[#eceef2] bg-white p-3">
+      <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-lg", d.status === "missing" ? "bg-warn-soft text-warn" : "bg-brand-soft text-brand")}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M14 3v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>
+      </span>
+      <div className="min-w-0 flex-1"><p className="truncate text-[13px] font-semibold text-n900">{d.name}</p><p className="text-[11.5px] text-n500">{d.status === "missing" ? "Not uploaded yet" : `${d.size} · ${d.date}`}</p></div>
+      {d.status === "missing" ? <button className="text-[12px] font-semibold text-brand hover:underline">Request</button> : <><Badge tone={tone}>{d.status === "verified" ? "Verified" : "Received"}</Badge></>}
     </div>
   );
 }
 
 export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
   const [tab, setTab] = useState<Tab>("Overview");
-  const [comm, setComm] = useState<"Notes" | "Texts" | "Calls" | "Emails">("Texts");
+  const [comm, setComm] = useState<"Texts" | "Calls" | "Emails">("Texts");
+  const [taskTab, setTaskTab] = useState<"To do" | "In progress" | "Done">("To do");
   const [stage, setStage] = useState(p.stage);
   const done = CHECKLIST.filter((c) => p.checklist[c.key]).length;
+  const tasks = p.tasks.filter((t) => (taskTab === "Done" ? t.done : taskTab === "To do" ? !t.done : false));
 
   return (
     <div className="app-scope min-h-dvh bg-n50">
       {/* header */}
-      <div className="sticky top-0 z-20 border-b border-n200 bg-n50/90 backdrop-blur">
-        <div className="w-full px-6 py-3">
+      <div className="border-b border-[#eceef2] bg-white">
+        <div className="w-full px-6 py-4">
           <Link href="/dashboard/leads" className="text-[12.5px] font-medium text-brand hover:text-brand-hover">← Pipeline</Link>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[14px] font-semibold text-white" style={{ background: avatarBg(p.name) }}>{initials(p.name)}</span>
+          <div className="mt-2.5 flex flex-wrap items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-[15px] font-semibold text-white" style={{ background: avatarBg(p.name) }}>{initials(p.name)}</span>
             <div className="mr-auto">
-              <h1 className="flex items-center gap-2 text-[18px] font-semibold text-n900">{p.name}<Badge tone={TEMP_TONE[p.temp]}>{p.temp}</Badge></h1>
-              <p className="text-[12.5px] text-n500">{p.source} · score <span className="tnum font-semibold text-n700">{p.score}</span> · owner {p.owner}</p>
+              <h1 className="flex items-center gap-2 text-[20px] font-semibold tracking-[-0.02em] text-n900">{p.name}<Badge tone={TEMP_TONE[p.temp]}>{p.temp}</Badge></h1>
+              <p className="text-[13px] text-n500">Interested in {p.vehicle} · via {p.source}</p>
             </div>
-            <select value={stage} onChange={(e) => setStage(e.target.value as typeof stage)} className="h-9 rounded-lg border border-n200 bg-white px-2.5 text-[12.5px] font-medium text-n700 outline-none focus:border-brand">
+            <select value={stage} onChange={(e) => setStage(e.target.value as typeof stage)} className="h-9 rounded-lg border border-[#eceef2] bg-white px-2.5 text-[13px] font-medium text-n700 outline-none focus:border-brand">
               {STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
+            <button className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#eceef2] bg-white px-3 text-[13px] font-semibold text-n700 transition hover:bg-n100"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>Edit</button>
             <div className="flex gap-1.5">
-              {["Call", "Text", "Email"].map((a) => <button key={a} className="h-9 rounded-lg border border-n200 bg-white px-3 text-[12.5px] font-semibold text-n700 transition hover:bg-n100">{a}</button>)}
-              <button className="h-9 rounded-lg bg-brand px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-hover">Book appointment</button>
+              {["Call", "Text"].map((a) => <button key={a} className="h-9 rounded-lg border border-[#eceef2] bg-white px-3 text-[13px] font-semibold text-n700 transition hover:bg-n100">{a}</button>)}
+              <button className="h-9 rounded-lg bg-brand px-3.5 text-[13px] font-semibold text-white transition hover:bg-brand-hover">Book appointment</button>
             </div>
+          </div>
+          <div className="mt-4 flex gap-1 border-b-0">
+            {TABS.map((t) => <button key={t} onClick={() => setTab(t)} className={cn("relative px-3 py-2 text-[13.5px] font-medium transition", tab === t ? "text-n900" : "text-n500 hover:text-n800")}>{t}{tab === t && <span className="absolute inset-x-2 -bottom-[9px] h-0.5 rounded-full bg-brand" />}</button>)}
           </div>
         </div>
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-5 px-6 py-5 lg:grid-cols-[340px_1fr]">
-        {/* rail */}
-        <aside className="space-y-3 lg:sticky lg:top-[92px] lg:self-start">
-          <Card className="p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-n500">Contact</p>
-            <div className="mt-2 space-y-2 text-[13px]">
-              <div className="flex justify-between"><span className="text-n500">Phone</span><span className="tnum font-medium text-n900">{p.phone}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-n500">Email</span><span className="truncate font-medium text-n900">{p.email}</span></div>
-              <div className="flex justify-between"><span className="text-n500">Est. deal</span><span className="tnum font-medium text-n900">{money(p.value)}</span></div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between"><p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-n500">Deal readiness</p><span className="tnum text-[12px] font-semibold text-n700">{done}/6</span></div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-n100"><span className="block h-full bg-brand" style={{ width: `${(done / 6) * 100}%` }} /></div>
-            <div className="mt-3 space-y-2">
-              {CHECKLIST.map((c) => {
-                const on = p.checklist[c.key];
-                return (
-                  <div key={c.key} className="flex items-center gap-2.5">
-                    <span className={cn("grid h-4 w-4 place-items-center rounded-full text-[9px] text-white", on ? "bg-ok" : "bg-n200")}>{on ? "✓" : ""}</span>
-                    <span className={cn("text-[12.5px]", on ? "text-n800" : "text-n500")}>{c.label}</span>
+      <div className="w-full px-6 py-5">
+        {tab === "Overview" && (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            {/* main */}
+            <div className="space-y-4 xl:col-span-2">
+              {/* lead details + metrics */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <Card className="p-5">
+                  <h3 className="text-[14px] font-semibold text-n900">Lead details</h3>
+                  <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+                    {[["Full name", p.name], ["Phone", p.phone], ["Email", p.email], ["Source", p.source], ["Interest", p.vehicle], ["Created", "Jul 24, 2026"]].map(([k, v]) => (
+                      <div key={k} className="min-w-0"><p className="text-[11.5px] text-n500">{k}</p><p className="mt-0.5 truncate text-[13.5px] font-medium text-n900">{v}</p></div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </Card>
+                  <p className="mt-4 text-[11.5px] text-n500">Tags</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-err-soft px-2.5 py-1 text-[11.5px] font-medium text-err">{p.temp === "hot" ? "Hot lead" : "Warm lead"}</span>
+                    <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[11.5px] font-medium text-brand">{p.financing === "cash" ? "Cash buyer" : "Financing"}</span>
+                    {p.hasTrade && <span className="rounded-full bg-warn-soft px-2.5 py-1 text-[11.5px] font-medium text-warn">Has trade</span>}
+                    <button className="rounded-full border border-dashed border-n300 px-2.5 py-1 text-[11.5px] font-medium text-n500 hover:bg-n100">+ Add tag</button>
+                  </div>
+                </Card>
 
-          <Card className="p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-n500">Vehicle of interest</p>
-            <p className="mt-1.5 text-[14px] font-semibold text-n900">{p.vehicle}</p>
-            <p className="text-[12px] text-n500">Stock in inventory · {money(p.value)}</p>
-          </Card>
-
-          <Card className="p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-n500">Deal snapshot</p>
-            <div className="mt-2 flex items-baseline gap-1"><span className="tnum text-[22px] font-semibold text-n900">{money(p.deal.monthly)}</span><span className="text-[12px] text-n500">/mo · {p.deal.term}mo</span></div>
-            <div className="mt-2 grid grid-cols-2 gap-y-1.5 text-[12px]">
-              <span className="text-n500">Down</span><span className="tnum text-right font-medium text-n900">{money(p.deal.down)}</span>
-              <span className="text-n500">APR</span><span className="tnum text-right font-medium text-n900">{p.deal.apr}%</span>
-              {p.hasTrade && (<><span className="text-n500">Trade equity</span><span className={cn("tnum text-right font-medium", p.deal.netEquity >= 0 ? "text-ok" : "text-err")}>{money(p.deal.netEquity)}</span></>)}
-            </div>
-          </Card>
-        </aside>
-
-        {/* main */}
-        <div>
-          <div className="mb-3 flex gap-1 overflow-x-auto border-b border-n200">
-            {TABS.map((t) => (
-              <button key={t} onClick={() => setTab(t)} className={cn("relative shrink-0 px-3 py-2.5 text-[13px] font-medium transition", tab === t ? "text-n900" : "text-n500 hover:text-n800")}>
-                {t}{tab === t && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}
-              </button>
-            ))}
-          </div>
-
-          {tab === "Overview" && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-brand-soft p-3.5"><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-brand"><Dot tone="brand" />AI · next best action</p><p className="mt-1.5 text-[13.5px] leading-snug text-n800">{p.next}</p></div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[["Stage", STAGES.find((s) => s.id === stage)?.label ?? ""], ["Credit", CREDIT_LABEL[p.creditStatus]], ["Docs", `${p.docs.filter((d) => d.status !== "missing").length}/${p.docs.length}`], ["FICO", p.bureau ? String(p.bureau.fico) : "—"]].map(([l, v]) => (
-                  <Card key={l} className="p-3"><p className="text-[11px] uppercase tracking-[0.04em] text-n500">{l}</p><p className="tnum mt-1 text-[16px] font-semibold text-n900">{v}</p></Card>
-                ))}
+                <Card className="p-5">
+                  <h3 className="text-[14px] font-semibold text-n900">Lead metrics</h3>
+                  <div className="mt-3 flex items-center gap-4">
+                    <ScoreRing score={p.score} />
+                    <div className="space-y-2 text-[12.5px]">
+                      <p className="flex items-center gap-2 text-n700"><Dot tone="ok" />High engagement</p>
+                      <p className="flex items-center gap-2 text-n700"><Dot tone="warn" />Medium response rate</p>
+                      <p className="flex items-center gap-2 text-n700"><Dot tone="brand" />{p.score}% conversion probability</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="mb-1 flex items-center justify-between text-[11.5px] text-n500"><span>Interaction frequency</span><span>Last 7 days</span></div>
+                    <Interaction />
+                  </div>
+                </Card>
               </div>
-              <Card className="p-4"><p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-n500">Recent activity</p>
-                <div className="mt-3 space-y-3">{p.timeline.slice(0, 4).map((a, i) => (
-                  <div key={i} className="flex gap-3"><span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", { ai: "bg-brand", you: "bg-n700", lead: "bg-ok", system: "bg-n400" }[a.who])} /><div><p className="text-[12.5px] text-n800">{a.text}</p><p className="text-[11px] text-n400">{a.when}</p></div></div>
-                ))}</div>
-              </Card>
-            </div>
-          )}
 
-          {tab === "Credit application" && (
-            <Card className="p-5">
-              <div className="flex items-center justify-between"><p className="text-[13.5px] font-semibold text-n900">Credit application</p><Badge tone={CREDIT_TONE[p.creditStatus]}><Dot tone={CREDIT_TONE[p.creditStatus]} />{CREDIT_LABEL[p.creditStatus]}</Badge></div>
-              {p.bureau && (<div className="mt-3 flex items-center justify-between rounded-lg bg-ok-soft px-3.5 py-2.5"><span className="text-[12.5px] text-n700">Bureau pulled {p.bureau.pulledAt}</span><span className="tnum text-[13px] font-semibold text-ok">FICO {p.bureau.fico} · {p.bureau.tier}</span></div>)}
-
-              <SectionTitle>Applicant</SectionTitle>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Full name" value={p.name} /><Field label="Date of birth" value="04 / 18 / 1989" />
-                <Field label="SSN (last 4)" value="•••• 4821" /><Field label="Driver's license #" value="TX 3390 1187" />
-                <Field label="Marital status" value="Married" /><Field label="Dependents" value="2" />
-              </div>
-              <SectionTitle>Residence</SectionTitle>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Street address" value="1200 S Lamar Blvd" wide /><Field label="City" value="Austin" /><Field label="State / ZIP" value="TX 78704" />
-                <Field label="Years at address" value="3" /><Field label="Own / Rent" value="Rent" /><Field label="Monthly housing" value="$1,850" />
-              </div>
-              <SectionTitle>Employment & income</SectionTitle>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Employer" value="Dell Technologies" wide /><Field label="Job title" value="Field technician" /><Field label="Years employed" value="4" />
-                <Field label="Gross monthly income" value="$6,400" /><Field label="Employer phone" value="(512) 555-0190" />
-              </div>
-              <SectionTitle>Deal terms requested</SectionTitle>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Preferred down" value={money(p.deal.down)} /><Field label="Target monthly" value={money(p.deal.monthly)} />
-                <Field label="Term (months)" value={String(p.deal.term)} /><Field label="Desired trade-in" value={p.hasTrade ? "2018 Ford F-150" : "None"} />
-              </div>
-              <div className="mt-5 flex gap-2"><button className="h-10 rounded-lg bg-brand px-4 text-[13px] font-semibold text-white transition hover:bg-brand-hover">Run credit check</button><button className="h-10 rounded-lg border border-n200 bg-white px-4 text-[13px] font-semibold text-n700 transition hover:bg-n100">Send secure form</button></div>
-            </Card>
-          )}
-
-          {tab === "Documents" && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {p.docs.map((d) => {
-                const tone: Tone = d.status === "verified" ? "ok" : d.status === "received" ? "brand" : "warn";
-                return (
-                  <Card key={d.name} className="flex items-center gap-3 p-3.5">
-                    <span className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-lg", d.status === "missing" ? "bg-warn-soft text-warn" : "bg-n100 text-n500")}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M14 3v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>
-                    </span>
-                    <div className="min-w-0 flex-1"><p className="text-[13px] font-semibold text-n900">{d.name}</p><p className="text-[11.5px] text-n500">{d.kind}{d.when ? ` · ${d.when}` : ""}</p></div>
-                    <div className="text-right"><Badge tone={tone}>{d.status === "verified" ? "Verified" : d.status === "received" ? "Received" : "Missing"}</Badge>
-                      <button className="mt-1.5 block text-[11.5px] font-semibold text-brand hover:underline">{d.status === "missing" ? "Request" : "View"}</button></div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-
-          {tab === "Communications" && (
-            <Card className="p-0">
-              <div className="flex gap-1 border-b border-n200 px-3 pt-2">
-                {(["Texts", "Calls", "Emails", "Notes"] as const).map((c) => (
-                  <button key={c} onClick={() => setComm(c)} className={cn("relative px-3 py-2 text-[12.5px] font-medium transition", comm === c ? "text-n900" : "text-n500 hover:text-n800")}>{c}{comm === c && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}</button>
-                ))}
-              </div>
-              <div className="p-4">
-                {comm === "Texts" && (<><div className="space-y-2">{p.messages.map((m, i) => (
-                  <div key={i} className={cn("flex", m.from === "lead" ? "justify-start" : "justify-end")}><div className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-[12.5px] leading-snug", m.from === "lead" ? "rounded-bl-sm bg-n100 text-n800" : m.from === "ai" ? "rounded-br-sm bg-brand text-white" : "rounded-br-sm bg-n800 text-white")}>{m.from !== "lead" && <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide opacity-70">{m.from === "ai" ? "Krakd AI" : "You"}</span>}{m.text}</div></div>
-                ))}</div><Composer placeholder="Send a text…" cta="Send" /></>)}
-                {comm === "Calls" && (<div className="space-y-2">{(p.calls.length ? p.calls : [{ dir: "out", text: "No calls yet", when: "" }]).map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 rounded-lg border border-n200 px-3 py-2.5"><span className={cn("grid h-8 w-8 place-items-center rounded-full", c.dir === "out" ? "bg-brand-soft text-brand" : "bg-ok-soft text-ok")}><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg></span><span className="flex-1 text-[12.5px] text-n800">{c.text}</span><span className="text-[11px] text-n400">{c.when}</span></div>
-                ))}<button className="mt-1 h-9 w-full rounded-lg border border-n200 bg-white text-[12.5px] font-semibold text-n700 transition hover:bg-n100">Log a call</button></div>)}
-                {comm === "Emails" && (<div className="space-y-2">{(p.emails.length ? p.emails : [{ subject: "No emails yet", when: "" }]).map((e, i) => (
-                  <div key={i} className="rounded-lg border border-n200 px-3 py-2.5"><p className="text-[13px] font-medium text-n900">{e.subject}</p><p className="text-[11px] text-n400">{e.when}</p></div>
-                ))}<Composer placeholder="Compose an email…" cta="Send email" /></div>)}
-                {comm === "Notes" && (<div className="space-y-2">{p.notes.map((n, i) => (
-                  <div key={i} className="rounded-lg bg-n50 px-3 py-2.5"><p className="text-[12.5px] text-n800">{n.text}</p><p className="mt-1 text-[11px] text-n400">{n.by} · {n.when}</p></div>
-                ))}<Composer placeholder="Add an internal note…" cta="Add note" /></div>)}
-              </div>
-            </Card>
-          )}
-
-          {tab === "Activity" && (
-            <Card className="p-4"><div className="space-y-3.5">{p.timeline.map((a, i) => (
-              <div key={i} className="flex gap-3"><div className="flex flex-col items-center"><span className={cn("mt-1 h-2.5 w-2.5 rounded-full", { ai: "bg-brand", you: "bg-n700", lead: "bg-ok", system: "bg-n400" }[a.who])} />{i < p.timeline.length - 1 && <span className="mt-1 w-px flex-1 bg-n200" />}</div><div className="pb-1.5"><p className="text-[13px] text-n800">{a.text}</p><p className="mt-0.5 text-[11px] text-n400">{a.who === "ai" ? "Krakd AI" : a.who === "you" ? p.owner : a.who === "lead" ? p.name : "System"} · {a.when}</p></div></div>
-            ))}</div></Card>
-          )}
-
-          {tab === "Deal" && (
-            <div className="space-y-3">
+              {/* timeline */}
               <Card className="p-5">
-                <p className="text-[13.5px] font-semibold text-n900">Deal structure</p>
-                <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[13px] sm:grid-cols-3">
-                  {[["Selling price", money(p.deal.price)], ["Cash down", money(p.deal.down)], ["APR", `${p.deal.apr}%`], ["Term", `${p.deal.term} mo`], ["Amount financed", money(p.deal.price - p.deal.down - Math.max(0, p.deal.netEquity))], ["Monthly", money(p.deal.monthly)]].map(([l, v]) => (
-                    <div key={l} className="flex flex-col"><span className="text-[11.5px] text-n500">{l}</span><span className="tnum font-semibold text-n900">{v}</span></div>
+                <div className="flex items-center justify-between"><h3 className="text-[14px] font-semibold text-n900">Communication timeline</h3><button onClick={() => setTab("Activities")} className="text-[12.5px] font-medium text-brand hover:text-brand-hover">View all</button></div>
+                <div className="mt-4 space-y-4">
+                  {p.timeline.slice(0, 4).map((a, i) => (
+                    <div key={i} className="flex gap-3">
+                      <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", { ai: "bg-brand-soft text-brand", you: "bg-n100 text-n600", lead: "bg-ok-soft text-ok", system: "bg-n100 text-n500" }[a.who])}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M3 8l9 5 9-5" stroke="currentColor" strokeWidth="1.5" /></svg>
+                      </span>
+                      <div className="min-w-0 flex-1"><p className="text-[13px] font-medium text-n900">{a.text}</p><p className="mt-0.5 text-[11.5px] text-n400">{a.who === "ai" ? "Krakd AI" : a.who === "you" ? p.owner : a.who === "lead" ? p.name : "System"} · {a.when}</p></div>
+                    </div>
                   ))}
                 </div>
               </Card>
-              {p.hasTrade && (
-                <Card className="p-5"><p className="text-[13.5px] font-semibold text-n900">Trade & equity</p>
-                  <div className="mt-3 grid grid-cols-3 gap-x-6 gap-y-2 text-[13px]">
-                    {[["Trade value", money(p.deal.tradeValue)], ["Payoff", money(p.deal.payoff)], ["Net equity", money(p.deal.netEquity)]].map(([l, v], i) => (
-                      <div key={l} className="flex flex-col"><span className="text-[11.5px] text-n500">{l}</span><span className={cn("tnum font-semibold", i === 2 ? (p.deal.netEquity >= 0 ? "text-ok" : "text-err") : "text-n900")}>{v}</span></div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-              <Card className="p-5"><p className="text-[13.5px] font-semibold text-n900">Gross</p>
-                <div className="mt-3 flex items-center gap-8 text-[13px]">
-                  <div><span className="block text-[11.5px] text-n500">Front gross</span><span className="tnum font-semibold text-n900">{money(p.deal.frontGross)}</span></div>
-                  <div><span className="block text-[11.5px] text-n500">Back gross</span><span className="tnum font-semibold text-n900">{money(p.deal.backGross)}</span></div>
-                  <div><span className="block text-[11.5px] text-n500">Total gross</span><span className="tnum font-semibold text-ok">{money(p.deal.frontGross + p.deal.backGross)}</span></div>
+
+              {/* tasks */}
+              <Card className="p-5">
+                <div className="flex items-center justify-between"><h3 className="text-[14px] font-semibold text-n900">Tasks &amp; reminders</h3><button className="text-[12.5px] font-medium text-brand hover:text-brand-hover">+ Add task</button></div>
+                <div className="mt-3 flex gap-1">
+                  {(["To do", "In progress", "Done"] as const).map((t) => <button key={t} onClick={() => setTaskTab(t)} className={cn("h-8 rounded-lg px-3 text-[12.5px] font-medium transition", taskTab === t ? "bg-brand text-white" : "bg-n100 text-n600 hover:bg-n200")}>{t}</button>)}
+                </div>
+                <div className="mt-3 space-y-2">
+                  {tasks.length ? tasks.map((t, i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-xl border border-[#eceef2] p-3">
+                      <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-md border", t.done ? "border-ok bg-ok text-white" : "border-n300")}>{t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span>
+                      <div className="flex-1"><p className={cn("text-[13px] font-medium", t.done ? "text-n400 line-through" : "text-n900")}>{t.title}</p><p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-n500"><span className={cn("h-1.5 w-1.5 rounded-full", PRIO_DOT[t.priority])} />{t.due} · {t.priority}</p></div>
+                      <button className="text-n400 hover:text-n700">···</button>
+                    </div>
+                  )) : <p className="rounded-xl border border-dashed border-n200 py-8 text-center text-[12.5px] text-n400">Nothing {taskTab.toLowerCase()}</p>}
                 </div>
               </Card>
             </div>
-          )}
-        </div>
+
+            {/* rail */}
+            <div className="space-y-4">
+              <Card className="p-5">
+                <p className="text-[13px] font-semibold text-n900">Assigned to</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="grid h-11 w-11 place-items-center rounded-full text-[13px] font-semibold text-white" style={{ background: avatarBg(p.owner) }}>{p.owner === "AI" ? "AI" : initials(p.owner)}</span>
+                  <div><p className="text-[13.5px] font-semibold text-n900">{p.owner === "AI" ? "Krakd AI" : p.owner}</p><p className="text-[12px] text-n500">{p.owner === "AI" ? "Autonomous follow-up" : "Salesperson"}</p></div>
+                </div>
+                <button className="mt-3 h-9 w-full rounded-lg border border-[#eceef2] bg-white text-[12.5px] font-semibold text-n700 transition hover:bg-n100">Reassign</button>
+              </Card>
+
+              <Card className="p-5">
+                <p className="text-[13px] font-semibold text-n900">Opportunity</p>
+                <div className="mt-2 flex items-baseline gap-1.5"><span className="tnum text-[24px] font-semibold text-n900">{money(p.value)}</span><span className="text-[12px] text-n500">est. deal</span></div>
+                <div className="mt-3 space-y-2 text-[12.5px]">
+                  <div className="flex justify-between"><span className="text-n500">Payment</span><span className="font-medium text-n900">{p.financing === "cash" ? "Cash" : "Financing"}</span></div>
+                  {p.financing === "finance" ? (<>
+                    <div className="flex justify-between"><span className="text-n500">Est. monthly</span><span className="tnum font-medium text-n900">{money(p.deal.monthly)}/mo</span></div>
+                    <div className="flex justify-between"><span className="text-n500">Credit</span><span className="font-medium text-n900">{p.bureau ? `${p.bureau.fico} · ${p.bureau.tier.split(" ")[0]}` : "Not pulled"}</span></div>
+                  </>) : <div className="flex justify-between"><span className="text-n500">Down / total</span><span className="tnum font-medium text-n900">Paid in full</span></div>}
+                  {p.hasTrade && <div className="flex justify-between"><span className="text-n500">Trade equity</span><span className={cn("tnum font-medium", p.deal.netEquity >= 0 ? "text-ok" : "text-err")}>{money(p.deal.netEquity)}</span></div>}
+                </div>
+                <div className="mt-4"><div className="mb-1.5 flex justify-between text-[11.5px]"><span className="text-n500">Deal readiness</span><span className="tnum font-semibold text-n700">{done}/6</span></div><div className="h-1.5 overflow-hidden rounded-full bg-n100"><span className="block h-full bg-brand" style={{ width: `${(done / 6) * 100}%` }} /></div></div>
+              </Card>
+
+              <Card className="p-5">
+                <div className="flex items-center justify-between"><p className="text-[13px] font-semibold text-n900">Attachments</p><button onClick={() => setTab("Documents")} className="text-[12.5px] font-medium text-brand hover:text-brand-hover">All</button></div>
+                <div className="mt-3 space-y-2">{p.docs.slice(0, 3).map((d) => <FileRow key={d.name} d={d} />)}</div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {tab === "Activities" && (
+          <Card className="max-w-[760px] p-5"><div className="space-y-4">{p.timeline.map((a, i) => (
+            <div key={i} className="flex gap-3"><div className="flex flex-col items-center"><span className={cn("mt-1 h-2.5 w-2.5 rounded-full", { ai: "bg-brand", you: "bg-n700", lead: "bg-ok", system: "bg-n400" }[a.who])} />{i < p.timeline.length - 1 && <span className="mt-1 w-px flex-1 bg-n200" />}</div><div className="pb-1.5"><p className="text-[13px] text-n800">{a.text}</p><p className="mt-0.5 text-[11.5px] text-n400">{a.who === "ai" ? "Krakd AI" : a.who === "you" ? p.owner : a.who === "lead" ? p.name : "System"} · {a.when}</p></div></div>
+          ))}</div></Card>
+        )}
+
+        {tab === "Communications" && (
+          <Card className="max-w-[760px] p-0">
+            <div className="flex gap-1 border-b border-[#eceef2] px-4 pt-2">{(["Texts", "Calls", "Emails"] as const).map((c) => <button key={c} onClick={() => setComm(c)} className={cn("relative px-3 py-2 text-[12.5px] font-medium transition", comm === c ? "text-n900" : "text-n500 hover:text-n800")}>{c}{comm === c && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}</button>)}</div>
+            <div className="p-4">
+              {comm === "Texts" && (<><div className="space-y-2">{p.messages.map((m, i) => <div key={i} className={cn("flex", m.from === "lead" ? "justify-start" : "justify-end")}><div className={cn("max-w-[78%] rounded-2xl px-3.5 py-2 text-[12.5px] leading-snug", m.from === "lead" ? "rounded-bl-sm bg-n100 text-n800" : m.from === "ai" ? "rounded-br-sm bg-brand text-white" : "rounded-br-sm bg-n800 text-white")}>{m.from !== "lead" && <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide opacity-70">{m.from === "ai" ? "Krakd AI" : "You"}</span>}{m.text}</div></div>)}</div><Composer placeholder="Send a text…" cta="Send" /></>)}
+              {comm === "Calls" && (<div className="space-y-2">{(p.calls.length ? p.calls : [{ dir: "out", text: "No calls yet", when: "" }]).map((c, i) => <div key={i} className="flex items-center gap-3 rounded-xl border border-[#eceef2] px-3 py-2.5"><span className={cn("grid h-8 w-8 place-items-center rounded-full", c.dir === "out" ? "bg-brand-soft text-brand" : "bg-ok-soft text-ok")}><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg></span><span className="flex-1 text-[12.5px] text-n800">{c.text}</span><span className="text-[11px] text-n400">{c.when}</span></div>)}<button className="mt-1 h-9 w-full rounded-lg border border-[#eceef2] bg-white text-[12.5px] font-semibold text-n700 hover:bg-n100">Log a call</button></div>)}
+              {comm === "Emails" && (<div className="space-y-2">{(p.emails.length ? p.emails : [{ subject: "No emails yet", when: "" }]).map((e, i) => <div key={i} className="rounded-xl border border-[#eceef2] px-3 py-2.5"><p className="text-[13px] font-medium text-n900">{e.subject}</p><p className="text-[11px] text-n400">{e.when}</p></div>)}<Composer placeholder="Compose an email…" cta="Send email" /></div>)}
+            </div>
+          </Card>
+        )}
+
+        {tab === "Documents" && (
+          <div className="max-w-[760px]">
+            <div className="mb-3 flex items-center justify-between"><p className="text-[13px] text-n500">{p.docs.filter((d) => d.status !== "missing").length} of {p.docs.length} on file{p.financing === "cash" && " · cash deal, no credit app"}</p><button className="h-9 rounded-lg bg-brand px-3.5 text-[12.5px] font-semibold text-white hover:bg-brand-hover">Upload file</button></div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{p.docs.map((d) => <FileRow key={d.name} d={d} />)}</div>
+          </div>
+        )}
+
+        {tab === "Notes" && (
+          <Card className="max-w-[760px] p-5"><div className="space-y-2">{p.notes.map((n, i) => <div key={i} className="rounded-xl bg-n50 px-3.5 py-3"><p className="text-[13px] text-n800">{n.text}</p><p className="mt-1 text-[11px] text-n400">{n.by} · {n.when}</p></div>)}<Composer placeholder="Add an internal note…" cta="Add note" /></div></Card>
+        )}
       </div>
     </div>
   );

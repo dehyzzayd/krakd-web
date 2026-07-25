@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-[10px] border border-n200 bg-white sh-card ${className}`}>{children}</div>;
+  return <div className={`rounded-[14px] border border-[#eceef2] bg-white sh-card ${className}`}>{children}</div>;
 }
 
 export function CardHead({ title, right }: { title: string; right?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-n200 px-4 py-3">
-      <h2 className="text-[13.5px] font-semibold text-n900">{title}</h2>
+    <div className="flex items-center justify-between border-b border-[#eceef2] px-5 py-3.5">
+      <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-n900">{title}</h2>
       {right}
     </div>
   );

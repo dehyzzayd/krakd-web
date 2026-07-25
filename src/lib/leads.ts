@@ -214,12 +214,21 @@ export function leadProfile(id: string) {
     backGross: 1200 + (l.score % 5) * 150,
   };
 
-  const docs: { name: string; kind: string; status: DocStatus; when?: string }[] = [
-    { name: "Driver's license", kind: "ID", status: checklist.id ? "verified" : "missing", when: checklist.id ? "on file" : undefined },
-    { name: "Proof of insurance", kind: "Insurance", status: checklist.insurance ? "verified" : "missing", when: checklist.insurance ? "verified" : undefined },
-    { name: "Pay stub · latest", kind: "Income", status: creditStatus !== "not_started" ? "received" : "missing" },
-    { name: "Pay stub · prior", kind: "Income", status: creditStatus === "approved" ? "received" : "missing" },
-    ...(hasTrade ? [{ name: "Trade title", kind: "Trade", status: (checklist.trade ? "received" : "missing") as DocStatus }, { name: "Payoff letter", kind: "Trade", status: (checklist.trade ? "received" : "missing") as DocStatus }] : []),
+  // Not everyone finances — some pay cash. Credit app only exists for financed deals.
+  const financing: "cash" | "finance" = ["l4", "l7", "l9"].includes(l.id) ? "cash" : "finance";
+
+  const docs: { name: string; size: string; date: string; status: DocStatus }[] = [
+    { name: "Driver's license.pdf", size: "1.2 MB", date: "Jul 22", status: checklist.id ? "verified" : "missing" },
+    { name: "Proof of insurance.pdf", size: "0.8 MB", date: "Jul 22", status: checklist.insurance ? "verified" : "missing" },
+    ...(financing === "finance" ? [{ name: "Credit application.pdf", size: "340 KB", date: "Jul 23", status: (creditStatus !== "not_started" ? "received" : "missing") as DocStatus }] : []),
+    ...(hasTrade ? [{ name: "Trade payoff letter.pdf", size: "210 KB", date: "Jul 24", status: (checklist.trade ? "received" : "missing") as DocStatus }] : []),
+  ];
+
+  const tasks: { title: string; due: string; priority: "High" | "Medium" | "Low"; done: boolean }[] = [
+    { title: `Follow up with ${l.name.split(" ")[0]}`, due: "Today · 5:00 PM", priority: "High", done: false },
+    { title: l.stage === "appointment" ? "Send appointment reminder" : "Send a vehicle walkaround video", due: "Tomorrow · 10:00 AM", priority: "Medium", done: false },
+    ...(reached(l.stage, "deal") ? [{ title: "Prep delivery paperwork", due: "Jul 27", priority: "Medium" as const, done: false }] : []),
+    { title: "Log first-contact outcome", due: "Completed", priority: "Low", done: true },
   ];
 
   const appointments: { type: string; when: string; status: ApptStatus }[] =
@@ -235,5 +244,5 @@ export function leadProfile(id: string) {
   const calls = l.timeline.filter((a) => /call/i.test(a.text)).map((a) => ({ dir: /outbound|left|missed/i.test(a.text) ? "out" : "in", text: a.text, when: a.when }));
   const emails = l.timeline.filter((a) => /email/i.test(a.text)).map((a) => ({ subject: a.text, when: a.when }));
 
-  return { ...l, checklist, creditStatus, bureau: checklist.credit ? { fico: t.fico, tier: t.tier, pulledAt: "2 days ago" } : null, deal, docs, appointments, notes, calls, emails, hasTrade };
+  return { ...l, checklist, creditStatus, financing, tasks, bureau: checklist.credit ? { fico: t.fico, tier: t.tier, pulledAt: "2 days ago" } : null, deal, docs, appointments, notes, calls, emails, hasTrade };
 }
