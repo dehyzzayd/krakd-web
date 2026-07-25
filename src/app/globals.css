@@ -26,20 +26,20 @@
   --color-accent-soft: #ffe9de;
 
   /* ── APP / DASHBOARD system (tryinvesti look): compact, utilitarian ── */
-  --color-n50: #fcfcfc;
-  --color-n100: #f3f3f3;
-  --color-n200: #e4e4e4;
-  --color-n300: #cbcbcb;
-  --color-n400: #b0b0b0;
-  --color-n500: #878787;
-  --color-n600: #696969;
-  --color-n700: #4a4a4a;
-  --color-n800: #343434;
-  --color-n900: #181818;
-  --color-n950: #141414;
-  --color-brand: #3c7cab;
-  --color-brand-hover: #336d97;
-  --color-brand-soft: #eaf2f8;
+  --color-n50: #f6f7f9;
+  --color-n100: #eef0f3;
+  --color-n200: #e2e4e9;
+  --color-n300: #c7cbd3;
+  --color-n400: #9aa0ac;
+  --color-n500: #6b7280;
+  --color-n600: #4b5563;
+  --color-n700: #374151;
+  --color-n800: #1f2430;
+  --color-n900: #0d1117;
+  --color-n950: #05070b;
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-soft: #eaf1ff;
   --color-ok: #1f8a65;
   --color-ok-soft: #e6f4ee;
   --color-warn: #c08532;
@@ -107,7 +107,8 @@
   .app-scope {
     font-family: var(--font-plex);
     background: var(--color-n50);
-    color: #262626;
+    color: #14181f;
+    letter-spacing: -0.006em;
   }
   .app-scope .tnum { font-family: var(--font-plex-mono); font-feature-settings: "tnum"; }
   .sh-card { box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1); }

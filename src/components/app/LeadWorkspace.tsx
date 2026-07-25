@@ -45,7 +45,7 @@ export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
     <div className="app-scope min-h-dvh bg-n50">
       {/* header */}
       <div className="sticky top-0 z-20 border-b border-n200 bg-n50/90 backdrop-blur">
-        <div className="mx-auto max-w-[1200px] px-6 py-3">
+        <div className="w-full px-6 py-3">
           <Link href="/dashboard/leads" className="text-[12.5px] font-medium text-brand hover:text-brand-hover">← Pipeline</Link>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[14px] font-semibold text-white" style={{ background: avatarBg(p.name) }}>{initials(p.name)}</span>
@@ -64,7 +64,7 @@ export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-5 px-6 py-5 lg:grid-cols-[320px_1fr]">
+      <div className="grid w-full grid-cols-1 gap-5 px-6 py-5 lg:grid-cols-[340px_1fr]">
         {/* rail */}
         <aside className="space-y-3 lg:sticky lg:top-[92px] lg:self-start">
           <Card className="p-4">

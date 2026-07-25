@@ -42,7 +42,7 @@ export default function CalendarPage() {
   return (
     <>
       <Topbar title="Calendar" />
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-5">
+      <div className="w-full px-6 py-5">
         {/* header */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1"><button className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">‹</button><button className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">›</button></div>

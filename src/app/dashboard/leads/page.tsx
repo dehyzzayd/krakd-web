@@ -41,7 +41,7 @@ function LeadCard({ l }: { l: Lead }) {
 
 export default function LeadsPage() {
   const s = crmStats();
-  const [view, setView] = useState<"board" | "table">("board");
+  const [view, setView] = useState<"board" | "table">("table");
   const byStage = (st: Stage) => LEADS.filter((l) => l.stage === st);
 
   return (
