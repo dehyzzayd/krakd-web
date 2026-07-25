@@ -146,3 +146,94 @@ export function crmStats() {
   const needs = LEADS.filter((l) => l.needsYou).length;
   return { active: active.length, appts, needs, aiWorking: LEADS.filter((l) => l.ai && l.stage !== "sold").length };
 }
+
+/* ══════════════════════ deep lead workspace model ══════════════════════ */
+
+export type CheckKey = "criteria" | "vehicle" | "credit" | "id" | "insurance" | "trade";
+export const CHECKLIST: { key: CheckKey; label: string }[] = [
+  { key: "criteria", label: "Buyer criteria captured" },
+  { key: "vehicle", label: "Vehicle of interest locked" },
+  { key: "credit", label: "Credit pulled" },
+  { key: "id", label: "ID on file" },
+  { key: "insurance", label: "Insurance verified" },
+  { key: "trade", label: "Trade appraised" },
+];
+
+export type CreditStatus = "not_started" | "submitted" | "approved" | "declined";
+export type DocStatus = "verified" | "received" | "missing";
+export type ApptStatus = "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled";
+
+export type LeadProfile = ReturnType<typeof leadProfile>;
+
+const pay = (principal: number, apr: number, term: number) => {
+  const r = apr / 100 / 12;
+  return r ? Math.round((principal * r) / (1 - Math.pow(1 + r, -term))) : Math.round(principal / term);
+};
+const tierFor = (score: number) =>
+  score >= 85 ? { apr: 5.9, tier: "A · Prime", fico: 720 + Math.round((score - 85) * 4) }
+  : score >= 70 ? { apr: 8.9, tier: "B · Near-prime", fico: 660 + (score - 70) * 3 }
+  : score >= 55 ? { apr: 12.9, tier: "C · Non-prime", fico: 600 + (score - 55) * 3 }
+  : { apr: 17.9, tier: "D · Subprime", fico: 540 + score };
+
+const reached = (stage: Stage, up: Stage) => {
+  const order: Stage[] = ["new", "working", "appointment", "deal", "sold"];
+  return order.indexOf(stage) >= order.indexOf(up);
+};
+
+export function leadProfile(id: string) {
+  const l = LEADS.find((x) => x.id === id);
+  if (!l) return null;
+  const t = tierFor(l.score);
+  const hasTrade = /trade|F-150|Ram|trade-in/i.test(l.next + l.vehicle) || ["l1", "l5", "l8"].includes(l.id);
+
+  const checklist: Record<CheckKey, boolean> = {
+    criteria: reached(l.stage, "working"),
+    vehicle: reached(l.stage, "working"),
+    credit: reached(l.stage, "deal") || (l.stage === "appointment" && l.score > 80),
+    id: reached(l.stage, "appointment") && l.score > 60,
+    insurance: reached(l.stage, "deal"),
+    trade: hasTrade && reached(l.stage, "deal"),
+  };
+
+  const creditStatus: CreditStatus =
+    l.stage === "sold" || l.stage === "deal" ? "approved"
+    : l.stage === "appointment" && l.score > 78 ? "submitted"
+    : l.stage === "working" && l.score > 68 ? "submitted" : "not_started";
+
+  const price = l.value;
+  const tradeValue = hasTrade ? Math.round(price * 0.32) : 0;
+  const payoff = hasTrade ? Math.round(tradeValue * 0.7) : 0;
+  const down = Math.round(price * 0.1);
+  const term = 72;
+  const financed = price - down - Math.max(0, tradeValue - payoff);
+  const deal = {
+    price, down, apr: t.apr, term, tradeValue, payoff,
+    netEquity: tradeValue - payoff,
+    monthly: pay(financed, t.apr, term),
+    frontGross: Math.round(price * 0.055),
+    backGross: 1200 + (l.score % 5) * 150,
+  };
+
+  const docs: { name: string; kind: string; status: DocStatus; when?: string }[] = [
+    { name: "Driver's license", kind: "ID", status: checklist.id ? "verified" : "missing", when: checklist.id ? "on file" : undefined },
+    { name: "Proof of insurance", kind: "Insurance", status: checklist.insurance ? "verified" : "missing", when: checklist.insurance ? "verified" : undefined },
+    { name: "Pay stub · latest", kind: "Income", status: creditStatus !== "not_started" ? "received" : "missing" },
+    { name: "Pay stub · prior", kind: "Income", status: creditStatus === "approved" ? "received" : "missing" },
+    ...(hasTrade ? [{ name: "Trade title", kind: "Trade", status: (checklist.trade ? "received" : "missing") as DocStatus }, { name: "Payoff letter", kind: "Trade", status: (checklist.trade ? "received" : "missing") as DocStatus }] : []),
+  ];
+
+  const appointments: { type: string; when: string; status: ApptStatus }[] =
+    l.stage === "appointment" ? [{ type: "Test drive", when: l.id === "l6" ? "Tomorrow · 11:00 AM" : "Saturday · 2:00 PM", status: "confirmed" }]
+    : l.stage === "deal" ? [{ type: "Test drive", when: "Yesterday · 3:30 PM", status: "completed" }, { type: "Delivery", when: "Pending scheduling", status: "scheduled" }]
+    : l.stage === "sold" ? [{ type: "Delivery", when: "Completed", status: "completed" }]
+    : [];
+
+  const notes = [
+    { by: l.owner === "AI" ? "Krakd AI" : l.owner, text: l.next, when: l.last },
+    ...(l.stage === "deal" ? [{ by: "Sales manager", text: "Approved to " + money(deal.monthly) + "/mo, hold gross above " + money(deal.frontGross) + ".", when: "1h ago" }] : []),
+  ];
+  const calls = l.timeline.filter((a) => /call/i.test(a.text)).map((a) => ({ dir: /outbound|left|missed/i.test(a.text) ? "out" : "in", text: a.text, when: a.when }));
+  const emails = l.timeline.filter((a) => /email/i.test(a.text)).map((a) => ({ subject: a.text, when: a.when }));
+
+  return { ...l, checklist, creditStatus, bureau: checklist.credit ? { fico: t.fico, tier: t.tier, pulledAt: "2 days ago" } : null, deal, docs, appointments, notes, calls, emails, hasTrade };
+}
