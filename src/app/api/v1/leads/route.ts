@@ -1,0 +1,67 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/server/auth";
+import { json, route } from "@/lib/server/http";
+import type { Prisma } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const ago = (d: Date) => {
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+};
+const first = (arr: unknown, key = "value") => Array.isArray(arr) && arr[0] ? (arr[0] as Record<string, string>)[key] ?? "" : "";
+const STATUS_LABEL: Record<string, string> = { NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified", APPOINTMENT: "Appt set", SOLD: "Sold", LOST: "Lost" };
+const TEMP_LABEL: Record<string, string> = { HOT: "Hot", WARM: "Warm", COLD: "Cold" };
+
+/* GET /api/v1/leads → { items, stats } for the current dealer (empty for new accounts) */
+export const GET = route(async (req: NextRequest) => {
+  const { dealershipId } = await requireAuth(req);
+  const where: Prisma.LeadWhereInput = { dealershipId };
+
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  const dayAgo = new Date(Date.now() - 86_400_000);
+
+  const [rows, total, newToday, hotLeads, apptsToday, sold, statusGroups] = await Promise.all([
+    prisma.lead.findMany({
+      where, orderBy: { createdAt: "desc" }, take: 200,
+      include: { vehicle: { select: { year: true, make: true, model: true } }, assignedTo: { select: { firstName: true, lastName: true } } },
+    }),
+    prisma.lead.count({ where }),
+    prisma.lead.count({ where: { dealershipId, createdAt: { gte: dayAgo } } }),
+    prisma.lead.count({ where: { dealershipId, temperature: "HOT", status: { notIn: ["SOLD", "LOST"] } } }),
+    prisma.appointment.count({ where: { dealershipId, scheduledStart: { gte: startOfDay } } }),
+    prisma.lead.count({ where: { dealershipId, status: "SOLD" } }),
+    prisma.lead.groupBy({ by: ["status"], where, _count: true }),
+  ]);
+
+  const active = statusGroups.filter((g) => !["SOLD", "LOST"].includes(g.status)).reduce((s, g) => s + g._count, 0);
+  const needsResponse = statusGroups.find((g) => g.status === "NEW")?._count ?? 0;
+
+  const items = rows.map((l) => ({
+    id: l.id,
+    name: `${l.firstName} ${l.lastName ?? ""}`.trim(),
+    phone: first(l.phones),
+    email: first(l.emails),
+    source: l.source ?? "—",
+    vehicle: l.vehicle ? `${l.vehicle.year} ${l.vehicle.make} ${l.vehicle.model}` : "—",
+    statusLabel: STATUS_LABEL[l.status] ?? l.status,
+    status: l.status,
+    temperature: TEMP_LABEL[l.temperature] ?? l.temperature,
+    assigned: l.ownerType === "AI" ? "Krakd AI" : l.assignedTo ? `${l.assignedTo.firstName} ${l.assignedTo.lastName ?? ""}`.trim() : null,
+    lastAdded: `${ago(l.createdAt)} ago`,
+  }));
+
+  return json({
+    items,
+    stats: {
+      total, active, newToday, needsResponse, apptsToday, hotLeads,
+      closeRate: total ? Math.round((sold / total) * 100) : 0,
+    },
+  });
+});
