@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import type { SiteConfig, SiteVehicle } from "@/lib/server/site";
 import { accentOf } from "@/lib/server/site";
 import { VehicleCard } from "./VehicleCard";
+import { siteTheme } from "./theme";
 
 export function InventoryBrowser({ config, vehicles, initial }: {
   config: SiteConfig; vehicles: SiteVehicle[]; initial?: Record<string, string>;
 }) {
   const accent = accentOf(config.primaryColor);
+  const ui = siteTheme(config.template);
   const [f, setF] = useState({
     make: initial?.make ?? "", model: initial?.model ?? "", year: initial?.year ?? "",
     body: initial?.body ?? "", maxPrice: initial?.maxPrice ?? "", sort: "newest",
@@ -35,7 +37,7 @@ export function InventoryBrowser({ config, vehicles, initial }: {
   const sel = "h-10 rounded-lg border border-black/12 bg-white px-3 text-[13.5px] outline-none focus:border-black/30";
 
   return (
-    <div className="mx-auto max-w-[1280px] px-5 py-10">
+    <div className={`mx-auto ${ui.container} px-5 py-10`}>
       <h1 className="text-[26px] font-bold tracking-tight">All inventory</h1>
       <p className="mt-1 text-[13.5px] text-[#64748b]">{vehicles.length} vehicles in stock</p>
 
@@ -56,7 +58,7 @@ export function InventoryBrowser({ config, vehicles, initial }: {
       {results.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-black/10 py-16 text-center text-[14px] text-[#64748b]">No vehicles match those filters. Try widening your search.</div>
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{results.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} />)}</div>
+        <div className={`mt-4 grid grid-cols-1 gap-5 ${ui.invCols}`}>{results.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant={ui.card} />)}</div>
       )}
     </div>
   );

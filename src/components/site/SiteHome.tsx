@@ -7,6 +7,7 @@ import { Car, DollarSign, Tag, ChevronRight, ShieldCheck, BadgeCheck, Wrench } f
 import type { SiteConfig, SiteVehicle } from "@/lib/server/site";
 import { accentOf } from "@/lib/server/site";
 import { VehicleCard } from "./VehicleCard";
+import { siteTheme } from "./theme";
 
 const DEFAULT_WHY = [
   { title: "Hand-picked inventory", body: "Every vehicle is selected for quality, then priced to the live market." },
@@ -46,58 +47,93 @@ function SearchBar({ slug, accent, makes, preview }: { slug: string; accent: str
 
 export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
   const accent = accentOf(config.primaryColor);
+  const ui = siteTheme(config.template);
+  const C = ui.container;
   const makes = [...new Set(vehicles.map((v) => v.make))].sort().slice(0, 24);
-  const featured = vehicles.slice(0, 8);
+  const featured = vehicles.slice(0, ui.card === "feature" ? 6 : 8);
   const why = config.whyUs.length ? config.whyUs : DEFAULT_WHY;
   const whyIcons = [ShieldCheck, BadgeCheck, Wrench];
 
+  const heroImg = config.heroImageUrl;
+
+  const featuredSection = (
+    <section className={`mx-auto ${C} px-5 py-6`}>
+      <div className="mb-6 flex items-end justify-between">
+        <h2 className={ui.heading}>Our inventory</h2>
+        <Link href={preview ? "#" : `/site/${config.slug}/inventory`} className="inline-flex items-center gap-1 text-[13.5px] font-semibold" style={{ color: accent }}>View all<ChevronRight className="h-4 w-4" /></Link>
+      </div>
+      {featured.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-black/10 py-16 text-center text-[14px] text-[#64748b]">Fresh inventory is on the way. Check back soon.</div>
+      ) : (
+        <div className={`grid grid-cols-1 gap-5 ${ui.featuredCols}`}>{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant={ui.card} preview={preview} />)}</div>
+      )}
+    </section>
+  );
+
+  const makesSection = makes.length > 0 && (
+    <section className={`mx-auto ${C} px-5 py-12`}>
+      <h2 className={`mb-5 ${ui.heading}`}>Shop by make</h2>
+      <div className="flex flex-wrap gap-2.5">
+        {makes.map((m) => <Link key={m} href={preview ? "#" : `/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`} className={`border border-black/10 bg-white px-4 py-2.5 text-[13.5px] font-semibold text-[#334155] transition hover:border-black/25 ${ui.chip}`}>{m}</Link>)}
+      </div>
+    </section>
+  );
+
   return (
     <>
-      {/* hero */}
-      <section className="relative w-full overflow-hidden" style={config.heroImageUrl ? undefined : { background: `linear-gradient(120deg, ${accent} 0%, #0f172a 100%)` }}>
-        {config.heroImageUrl && <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={config.heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(120deg, rgba(15,23,42,0.85), rgba(15,23,42,0.5))" }} />
-        </>}
-        <div className="relative mx-auto max-w-[1280px] px-5 py-20 text-white sm:py-28">
-          <h1 className="max-w-[18ch] text-[34px] font-extrabold leading-[1.05] tracking-tight sm:text-[52px]">{config.headline}</h1>
-          {config.intro && <p className="mt-4 max-w-[56ch] text-[15px] text-white/85 sm:text-[17px]">{config.intro}</p>}
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href={preview ? "#" : `/site/${config.slug}/inventory`} className="rounded-lg bg-white px-6 py-3 text-[14px] font-semibold" style={{ color: accent }}>{config.ctaLabel}</Link>
-            <Link href={preview ? "#" : `/site/${config.slug}/financing`} className="rounded-lg border border-white/40 px-6 py-3 text-[14px] font-semibold text-white hover:bg-white/10">Get financing</Link>
+      {/* hero — distinct per template */}
+      {ui.hero === "split" ? (
+        <section className="w-full border-b border-black/5 bg-[#f8fafc]">
+          <div className={`mx-auto grid ${C} items-center gap-8 px-5 py-16 lg:grid-cols-2`}>
+            <div>
+              <h1 className="text-[32px] font-extrabold leading-[1.08] tracking-tight sm:text-[44px]">{config.headline}</h1>
+              {config.intro && <p className="mt-4 max-w-[46ch] text-[15px] text-[#475569]">{config.intro}</p>}
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href={preview ? "#" : `/site/${config.slug}/inventory`} className="rounded-lg px-6 py-3 text-[14px] font-semibold text-white" style={{ background: accent }}>{config.ctaLabel}</Link>
+                <Link href={preview ? "#" : `/site/${config.slug}/financing`} className="rounded-lg border border-black/15 px-6 py-3 text-[14px] font-semibold" style={{ color: accent }}>Get financing</Link>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-black/8 bg-white shadow-sm">
+              {heroImg
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={heroImg} alt="" className="h-full max-h-[320px] w-full object-cover" />
+                : <div className="p-8 text-center"><p className="text-[44px] font-extrabold tracking-tight" style={{ color: accent }}>{vehicles.length}</p><p className="text-[13.5px] font-medium text-[#64748b]">vehicles available right now</p></div>}
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* search — overlapping the hero */}
-      <section className="mx-auto -mt-8 max-w-[1280px] px-5"><SearchBar slug={config.slug} accent={accent} makes={makes} preview={preview} /></section>
-
-      {/* shop by make */}
-      {makes.length > 0 && (
-        <section className="mx-auto max-w-[1280px] px-5 py-12">
-          <h2 className="mb-5 text-[20px] font-bold tracking-tight">Shop by make</h2>
-          <div className="flex flex-wrap gap-2.5">
-            {makes.map((m) => <Link key={m} href={preview ? "#" : `/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`} className="rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[13.5px] font-semibold text-[#334155] transition hover:border-black/25">{m}</Link>)}
+        </section>
+      ) : ui.hero === "search" ? (
+        <section className="w-full text-white" style={{ background: `linear-gradient(120deg, ${accent} 0%, #1e293b 100%)` }}>
+          <div className={`mx-auto ${C} px-5 py-14 text-center`}>
+            <h1 className="text-[28px] font-extrabold tracking-tight sm:text-[38px]">{config.headline}</h1>
+            {config.intro && <p className="mx-auto mt-2 max-w-[54ch] text-[14.5px] text-white/85">{config.intro}</p>}
+          </div>
+        </section>
+      ) : (
+        <section className="relative w-full overflow-hidden" style={heroImg ? undefined : { background: `linear-gradient(120deg, ${accent} 0%, #0f172a 100%)` }}>
+          {heroImg && <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(120deg, rgba(15,23,42,0.88), rgba(15,23,42,0.55))" }} />
+          </>}
+          <div className={`relative mx-auto ${C} px-5 py-24 text-white sm:py-32`}>
+            <h1 className="max-w-[16ch] text-[38px] font-extrabold leading-[1.03] tracking-tight sm:text-[60px]">{config.headline}</h1>
+            {config.intro && <p className="mt-5 max-w-[56ch] text-[16px] text-white/85 sm:text-[18px]">{config.intro}</p>}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href={preview ? "#" : `/site/${config.slug}/inventory`} className="rounded-lg bg-white px-7 py-3.5 text-[14px] font-semibold" style={{ color: accent }}>{config.ctaLabel}</Link>
+              <Link href={preview ? "#" : `/site/${config.slug}/financing`} className="rounded-lg border border-white/40 px-7 py-3.5 text-[14px] font-semibold text-white hover:bg-white/10">Get financing</Link>
+            </div>
           </div>
         </section>
       )}
 
-      {/* featured inventory */}
-      <section className="mx-auto max-w-[1280px] px-5 py-4">
-        <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-[24px] font-bold tracking-tight">Our inventory</h2>
-          <Link href={preview ? "#" : `/site/${config.slug}/inventory`} className="inline-flex items-center gap-1 text-[13.5px] font-semibold" style={{ color: accent }}>View all<ChevronRight className="h-4 w-4" /></Link>
-        </div>
-        {featured.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-black/10 py-16 text-center text-[14px] text-[#64748b]">Fresh inventory is on the way. Check back soon.</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} preview={preview} />)}</div>
-        )}
-      </section>
+      {/* search bar */}
+      <section className={`mx-auto ${C} px-5 ${ui.hero === "split" ? "py-8" : "-mt-8"}`}><SearchBar slug={config.slug} accent={accent} makes={makes} preview={preview} /></section>
+
+      {/* inventory-first templates lead with inventory */}
+      {ui.inventoryFirst ? <>{featuredSection}{makesSection}</> : <>{makesSection}{featuredSection}</>}
 
       {/* three info cards */}
-      <section className="mx-auto max-w-[1280px] px-5 py-12">
+      <section className={`mx-auto ${C} px-5 py-12`}>
         <div className="grid gap-5 sm:grid-cols-3">
           {[
             { Icon: Car, title: "Browse inventory", body: "Every vehicle we have, updated live.", href: `/site/${config.slug}/inventory`, cta: "Shop now" },
@@ -116,8 +152,8 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
 
       {/* why choose us */}
       <section className="w-full bg-[#f8fafc] py-14">
-        <div className="mx-auto max-w-[1280px] px-5">
-          <h2 className="text-[24px] font-bold tracking-tight">Why {config.dealershipName}</h2>
+        <div className={`mx-auto ${C} px-5`}>
+          <h2 className={ui.heading}>Why {config.dealershipName}</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
             {why.slice(0, 3).map((w, i) => {
               const Icon = whyIcons[i % whyIcons.length];
@@ -134,10 +170,10 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
       </section>
 
       {/* welcome / about */}
-      <section className="mx-auto max-w-[1280px] px-5 py-14">
+      <section className={`mx-auto ${C} px-5 py-14`}>
         <div className="grid items-center gap-8 lg:grid-cols-2">
           <div>
-            <h2 className="text-[24px] font-bold tracking-tight">Welcome to {config.dealershipName}</h2>
+            <h2 className={ui.heading}>Welcome to {config.dealershipName}</h2>
             <p className="mt-3 text-[14.5px] leading-relaxed text-[#475569]">{config.aboutText || `At ${config.dealershipName}, we make buying your next vehicle simple and honest. Browse our live inventory, get pre-qualified online, and drive home with confidence.`}</p>
             <Link href={preview ? "#" : `/site/${config.slug}/about`} className="mt-5 inline-flex items-center gap-1 text-[13.5px] font-semibold" style={{ color: accent }}>About us<ChevronRight className="h-4 w-4" /></Link>
           </div>
