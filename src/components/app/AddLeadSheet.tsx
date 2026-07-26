@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
 import { apiFetch, ApiError } from "@/lib/api";
+
+type Veh = { id: string; year: number; make: string; model: string; trim: string; price: number };
 
 const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 const SOURCES = ["Facebook", "Google", "Cars.com", "AutoTrader", "CarGurus", "Website", "Referral", "Walk-in"];
@@ -13,17 +15,24 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 }
 
 export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", source: "Website", vehicle: "", temperature: "WARM" });
+  const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", source: "Website", vehicle: "", vehicleId: "", temperature: "WARM" });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const [vehicles, setVehicles] = useState<Veh[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    apiFetch<{ items: Veh[] }>("/inventory").then((r) => setVehicles(r.items ?? [])).catch(() => setVehicles([]));
+  }, [open]);
 
   const save = async () => {
     setErr(null);
     if (!f.firstName.trim()) { setErr("Enter a first name."); return; }
     setBusy(true);
     try {
-      await apiFetch("/leads", { method: "POST", body: JSON.stringify(f) });
+      const { vehicleId, ...rest } = f;
+      await apiFetch("/leads", { method: "POST", body: JSON.stringify(vehicleId ? { ...rest, vehicleId } : rest) });
       onCreated();
       onClose();
     } catch (e) {
@@ -46,7 +55,19 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
         </div>
         <Labeled label="Phone"><input value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="(512) 555-0100" className={cn(fieldCls, "tnum")} /></Labeled>
         <Labeled label="Email"><input value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="buyer@email.com" className={fieldCls} /></Labeled>
-        <Labeled label="Interested in"><input value={f.vehicle} onChange={(e) => set("vehicle", e.target.value)} placeholder="2023 Silverado 1500" className={fieldCls} /></Labeled>
+        <Labeled label="Interested in">
+          {vehicles.length > 0 ? (
+            <select value={f.vehicleId} onChange={(e) => set("vehicleId", e.target.value)} className={cn(fieldCls, "px-2.5")}>
+              <option value="">Not from inventory…</option>
+              {vehicles.map((v) => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}{v.trim ? ` ${v.trim}` : ""} · ${v.price.toLocaleString()}</option>)}
+            </select>
+          ) : (
+            <input value={f.vehicle} onChange={(e) => set("vehicle", e.target.value)} placeholder="2023 Silverado 1500" className={fieldCls} />
+          )}
+          {vehicles.length > 0 && !f.vehicleId && (
+            <input value={f.vehicle} onChange={(e) => set("vehicle", e.target.value)} placeholder="Or type what they're after" className={cn(fieldCls, "mt-2")} />
+          )}
+        </Labeled>
         <div className="grid grid-cols-2 gap-4">
           <Labeled label="Source"><select value={f.source} onChange={(e) => set("source", e.target.value)} className={cn(fieldCls, "px-2.5")}>{SOURCES.map((s) => <option key={s}>{s}</option>)}</select></Labeled>
           <Labeled label="Temperature"><select value={f.temperature} onChange={(e) => set("temperature", e.target.value)} className={cn(fieldCls, "px-2.5")}><option value="HOT">Hot</option><option value="WARM">Warm</option><option value="COLD">Cold</option></select></Labeled>

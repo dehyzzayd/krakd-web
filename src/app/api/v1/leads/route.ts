@@ -16,6 +16,7 @@ const createSchema = z.object({
   email: z.string().optional(),
   source: z.string().optional(),
   vehicle: z.string().optional(),
+  vehicleId: z.string().uuid().optional(),
   temperature: z.enum(["HOT", "WARM", "COLD"]).optional(),
 });
 
@@ -26,9 +27,20 @@ export const POST = route(async (req: NextRequest) => {
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
 
+  // only link a vehicle-of-interest that actually belongs to this dealer
+  let vehicleId: string | undefined;
+  let vehicleLabel = d.vehicle ?? "";
+  if (d.vehicleId) {
+    const v = await prisma.vehicle.findFirst({ where: { id: d.vehicleId, dealershipId }, select: { id: true, year: true, make: true, model: true } });
+    if (!v) throw new HttpError(400, "That vehicle isn't in your inventory");
+    vehicleId = v.id;
+    vehicleLabel = `${v.year} ${v.make} ${v.model}`;
+  }
+
   const lead = await prisma.lead.create({
     data: {
       dealershipId,
+      vehicleId,
       firstName: d.firstName,
       lastName: d.lastName,
       emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
@@ -41,7 +53,7 @@ export const POST = route(async (req: NextRequest) => {
   // notify the dealer's owner (best-effort)
   const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
   const ownerEmail = dealer?.users[0]?.email;
-  if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: d.source ?? "", vehicle: d.vehicle ?? "", contact: d.phone ?? d.email ?? "", leadId: lead.id });
+  if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: d.source ?? "", vehicle: vehicleLabel, contact: d.phone ?? d.email ?? "", leadId: lead.id });
 
   return json({ id: lead.id }, 201);
 });
