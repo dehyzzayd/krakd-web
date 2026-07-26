@@ -9,8 +9,8 @@ export function Sheet({ open, onClose, title, subtitle, footer, children, width 
 }) {
   if (!open) return null;
   return (
-    <div className="app-scope fixed inset-0 z-[60]">
-      <div className="overlay-in absolute inset-0 bg-black/5 backdrop-blur-sm" onClick={onClose} aria-hidden />
+    <div className="app-scope fixed inset-0 z-[60]" style={{ background: "transparent" }}>
+      <div className="overlay-in absolute inset-0 bg-black/10 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <div className={`drawer-in absolute inset-y-0 right-0 flex w-full flex-col border-l border-n200 bg-white shadow-xl ${width}`} role="dialog">
         <div className="flex items-start justify-between gap-3 border-b border-n200 px-6 py-4">
           <div>
