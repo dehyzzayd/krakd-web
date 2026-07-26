@@ -102,7 +102,7 @@ export function Navbar() {
             <a
               key={l.label}
               href={l.href}
-              className="block rounded-[14px] px-4 py-2.5 text-[15px] font-medium text-ink-2 hover:bg-inset"
+              className="block rounded-xl px-4 py-2.5 text-[15px] font-medium text-ink-2 hover:bg-inset"
             >
               {l.label}
             </a>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { Card, Badge, Dot, type Tone } from "@/components/app/AppKit";
 import { Drawer } from "@/components/app/budget";
+import { EditContactSheet } from "@/components/app/EditContactSheet";
 import { cn } from "@/lib/cn";
 import { CONTACTS, money, type Contact } from "@/lib/crm";
 
@@ -20,6 +21,7 @@ export default function ContactsPage() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | Contact["type"]>("all");
   const [sel, setSel] = useState<Contact | null>(null);
+  const [edit, setEdit] = useState<{ contact: Contact | null } | null>(null);
 
   const list = useMemo(() => CONTACTS.filter((c) => {
     if (filter !== "all" && c.type !== filter) return false;
@@ -29,7 +31,7 @@ export default function ContactsPage() {
 
   return (
     <>
-      <Topbar title="Contacts" action={{ label: "Add contact" }} />
+      <Topbar title="Contacts" action={{ label: "Add contact", onClick: () => setEdit({ contact: null }) }} />
       <AppMain>
         <div className="mb-3 grid grid-cols-3 gap-3">
           {[{ l: "All contacts", v: CONTACTS.length }, { l: "Active leads", v: CONTACTS.filter((c) => c.type === "lead").length }, { l: "Customers", v: CONTACTS.filter((c) => c.type !== "lead").length }].map((k) => (
@@ -70,9 +72,12 @@ export default function ContactsPage() {
           </div>
         </Card>
 
-        <Drawer open={!!sel} onClose={() => setSel(null)} title={sel?.name ?? ""} footer={sel?.leadId ? (
-          <Link href={`/dashboard/leads/${sel.leadId}`} className="block h-10 rounded-lg bg-brand text-center text-[13px] font-semibold leading-10 text-white transition hover:bg-brand-hover">Open lead workspace</Link>
-        ) : <button onClick={() => setSel(null)} className="h-10 w-full rounded-lg border border-n200 bg-white text-[13px] font-semibold text-n700 transition hover:bg-n100">Close</button>}>
+        <Drawer open={!!sel} onClose={() => setSel(null)} title={sel?.name ?? ""} footer={
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setEdit({ contact: sel }); setSel(null); }} className="h-10 flex-1 rounded-lg border border-n200 bg-white text-[13px] font-semibold text-n700 transition hover:bg-n100">Edit contact</button>
+            {sel?.leadId && <Link href={`/dashboard/leads/${sel.leadId}`} className="h-10 flex-1 rounded-lg text-center text-[13px] font-semibold leading-10 btn-brand">Open lead</Link>}
+          </div>
+        }>
           {sel && (
             <div>
               <div className="flex items-center gap-3">
@@ -93,6 +98,8 @@ export default function ContactsPage() {
             </div>
           )}
         </Drawer>
+
+        {edit && <EditContactSheet open contact={edit.contact} onClose={() => setEdit(null)} />}
       </AppMain>
     </>
   );

@@ -40,7 +40,7 @@ function Interaction() {
 
 function Composer({ placeholder, cta }: { placeholder: string; cta: string }) {
   return (
-    <div className="mt-3 rounded-xl border border-[#eceef2] bg-white p-2.5">
+    <div className="mt-3 rounded-2xl border border-n200 bg-white p-2.5">
       <textarea placeholder={placeholder} rows={3} className="w-full resize-none bg-transparent text-[13px] text-n800 outline-none placeholder:text-n400" />
       <div className="flex justify-end gap-2"><button className="h-8 rounded-lg bg-n100 px-3 text-[12.5px] font-semibold text-n600 hover:bg-n200">AI draft</button><button className="h-8 rounded-lg bg-brand px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-hover">{cta}</button></div>
     </div>
@@ -50,7 +50,7 @@ function Composer({ placeholder, cta }: { placeholder: string; cta: string }) {
 function FileRow({ d }: { d: { name: string; size: string; date: string; status: string } }) {
   const tone: Tone = d.status === "verified" ? "ok" : d.status === "received" ? "brand" : "warn";
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#eceef2] bg-white p-3">
+    <div className="flex items-center gap-3 rounded-2xl border border-n200 bg-white p-3">
       <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-lg", d.status === "missing" ? "bg-warn-soft text-warn" : "bg-brand-soft text-brand")}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M14 3v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>
       </span>
@@ -85,11 +85,11 @@ export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
   const tasks = p.tasks.filter((t) => (taskTab === "Done" ? t.done : taskTab === "To do" ? !t.done : false));
 
   return (
-    <div className="app-scope flex min-h-dvh flex-col bg-n50">
+    <div className="app-scope flex min-h-dvh flex-col bg-white">
       <Topbar crumbs={[{ label: "Leads", href: "/dashboard/leads" }, { label: p.name }]} />
 
       {/* identity + tabs */}
-      <div className="border-b border-[#eceef2] bg-white">
+      <div className="border-b border-[#e4e7ec] bg-white">
         <div className="w-full px-6 pt-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-[15px] font-semibold text-white" style={{ background: avatarBg(p.name) }}>{initials(p.name)}</span>
@@ -97,12 +97,12 @@ export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
               <h1 className="flex items-center gap-2 text-[20px] font-semibold tracking-[-0.02em] text-n900">{p.name}<Badge tone={TEMP_TONE[p.temp]}>{p.temp}</Badge></h1>
               <p className="text-[13px] text-n500">Interested in {p.vehicle} · via {p.source}</p>
             </div>
-            <select value={stage} onChange={(e) => setStage(e.target.value as typeof stage)} className="h-9 rounded-lg border border-[#eceef2] bg-white px-2.5 text-[13px] font-medium text-n700 outline-none focus:border-brand">
+            <select value={stage} onChange={(e) => setStage(e.target.value as typeof stage)} className="h-9 rounded-lg border border-[#e4e7ec] bg-white px-2.5 text-[13px] font-medium text-n700 outline-none focus:border-brand">
               {STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
-            <button className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#eceef2] bg-white px-3 text-[13px] font-semibold text-n700 transition hover:bg-n100"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>Edit</button>
+            <button className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#e4e7ec] bg-white px-3 text-[13px] font-semibold text-n700 transition hover:bg-n100"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18 10l-4-4L4 16v4zM14 6l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>Edit</button>
             <div className="flex gap-1.5">
-              {["Call", "Text"].map((a) => <button key={a} className="h-9 rounded-lg border border-[#eceef2] bg-white px-3 text-[13px] font-semibold text-n700 transition hover:bg-n100">{a}</button>)}
+              {["Call", "Text"].map((a) => <button key={a} className="h-9 rounded-lg border border-[#e4e7ec] bg-white px-3 text-[13px] font-semibold text-n700 transition hover:bg-n100">{a}</button>)}
               <button className="h-9 rounded-lg bg-brand px-3.5 text-[13px] font-semibold text-white transition hover:bg-brand-hover">Book appointment</button>
             </div>
           </div>
@@ -200,7 +200,7 @@ export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {tasks.length ? tasks.map((t, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-xl border border-[#eceef2] p-3">
+                    <div key={i} className="flex items-center gap-3 rounded-2xl border border-n200 p-3">
                       <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-md border", t.done ? "border-ok bg-ok text-white" : "border-n300")}>{t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span>
                       <div className="min-w-0 flex-1"><p className={cn("truncate text-[13px] font-medium", t.done ? "text-n400 line-through" : "text-n900")}>{t.title}</p><p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-n500"><span className={cn("h-1.5 w-1.5 rounded-full", PRIO_DOT[t.priority])} />{t.due} · {t.priority}</p></div>
                     </div>
@@ -214,11 +214,11 @@ export function LeadWorkspace({ p }: { p: NonNullable<LeadProfile> }) {
 
           {tab === "Communications" && (
             <Card className="p-0">
-              <div className="flex gap-1 border-b border-[#eceef2] px-4 pt-2">{(["Texts", "Calls", "Emails"] as const).map((c) => <button key={c} onClick={() => setComm(c)} className={cn("relative px-3 py-2 text-[12.5px] font-medium transition", comm === c ? "text-n900" : "text-n500 hover:text-n800")}>{c}{comm === c && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}</button>)}</div>
+              <div className="flex gap-1 border-b border-[#e4e7ec] px-4 pt-2">{(["Texts", "Calls", "Emails"] as const).map((c) => <button key={c} onClick={() => setComm(c)} className={cn("relative px-3 py-2 text-[12.5px] font-medium transition", comm === c ? "text-n900" : "text-n500 hover:text-n800")}>{c}{comm === c && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}</button>)}</div>
               <div className="p-4">
                 {comm === "Texts" && (<><div className="space-y-2">{p.messages.map((m, i) => <div key={i} className={cn("flex", m.from === "lead" ? "justify-start" : "justify-end")}><div className={cn("max-w-[70%] rounded-2xl px-3.5 py-2 text-[12.5px] leading-snug", m.from === "lead" ? "rounded-bl-sm bg-n100 text-n800" : m.from === "ai" ? "rounded-br-sm bg-brand text-white" : "rounded-br-sm bg-n800 text-white")}>{m.from !== "lead" && <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide opacity-70">{m.from === "ai" ? "Krakd AI" : "You"}</span>}{m.text}</div></div>)}</div><Composer placeholder="Send a text…" cta="Send" /></>)}
-                {comm === "Calls" && (<div className="space-y-2">{(p.calls.length ? p.calls : [{ dir: "out", text: "No calls yet", when: "" }]).map((c, i) => <div key={i} className="flex items-center gap-3 rounded-xl border border-[#eceef2] px-3 py-2.5"><span className={cn("grid h-8 w-8 place-items-center rounded-full", c.dir === "out" ? "bg-brand-soft text-brand" : "bg-ok-soft text-ok")}><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg></span><span className="flex-1 text-[12.5px] text-n800">{c.text}</span><span className="text-[11px] text-n400">{c.when}</span></div>)}<button className="mt-1 h-9 w-full rounded-lg border border-[#eceef2] bg-white text-[12.5px] font-semibold text-n700 hover:bg-n100">Log a call</button></div>)}
-                {comm === "Emails" && (<div className="space-y-2">{(p.emails.length ? p.emails : [{ subject: "No emails yet", when: "" }]).map((e, i) => <div key={i} className="rounded-xl border border-[#eceef2] px-3 py-2.5"><p className="text-[13px] font-medium text-n900">{e.subject}</p><p className="text-[11px] text-n400">{e.when}</p></div>)}<Composer placeholder="Compose an email…" cta="Send email" /></div>)}
+                {comm === "Calls" && (<div className="space-y-2">{(p.calls.length ? p.calls : [{ dir: "out", text: "No calls yet", when: "" }]).map((c, i) => <div key={i} className="flex items-center gap-3 rounded-2xl border border-n200 px-3 py-2.5"><span className={cn("grid h-8 w-8 place-items-center rounded-full", c.dir === "out" ? "bg-brand-soft text-brand" : "bg-ok-soft text-ok")}><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg></span><span className="flex-1 text-[12.5px] text-n800">{c.text}</span><span className="text-[11px] text-n400">{c.when}</span></div>)}<button className="mt-1 h-9 w-full rounded-lg border border-[#e4e7ec] bg-white text-[12.5px] font-semibold text-n700 hover:bg-n100">Log a call</button></div>)}
+                {comm === "Emails" && (<div className="space-y-2">{(p.emails.length ? p.emails : [{ subject: "No emails yet", when: "" }]).map((e, i) => <div key={i} className="rounded-2xl border border-n200 px-3 py-2.5"><p className="text-[13px] font-medium text-n900">{e.subject}</p><p className="text-[11px] text-n400">{e.when}</p></div>)}<Composer placeholder="Compose an email…" cta="Send email" /></div>)}
               </div>
             </Card>
           )}

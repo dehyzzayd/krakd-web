@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { authApi, setSession, ApiError } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
 import { Field } from "@/components/auth/AuthScaffold";
 import { VEHICLE_TYPES } from "./VehicleIcons";
@@ -181,7 +183,7 @@ function VerifyStep({ digits, setDigits, onNext }: { digits: string[]; setDigits
   };
   return (
     <div>
-      <StepHeader n={1} title="Verify your email" sub="We sent a 6-digit code to your inbox. Enter it below to continue." />
+      <StepHeader n={1} title="Verify your email" sub="During beta, enter any 6 digits (e.g. 123456) to continue — live email verification is coming." />
       <div className="flex gap-2.5 sm:gap-3">
         {digits.map((d, i) => (
           <input key={i} ref={(el) => { refs.current[i] = el; }} value={d} onChange={(e) => set(i, e.target.value)} onKeyDown={(e) => onKey(i, e)} inputMode="numeric" maxLength={1} aria-label={`Digit ${i + 1}`}
@@ -208,7 +210,7 @@ function StoreStep({ form, update, toggleType, onNext }: { form: Form; update: (
               const on = form.types.includes(id);
               return (
                 <button key={id} type="button" onClick={() => toggleType(id)}
-                  className={`flex flex-col items-start gap-3 rounded-[14px] border p-3.5 text-left transition ${on ? "border-ink bg-ink/[0.03] ring-1 ring-ink" : "border-[#e6e6e6] hover:border-[#c9c9c9]"}`}>
+                  className={`flex flex-col items-start gap-3 rounded-xl border p-3.5 text-left transition ${on ? "border-ink bg-ink/[0.03] ring-1 ring-ink" : "border-[#e6e6e6] hover:border-[#c9c9c9]"}`}>
                   <Icon className={`h-6 w-6 ${on ? "text-ink" : "text-[#9a9aa2]"}`} />
                   <span className={`text-[13.5px] font-medium leading-tight ${on ? "text-ink" : "text-body"}`}>{label}</span>
                 </button>
@@ -254,9 +256,9 @@ function ContactStep({ form, update, onBack, onNext }: { form: Form; update: (k:
   );
 }
 
-function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, applyPromo, onBack, onNext }: {
+function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, beta, applyPromo, onBack, onNext }: {
   plan: string; setPlan: (v: string) => void; cycle: "monthly" | "annual"; setCycle: (v: "monthly" | "annual") => void;
-  promo: string; setPromo: (v: string) => void; promoOk: boolean; applyPromo: () => void; onBack: () => void; onNext: () => void;
+  promo: string; setPromo: (v: string) => void; promoOk: boolean; beta: boolean; applyPromo: () => void; onBack: () => void; onNext: () => void;
 }) {
   return (
     <div>
@@ -299,7 +301,7 @@ function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, ap
             className="h-12 flex-1 rounded-[12px] bg-[#f4f4f5] px-4 text-[15px] uppercase text-ink outline-none ring-1 ring-black/[0.04] transition placeholder:normal-case placeholder:text-muted focus:bg-white focus:ring-2 focus:ring-ink/25" />
           <button onClick={applyPromo} className="inline-flex h-12 items-center justify-center rounded-[12px] bg-[#f0f0f0] px-5 text-[14px] font-semibold text-ink transition hover:bg-[#e7e7e7]">Apply</button>
         </div>
-        {promoOk && <p className="mt-2 text-[13px] font-medium text-[#1e9e5a]">✓ Code applied — discount shown at checkout.</p>}
+        {promoOk && <p className="mt-2 text-[13px] font-medium text-[#1e9e5a]">{beta ? "✓ BETAACCESS — free beta access, $0 due today." : "✓ Code applied — discount shown at checkout."}</p>}
       </div>
 
       <Nav onBack={onBack} onNext={onNext} />
@@ -307,8 +309,9 @@ function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, ap
   );
 }
 
-function ReviewStep({ form, plan, cycle, promo, promoOk, onEdit, onBack, onNext }: {
-  form: Form; plan: string; cycle: "monthly" | "annual"; promo: string; promoOk: boolean; onEdit: () => void; onBack: () => void; onNext: () => void;
+function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error, onEdit, onBack, onFinish }: {
+  form: Form; plan: string; cycle: "monthly" | "annual"; promo: string; promoOk: boolean; beta: boolean;
+  submitting: boolean; error: string | null; onEdit: () => void; onBack: () => void; onFinish: () => void;
 }) {
   const p = PLANS.find((x) => x.id === plan)!;
   const pr = priceFor(plan, cycle);
@@ -368,14 +371,17 @@ function ReviewStep({ form, plan, cycle, promo, promoOk, onEdit, onBack, onNext 
       </div>
 
       <p className="mt-4 text-[12.5px] leading-snug text-muted">
-        On the next step you&apos;ll enter payment securely via Stripe. You won&apos;t be charged until your 14-day trial ends.
+        {beta
+          ? "BETAACCESS applied — $0 due today and full dashboard access. Card billing kicks in later."
+          : "Enter payment securely via Stripe on the next step. (Card payments are coming — use the BETAACCESS code to start free today.)"}
       </p>
-      <Nav onBack={onBack} onNext={onNext} nextLabel="Proceed to pay →" />
+      {error && <p className="mt-3 text-[13px] font-medium text-[#dc2626]">{error}</p>}
+      <Nav onBack={onBack} onNext={onFinish} nextLabel={submitting ? "Creating account…" : beta ? "Activate free account →" : "Proceed to pay →"} />
     </div>
   );
 }
 
-function DoneStep() {
+function DoneStep({ onGo }: { onGo: () => void }) {
   return (
     <div className="text-center">
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-ink text-[26px] text-white">✓</span>
@@ -383,7 +389,7 @@ function DoneStep() {
       <p className="mx-auto mt-3 max-w-[38ch] text-[15px] leading-[1.55] text-muted">
         Your dealership workspace is ready. Import your inventory, connect your channels, and let the AI start working your leads.
       </p>
-      <a href="/dashboard" className="mt-8 inline-flex h-12 items-center justify-center rounded-[12px] bg-ink px-7 text-[15px] font-semibold text-white transition hover:bg-black">Go to dashboard</a>
+      <button onClick={onGo} className="mt-8 inline-flex h-12 items-center justify-center rounded-[12px] bg-ink px-7 text-[15px] font-semibold text-white transition hover:bg-black">Go to dashboard</button>
     </div>
   );
 }
@@ -402,6 +408,10 @@ export function OnboardingWizard() {
   const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
   const [promo, setPromo] = useState("");
   const [promoOk, setPromoOk] = useState(false);
+  const [beta, setBeta] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const update = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const toggleType = (id: string) =>
@@ -409,14 +419,53 @@ export function OnboardingWizard() {
   const next = () => setStep((s) => Math.min(s + 1, 5));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
+  const applyPromo = () => {
+    const code = promo.trim().toUpperCase();
+    setBeta(code === "BETAACCESS");
+    setPromoOk(code.length > 0);
+  };
+
+  /** Final step: create the real dealership account, store the session, land on the dashboard. */
+  const finish = async () => {
+    setError(null);
+    if (!beta) {
+      setError("Add the BETAACCESS promo code to continue — card payments arrive with Stripe.");
+      return;
+    }
+    const raw = typeof window !== "undefined" ? sessionStorage.getItem("krakd_signup") : null;
+    if (!raw) {
+      setError("We lost your sign-up details — please start again from Sign up.");
+      return;
+    }
+    const s = JSON.parse(raw) as { firstName: string; lastName: string; email: string; password: string };
+    setSubmitting(true);
+    try {
+      const tokens = await authApi.register({
+        dealershipName: form.dealership || `${s.firstName}'s Dealership`,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        email: s.email,
+        password: s.password,
+        phone: form.phone || undefined,
+      });
+      setSession(tokens);
+      sessionStorage.removeItem("krakd_signup");
+      setStep(5);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not create your account. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Panel step={Math.min(step, 4)}>
       {step === 0 && <VerifyStep digits={otp} setDigits={setOtp} onNext={next} />}
       {step === 1 && <StoreStep form={form} update={update} toggleType={toggleType} onNext={next} />}
       {step === 2 && <ContactStep form={form} update={update} onBack={back} onNext={next} />}
-      {step === 3 && <PlanStep plan={plan} setPlan={setPlan} cycle={cycle} setCycle={setCycle} promo={promo} setPromo={setPromo} promoOk={promoOk} applyPromo={() => setPromoOk(promo.trim().length > 0)} onBack={back} onNext={next} />}
-      {step === 4 && <ReviewStep form={form} plan={plan} cycle={cycle} promo={promo} promoOk={promoOk} onEdit={() => setStep(1)} onBack={back} onNext={next} />}
-      {step === 5 && <DoneStep />}
+      {step === 3 && <PlanStep plan={plan} setPlan={setPlan} cycle={cycle} setCycle={setCycle} promo={promo} setPromo={setPromo} promoOk={promoOk} beta={beta} applyPromo={applyPromo} onBack={back} onNext={next} />}
+      {step === 4 && <ReviewStep form={form} plan={plan} cycle={cycle} promo={promo} promoOk={promoOk} beta={beta} submitting={submitting} error={error} onEdit={() => setStep(1)} onBack={back} onFinish={finish} />}
+      {step === 5 && <DoneStep onGo={() => router.push("/dashboard")} />}
     </Panel>
   );
 }

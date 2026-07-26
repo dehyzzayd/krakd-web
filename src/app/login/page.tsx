@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import {
-  AuthShell,
-  Field,
-  OrDivider,
-  SocialRow,
-  BTN_PRIMARY,
-} from "@/components/auth/AuthScaffold";
+import { AuthShell } from "@/components/auth/AuthScaffold";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export const metadata: Metadata = {
   title: "Log in — Krakd",
@@ -44,47 +39,7 @@ export default function LoginPage() {
         </>
       }
     >
-      <div>
-        <h1 className="text-[32px] font-semibold tracking-[-0.02em] text-ink">
-          Sign in
-        </h1>
-        <p className="mt-2 text-[15px] text-muted">
-          Welcome back. Enter your details to continue.
-        </p>
-
-        <div className="mt-8">
-          <SocialRow />
-        </div>
-        <div className="my-7">
-          <OrDivider />
-        </div>
-
-        <form className="space-y-5">
-          <Field id="email" label="Email" type="email" placeholder="john@dealership.com" autoComplete="email" />
-          <Field
-            id="password"
-            label="Password"
-            type="password"
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            trailing={
-              <a href="/reset" className="text-[13px] font-medium text-muted hover:text-ink">
-                Forgot?
-              </a>
-            }
-          />
-          <button type="submit" className={`${BTN_PRIMARY} mt-2`}>
-            Sign in
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-[14px] text-muted">
-          New to Krakd?{" "}
-          <a href="/signup" className="font-semibold text-ink underline underline-offset-4 hover:text-ink/70">
-            Create an account
-          </a>
-        </p>
-      </div>
+      <LoginForm />
     </AuthShell>
   );
 }

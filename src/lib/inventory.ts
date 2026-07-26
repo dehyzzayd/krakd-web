@@ -16,7 +16,7 @@ export type Vehicle = {
   mileage: number; days: number; status: VStatus;
   color: string; colorHex: string;
   vdpViews: number; leads: number; photos: number;
-  channels: string[];
+  channels: string[]; image: string;
 };
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -37,9 +37,22 @@ export function marketDelta(v: Vehicle) {
   return { delta, pct, tone: tone as "ok" | "err" | "neutral", position: Math.max(0, Math.min(1, (v.price - v.marketLow) / (v.marketHigh - v.marketLow || 1))), avgPos: Math.max(0, Math.min(1, (v.marketAvg - v.marketLow) / (v.marketHigh - v.marketLow || 1))) };
 }
 
+/** Derived spec sheet — engine/drivetrain/fuel inferred from body & trim. */
+export function vehicleSpecs(v: Pick<Vehicle, "make" | "model" | "body" | "trim">) {
+  const ev = v.make === "Tesla";
+  const truck = /cab|1500|f-150|silverado|tacoma|ram/i.test(v.body + " " + v.model);
+  return {
+    engine: ev ? "Dual-motor electric" : truck ? "5.3L V8" : "2.0L Turbo I4",
+    transmission: ev ? "Single-speed" : truck ? "10-speed automatic" : "8-speed automatic",
+    drivetrain: /awd|4wd|xdrive|trail|trd|quattro|4x4/i.test(v.trim) ? "AWD" : truck ? "4x4" : "RWD",
+    fuel: ev ? "Electric" : "Gasoline",
+    interior: "Black leather",
+  };
+}
+
 const ALL = ["facebook", "google", "cars", "autotrader", "cargurus", "website"];
 
-export const VEHICLES: Vehicle[] = [
+const RAW_VEHICLES: Omit<Vehicle, "image">[] = [
   { id: "k2213", year: 2023, make: "Chevrolet", model: "Silverado 1500", trim: "LT Trail Boss", body: "Crew Cab", vin: "1GCUYEED8PZ101024", stock: "K-2213", price: 38940, marketLow: 36500, marketAvg: 40100, marketHigh: 43800, cost: 33200, mileage: 28450, days: 6, status: "available", color: "Summit White", colorHex: "#e9ecf0", vdpViews: 412, leads: 9, photos: 32, channels: ALL },
   { id: "k2188", year: 2021, make: "Tesla", model: "Model 3", trim: "Long Range AWD", body: "Sedan", vin: "5YJ3E1EB4MF882841", stock: "K-2188", price: 27450, marketLow: 26200, marketAvg: 29050, marketHigh: 31900, cost: 24100, mileage: 41220, days: 21, status: "available", color: "Midnight Silver", colorHex: "#3a3f47", vdpViews: 631, leads: 14, photos: 41, channels: ["facebook", "google", "cars", "cargurus", "website"] },
   { id: "k2201", year: 2020, make: "Ram", model: "1500", trim: "Laramie", body: "Crew Cab", vin: "1C6SRFJT4LN256620", stock: "K-2201", price: 34120, marketLow: 33000, marketAvg: 34600, marketHigh: 37200, cost: 29900, mileage: 52310, days: 3, status: "recon", color: "Diamond Black", colorHex: "#15171b", vdpViews: 88, leads: 2, photos: 0, channels: [] },
@@ -53,6 +66,9 @@ export const VEHICLES: Vehicle[] = [
   { id: "k1975", year: 2017, make: "Jeep", model: "Wrangler", trim: "Unlimited Sahara", body: "SUV", vin: "1C4BJWEG5HL621188", stock: "K-1975", price: 23400, marketLow: 22800, marketAvg: 24900, marketHigh: 27200, cost: 19800, mileage: 71230, days: 49, status: "wholesale", color: "Firecracker Red", colorHex: "#b23b32", vdpViews: 176, leads: 3, photos: 19, channels: ["facebook"] },
   { id: "k2270", year: 2021, make: "Lexus", model: "RX 350", trim: "F Sport", body: "SUV", vin: "2T2SZMDA3MC287610", stock: "K-2270", price: 39600, marketLow: 38200, marketAvg: 39400, marketHigh: 42000, cost: 35100, mileage: 36780, days: 2, status: "recon", color: "Nebula Gray", colorHex: "#6b7078", vdpViews: 61, leads: 1, photos: 0, channels: [] },
 ];
+
+export const VEHICLES: Vehicle[] = RAW_VEHICLES.map((v, i) => ({ ...v, image: `/vehicles/v${i + 1}.jpg` }));
+export const vehicleById = (id: string) => VEHICLES.find((v) => v.id === id);
 
 export function inventoryStats() {
   const live = VEHICLES.filter((v) => v.status !== "sold");

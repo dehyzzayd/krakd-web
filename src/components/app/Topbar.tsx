@@ -14,12 +14,12 @@ export function Topbar({
 }: {
   title?: string;
   crumbs?: { label: string; href?: string }[];
-  action?: { label: string; href?: string };
+  action?: { label: string; href?: string; onClick?: () => void };
 }) {
   const { toggle } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#eceef2] bg-n50/85 px-4 backdrop-blur sm:px-5">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#e4e7ec] bg-n50/85 px-4 backdrop-blur sm:px-5">
       <button
         onClick={toggle}
         aria-label="Toggle sidebar"
@@ -53,7 +53,7 @@ export function Topbar({
       </div>
 
       {action && (
-        <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-[13px] font-semibold text-white transition hover:bg-brand-hover">
+        <button onClick={action.onClick} className="btn-brand inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition">
           <IconPlus className="h-[16px] w-[16px]" />
           <span className="hidden sm:inline">{action.label}</span>
         </button>

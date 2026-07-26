@@ -1,258 +1,218 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Topbar, AppMain } from "@/components/app/Topbar";
-import { Card, Badge, Dot, type Tone } from "@/components/app/AppKit";
-import { Drawer } from "@/components/app/budget";
+import { useMemo, useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Search, SlidersHorizontal, ArrowUpDown, Download, Plus, List as ListIcon, LayoutGrid,
+  Check, ChevronLeft, ChevronRight, MoreVertical, Boxes, DollarSign,
+  Clock, AlertTriangle, TrendingUp, Eye, Camera, X, Pencil, Tag, PackageX,
+} from "lucide-react";
+import { Topbar } from "@/components/app/Topbar";
 import { cn } from "@/lib/cn";
 import {
-  VEHICLES, inventoryStats, money, miles, agingBucket, marketDelta,
-  STATUS_LABEL, STATUS_TONE, type Vehicle, type VStatus,
+  VEHICLES, inventoryStats, money, miles, agingBucket, marketDelta, vehicleSpecs,
+  STATUS_LABEL, type Vehicle, type VStatus,
 } from "@/lib/inventory";
 
-const CH_LABEL: Record<string, string> = { facebook: "FB", google: "Google", cars: "Cars", autotrader: "AT", cargurus: "CG", website: "Web" };
+const STATUS_PILL: Record<VStatus, string> = {
+  available: "bg-ok-soft text-ok", recon: "bg-warn-soft text-warn", reserved: "bg-brand-soft text-brand",
+  wholesale: "bg-n100 text-n600", sold: "bg-n100 text-n600",
+};
 
-function CarMark({ className }: { className?: string }) {
+function KpiCard({ label, value, sub, tone = "default" }: { icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>; label: string; value: string | number; sub: string; tone?: string }) {
+  const subTone = tone === "danger" ? "text-err" : tone === "success" ? "text-ok" : "text-n400";
   return (
-    <svg viewBox="0 0 200 78" className={className} fill="none" aria-hidden>
-      <path d="M6 58 C6 50 12 47 22 46 L44 31 C52 26 84 25 104 27 L150 33 C172 36 190 42 194 53 C195 56 195 59 193 61 L176 61 A14 14 0 0 0 148 61 L78 61 A14 14 0 0 0 50 61 L6 61 Z" fill="#aeb6c1" />
-      <path d="M50 30 L46 44 L98 43 L100 28 C86 27 62 27 50 30Z" fill="#cfd5dd" />
-      <path d="M104 28 L106 43 L150 44 L146 33 C132 30 116 28 104 28Z" fill="#cfd5dd" />
-      <circle cx="64" cy="61" r="13" fill="#2b2f36" /><circle cx="64" cy="61" r="6" fill="#6b7078" />
-      <circle cx="162" cy="61" r="13" fill="#2b2f36" /><circle cx="162" cy="61" r="6" fill="#6b7078" />
-    </svg>
+    <div className="rounded-2xl border border-n200 bg-white p-4 sh-card">
+      <p className="tnum text-[25px] font-semibold leading-none tracking-[-0.03em] text-n900">{value}</p>
+      <p className="mt-2.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-n500">{label}</p>
+      <p className={cn("mt-1 truncate text-[12px]", subTone)}>{sub}</p>
+    </div>
   );
 }
 
-function Thumb({ v, tall = false }: { v: Vehicle; tall?: boolean }) {
-  const ag = agingBucket(v.days);
-  if (v.photos === 0) {
-    return (
-      <div className={cn("relative flex items-center justify-center rounded-t-[10px] border-b border-dashed border-warn/40 bg-warn-soft/60", tall ? "h-44" : "h-36")}>
-        <div className="text-center">
-          <p className="text-[12px] font-semibold text-warn">No photos yet</p>
-          <p className="mt-0.5 text-[11px] text-n500">AI flagged · add to publish</p>
+function Thumb({ v, className }: { v: Vehicle; className?: string }) {
+  return (
+    <span className={cn("relative block overflow-hidden rounded-md bg-n100", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={v.image} alt="" className={cn("h-full w-full object-cover", v.photos === 0 && "opacity-50")} />
+      {v.photos === 0 && <span className="absolute inset-0 grid place-items-center bg-warn-soft/40"><Camera className="h-4 w-4 text-warn" /></span>}
+    </span>
+  );
+}
+
+function DeltaText({ v }: { v: Vehicle }) {
+  const m = marketDelta(v);
+  if (m.tone === "neutral") return <span className="text-[11px] text-n400">at market</span>;
+  return <span className={cn("text-[11px] font-medium", m.tone === "ok" ? "text-ok" : "text-err")}>{m.delta < 0 ? "−" : "+"}{money(Math.abs(m.delta))}</span>;
+}
+
+function RowMenu({ v }: { v: Vehicle }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { const f = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, []);
+  const items: { icon: React.ComponentType<{ className?: string }>; label: string; href?: string; onClick?: () => void; primary?: boolean; danger?: boolean }[] = [
+    { icon: Eye, label: "View details", href: `/dashboard/inventory/${v.id}`, primary: true },
+    { icon: Pencil, label: "Edit vehicle", href: `/dashboard/inventory/${v.id}/edit` },
+    { icon: Tag, label: "Adjust price" },
+    { icon: PackageX, label: "Move to wholesale", danger: true },
+  ];
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} className={cn("grid h-7 w-7 place-items-center rounded-md transition-colors", open ? "bg-n100 text-n700" : "text-n400 hover:bg-n100 hover:text-n700")}><MoreVertical className="h-4 w-4" /></button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1 w-48 rounded-lg border border-[#e4e7ec] bg-white py-1 sh-raised">
+          {items.map((it) => it.href
+            ? <Link key={it.label} href={it.href} onClick={() => setOpen(false)} className={cn("flex items-center gap-2.5 px-3 py-1.5 text-[12.5px] hover:bg-n50", it.primary ? "font-semibold text-n900" : "text-n700")}><it.icon className={cn("h-3.5 w-3.5", it.primary ? "text-brand" : "text-n400")} />{it.label}</Link>
+            : <button key={it.label} onClick={() => { setOpen(false); it.onClick?.(); }} className={cn("flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] hover:bg-n50", it.danger ? "text-err" : "text-n700")}><it.icon className={cn("h-3.5 w-3.5", it.danger ? "text-err" : "text-n400")} />{it.label}</button>)}
         </div>
-        <span className="absolute left-3 top-3"><Badge tone={STATUS_TONE[v.status]}><Dot tone={STATUS_TONE[v.status]} />{STATUS_LABEL[v.status]}</Badge></span>
-      </div>
-    );
-  }
-  return (
-    <div className={cn("relative overflow-hidden rounded-t-[10px]", tall ? "h-44" : "h-36")} style={{ background: "linear-gradient(135deg,#f1f4f8 0%,#dde3ea 60%,#cdd4dd 100%)" }}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 30% 0%, rgba(255,255,255,0.6), transparent 60%)" }} />
-      <CarMark className="absolute bottom-3 left-1/2 w-[78%] -translate-x-1/2" />
-      <span className="absolute left-3 top-3"><Badge tone={STATUS_TONE[v.status]}><Dot tone={STATUS_TONE[v.status]} />{STATUS_LABEL[v.status]}</Badge></span>
-      <span className="absolute right-3 top-3"><Badge tone={ag.tone as Tone}>{v.days}d · {ag.label}</Badge></span>
-      <span className="absolute bottom-2.5 left-3 rounded-md bg-n950/55 px-1.5 py-0.5 text-[10.5px] font-medium text-white backdrop-blur">{v.photos} photos</span>
+      )}
     </div>
   );
 }
 
-function MarketBar({ v }: { v: Vehicle }) {
-  const m = marketDelta(v);
-  return (
-    <div>
-      <div className="relative h-1.5 rounded-full" style={{ background: "linear-gradient(90deg,#3fc67733,#c0853233,#cf2d5633)" }}>
-        <span className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 bg-n400" style={{ left: `${m.avgPos * 100}%` }} title="Market avg" />
-        <span className={cn("absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white", m.tone === "ok" ? "bg-ok" : m.tone === "err" ? "bg-err" : "bg-n700")} style={{ left: `${m.position * 100}%` }} />
-      </div>
-      <div className="tnum mt-1 flex justify-between text-[10.5px] text-n400"><span>{money(v.marketLow)}</span><span>mkt {money(v.marketAvg)}</span><span>{money(v.marketHigh)}</span></div>
-    </div>
-  );
-}
-
-function DeltaChip({ v }: { v: Vehicle }) {
-  const m = marketDelta(v);
-  if (m.tone === "neutral") return <Badge tone="neutral">At market</Badge>;
-  const below = m.delta < 0;
-  return <Badge tone={below ? "ok" : "err"}>{below ? "▼" : "▲"} {money(Math.abs(m.delta))} {below ? "below" : "above"}</Badge>;
-}
-
-const FILTERS: { k: VStatus | "all"; label: string }[] = [
-  { k: "all", label: "All" }, { k: "available", label: "Available" }, { k: "recon", label: "In recon" },
-  { k: "reserved", label: "Reserved" }, { k: "wholesale", label: "Wholesale" },
+const TABS: { k: "all" | VStatus; label: string }[] = [
+  { k: "all", label: "All" }, { k: "available", label: "Available" }, { k: "recon", label: "In recon" }, { k: "reserved", label: "Reserved" }, { k: "wholesale", label: "Wholesale" },
 ];
-const SORTS = [
-  { k: "days", label: "Days on lot" }, { k: "price", label: "Price" }, { k: "leads", label: "Leads" }, { k: "vdp", label: "VDP views" },
-] as const;
+const BODIES = [...new Set(VEHICLES.map((v) => v.body))];
+const AGES = ["Fresh", "Active", "Aging", "Stale"];
 
 export default function InventoryPage() {
+  const router = useRouter();
   const s = inventoryStats();
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<VStatus | "all">("all");
-  const [view, setView] = useState<"grid" | "table">("grid");
-  const [sort, setSort] = useState<(typeof SORTS)[number]["k"]>("days");
-  const [sel, setSel] = useState<Vehicle | null>(null);
+  const [tab, setTab] = useState<"all" | VStatus>("all");
+  const [view, setView] = useState<"list" | "grid">("list");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<{ body: string[]; aging: string[] }>({ body: [], aging: [] });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const list = useMemo(() => {
     let r = VEHICLES.filter((v) => v.status !== "sold");
-    if (filter !== "all") r = r.filter((v) => v.status === filter);
-    if (q.trim()) {
-      const t = q.toLowerCase();
-      r = r.filter((v) => `${v.year} ${v.make} ${v.model} ${v.trim} ${v.stock} ${v.vin}`.toLowerCase().includes(t));
-    }
-    return [...r].sort((a, b) => sort === "price" ? b.price - a.price : sort === "leads" ? b.leads - a.leads : sort === "vdp" ? b.vdpViews - a.vdpViews : b.days - a.days);
-  }, [q, filter, sort]);
+    if (tab !== "all") r = r.filter((v) => v.status === tab);
+    if (q.trim()) { const t = q.toLowerCase(); r = r.filter((v) => `${v.year} ${v.make} ${v.model} ${v.trim} ${v.stock} ${v.vin}`.toLowerCase().includes(t)); }
+    if (filters.body.length) r = r.filter((v) => filters.body.includes(v.body));
+    if (filters.aging.length) r = r.filter((v) => filters.aging.includes(agingBucket(v.days).label));
+    return r;
+  }, [q, tab, filters]);
+
+  const totalVdp = VEHICLES.reduce((a, v) => a + v.vdpViews, 0);
+  const toggleOne = (id: string) => setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allSel = list.length > 0 && list.every((v) => selected.has(v.id));
+  const toggleAll = () => setSelected((p) => { const n = new Set(p); allSel ? list.forEach((v) => n.delete(v.id)) : list.forEach((v) => n.add(v.id)); return n; });
+  const toggleIn = (key: "body" | "aging", v: string) => setFilters((f) => { const a = new Set(f[key]); a.has(v) ? a.delete(v) : a.add(v); return { ...f, [key]: [...a] }; });
+  const activeFilters = filters.body.length + filters.aging.length;
+  const tabCounts: Record<string, number> = { all: VEHICLES.filter((v) => v.status !== "sold").length };
+  TABS.slice(1).forEach((t) => (tabCounts[t.k] = VEHICLES.filter((v) => v.status === t.k).length));
 
   return (
     <>
-      <Topbar title="Inventory" action={{ label: "Add vehicle" }} />
-      <AppMain>
+      <Topbar title="Inventory" />
+      <div className="w-full px-6 py-5">
+        {/* top bar */}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div><h1 className="text-[20px] font-bold text-n900">Inventory</h1><p className="mt-0.5 text-[12px] text-n500">Live stock · {s.units} units · {money(s.value)} retail</p></div>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center rounded-lg border border-[#e4e7ec] bg-white p-0.5">
+              {([["list", ListIcon, "Table"], ["grid", LayoutGrid, "Grid"]] as const).map(([m, Ic, lbl]) => <button key={m} onClick={() => setView(m)} className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition", view === m ? "bg-n100 text-n900" : "text-n500 hover:text-n700")}><Ic className="h-3.5 w-3.5" />{lbl}</button>)}
+            </div>
+            <Link href="/dashboard/inventory/new" className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-[13px] font-semibold text-white transition hover:bg-brand-hover"><Plus className="h-4 w-4" />Add vehicle</Link>
+          </div>
+        </div>
+
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          {[
-            { l: "Units live", v: String(s.units) }, { l: "Inventory value", v: `$${(s.value / 1000).toFixed(0)}k` },
-            { l: "Avg days on lot", v: `${s.avgDays}d` }, { l: "Aging · 45d+", v: `${s.stalePct}%` }, { l: "Avg front gross", v: money(s.avgGross) },
-          ].map((k) => (
-            <Card key={k.l} className="p-3.5">
-              <p className="text-[11px] font-medium uppercase tracking-[0.04em] text-n500">{k.l}</p>
-              <p className="tnum mt-1.5 text-[20px] font-semibold leading-none text-n900">{k.v}</p>
-            </Card>
-          ))}
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+          <KpiCard icon={Boxes} label="Units live" value={s.units} sub="in stock" />
+          <KpiCard icon={DollarSign} label="Retail value" value={`$${(s.value / 1000).toFixed(0)}k`} sub="total on lot" />
+          <KpiCard icon={Clock} label="Avg days on lot" value={`${s.avgDays}d`} sub="turn velocity" />
+          <KpiCard icon={AlertTriangle} label="Aging · 45d+" value={`${s.stalePct}%`} sub="needs action" tone={s.stalePct > 12 ? "danger" : "default"} />
+          <KpiCard icon={TrendingUp} label="Avg front gross" value={money(s.avgGross)} sub="per unit" tone="success" />
+          <KpiCard icon={Eye} label="VDP views" value={`${(totalVdp / 1000).toFixed(1)}k`} sub="30-day demand" />
         </div>
 
         {/* toolbar */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search make, model, VIN, stock…" className="h-9 w-full max-w-[280px] rounded-lg border border-n200 bg-white px-3 text-[13px] text-n800 outline-none transition placeholder:text-n400 focus:border-brand focus:ring-2 focus:ring-brand/15" />
-          <div className="flex items-center gap-1 rounded-lg border border-n200 bg-white p-0.5">
-            {FILTERS.map((f) => (
-              <button key={f.k} onClick={() => setFilter(f.k)} className={cn("h-8 rounded-[7px] px-2.5 text-[12.5px] font-medium transition", filter === f.k ? "bg-n100 text-n900" : "text-n600 hover:text-n900")}>{f.label}</button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-9 rounded-lg border border-n200 bg-white px-2.5 text-[12.5px] text-n700 outline-none focus:border-brand">
-              {SORTS.map((o) => <option key={o.k} value={o.k}>Sort · {o.label}</option>)}
-            </select>
-            <div className="flex items-center rounded-lg border border-n200 bg-white p-0.5">
-              {(["grid", "table"] as const).map((mode) => (
-                <button key={mode} onClick={() => setView(mode)} className={cn("grid h-8 w-8 place-items-center rounded-[7px] transition", view === mode ? "bg-n100 text-n900" : "text-n500 hover:text-n800")} aria-label={mode}>
-                  {mode === "grid"
-                    ? <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1.4" stroke="currentColor" strokeWidth="1.6" /><rect x="11" y="3" width="6" height="6" rx="1.4" stroke="currentColor" strokeWidth="1.6" /><rect x="3" y="11" width="6" height="6" rx="1.4" stroke="currentColor" strokeWidth="1.6" /><rect x="11" y="11" width="6" height="6" rx="1.4" stroke="currentColor" strokeWidth="1.6" /></svg>
-                    : <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>}
-                </button>
-              ))}
+        <div className="pt-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex h-10 items-center gap-2 rounded-md border border-[#e4e7ec] bg-white px-3 shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+                <Search className="h-4 w-4 shrink-0 text-n400" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search make, model, VIN, stock…" className="w-64 bg-transparent text-[13px] text-n900 outline-none placeholder:text-n400" />
+              </div>
+              <button onClick={() => setFiltersOpen((o) => !o)} className={cn("flex h-10 items-center gap-2 rounded-md border px-4 text-[13px] font-medium transition", filtersOpen || activeFilters ? "border-brand bg-brand-soft/50 text-brand" : "border-[#e4e7ec] bg-white text-n700 hover:bg-n50")}><SlidersHorizontal className="h-4 w-4" />Filters{activeFilters > 0 && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">{activeFilters}</span>}</button>
+              <button className="flex h-10 items-center gap-2 rounded-md border border-[#e4e7ec] bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><ArrowUpDown className="h-4 w-4" />Sort</button>
             </div>
+            <button className="flex h-10 items-center gap-2 rounded-md border border-[#e4e7ec] bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><Download className="h-4 w-4" />Export feed</button>
           </div>
+          {filtersOpen && (
+            <div className="mt-3 rounded-2xl border border-n200 bg-white p-4 sh-card">
+              <div className="mb-3 flex items-center justify-between"><span className="text-[13px] font-semibold text-n900">Filters</span><button onClick={() => setFilters({ body: [], aging: [] })} className="text-[12px] font-semibold text-brand hover:underline">Clear all</button></div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {([["Body", BODIES, "body"], ["Aging", AGES, "aging"]] as [string, string[], "body" | "aging"][]).map(([title, opts, key]) => (
+                  <div key={title}><p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-n400">{title}</p><div className="flex flex-wrap gap-1.5">{opts.map((o) => { const on = filters[key].includes(o); return <button key={o} onClick={() => toggleIn(key, o)} className={cn("rounded border px-2 py-1 text-[11px] font-semibold transition", on ? "border-brand bg-brand text-white" : "border-[#e4e7ec] bg-white text-n600 hover:bg-n50")}>{o}</button>; })}</div></div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <p className="mt-3 text-[12px] text-n500">{list.length} vehicles</p>
-
-        {/* GRID */}
-        {view === "grid" ? (
-          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {list.map((v) => (
-              <button key={v.id} onClick={() => setSel(v)} className="group overflow-hidden rounded-[10px] border border-n200 bg-white text-left sh-card transition hover:sh-raised">
-                <Thumb v={v} />
-                <div className="p-3.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="tnum text-[18px] font-semibold text-n900">{money(v.price)}</p>
-                    <DeltaChip v={v} />
-                  </div>
-                  <p className="mt-1 text-[13.5px] font-medium text-n900">{v.year} {v.make} {v.model}</p>
-                  <p className="text-[12px] text-n500">{v.trim}</p>
-                  <p className="mt-1.5 flex items-center gap-2 text-[11.5px] text-n500">
-                    <span className="tnum">{miles(v.mileage)}</span><span>·</span><span>{v.body}</span><span>·</span>
-                    <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10" style={{ background: v.colorHex }} />{v.color}</span>
-                  </p>
-                  <div className="mt-3"><MarketBar v={v} /></div>
-                  <div className="mt-3 flex items-center gap-3 border-t border-n200 pt-2.5 text-[11.5px] text-n500">
-                    <span className="tnum"><span className="font-semibold text-n800">{v.vdpViews}</span> VDP</span>
-                    <span className="tnum"><span className="font-semibold text-n800">{v.leads}</span> leads</span>
-                    <span className="ml-auto text-n400">{v.channels.length ? `Live on ${v.channels.length}` : "Not published"}</span>
-                  </div>
-                </div>
-              </button>
-            ))}
+        {selected.size > 0 && (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-brand bg-brand-soft/50 px-4 py-2.5">
+            <span className="text-[13px] font-semibold text-brand">{selected.size} selected</span>
+            <div className="flex flex-wrap items-center gap-2">{["Reprice", "Publish", "Move to recon"].map((a) => <button key={a} className="rounded-md border border-[#e4e7ec] bg-white px-3 py-1.5 text-[12px] font-semibold text-n700 hover:bg-n50">{a}</button>)}<button className="rounded-md border border-err/25 bg-white px-3 py-1.5 text-[12px] font-semibold text-err hover:bg-err-soft">Wholesale</button><button onClick={() => setSelected(new Set())} className="grid h-7 w-7 place-items-center rounded-md text-n400 hover:bg-white hover:text-n700"><X className="h-3.5 w-3.5" /></button></div>
           </div>
-        ) : (
-          /* TABLE */
-          <Card className="mt-2">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] text-left">
-                <thead><tr className="text-[11px] uppercase tracking-[0.04em] text-n500">
-                  <th className="px-4 py-2.5 font-medium">Vehicle</th><th className="px-3 py-2.5 font-medium">Stock</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Price</th><th className="px-3 py-2.5 text-right font-medium">Gross</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Miles</th><th className="px-3 py-2.5 font-medium">Days</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Leads</th><th className="px-3 py-2.5 font-medium">Status</th><th className="px-4 py-2.5 font-medium">Channels</th>
-                </tr></thead>
-                <tbody>
-                  {list.map((v) => {
-                    const ag = agingBucket(v.days);
-                    return (
-                      <tr key={v.id} onClick={() => setSel(v)} className="cursor-pointer border-t border-n200 transition hover:bg-n50">
-                        <td className="px-4 py-2.5"><div className="flex items-center gap-2.5"><span className="grid h-9 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-n100"><CarMark className="w-10" /></span><span><span className="block text-[13px] font-medium text-n900">{v.year} {v.make} {v.model}</span><span className="block text-[11.5px] text-n500">{v.trim}</span></span></div></td>
-                        <td className="tnum px-3 py-2.5 text-[12.5px] text-n600">{v.stock}</td>
-                        <td className="tnum px-3 py-2.5 text-right"><span className="text-[13px] font-medium text-n900">{money(v.price)}</span><span className={cn("block text-[11px]", marketDelta(v).tone === "ok" ? "text-ok" : marketDelta(v).tone === "err" ? "text-err" : "text-n400")}>{marketDelta(v).delta < 0 ? "−" : "+"}{money(Math.abs(marketDelta(v).delta))}</span></td>
-                        <td className="tnum px-3 py-2.5 text-right text-[13px] text-n700">{money(v.price - v.cost)}</td>
-                        <td className="tnum px-3 py-2.5 text-right text-[13px] text-n700">{(v.mileage / 1000).toFixed(0)}k</td>
-                        <td className="px-3 py-2.5"><Badge tone={ag.tone as Tone}>{v.days}d</Badge></td>
-                        <td className="tnum px-3 py-2.5 text-right text-[13px] text-n800">{v.leads}</td>
-                        <td className="px-3 py-2.5"><Badge tone={STATUS_TONE[v.status]}><Dot tone={STATUS_TONE[v.status]} />{STATUS_LABEL[v.status]}</Badge></td>
-                        <td className="px-4 py-2.5 text-[11.5px] text-n500">{v.channels.length ? `${v.channels.length} live` : "—"}</td>
+        )}
+
+        {/* tabs + content */}
+        <div className="pt-5">
+          <div className="rounded-2xl border border-n200 bg-white sh-card">
+            <div className="border-b border-[#e4e7ec] p-4"><div className="flex flex-wrap items-center gap-2">{TABS.map((t) => { const on = tab === t.k; return <button key={t.k} onClick={() => setTab(t.k)} className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition", on ? "bg-brand text-white" : "text-n500 hover:bg-n100")}>{t.label}<span className={cn("grid h-4 min-w-5 place-items-center rounded-full px-1.5 text-[10px]", on ? "bg-white text-brand" : "bg-n100 text-n500")}>{tabCounts[t.k]}</span></button>; })}</div></div>
+
+            {view === "grid" ? (
+              <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                {list.map((v) => { const ag = agingBucket(v.days); const sp = vehicleSpecs(v); return (
+                  <button key={v.id} onClick={() => router.push(`/dashboard/inventory/${v.id}`)} className="overflow-hidden rounded-2xl border border-n200 bg-white text-left transition hover:sh-raised">
+                    <div className="relative aspect-square"><Thumb v={v} className="h-full w-full rounded-none" /><span className={cn("absolute left-3 top-3 rounded-md px-2 py-0.5 text-[11px] font-semibold", STATUS_PILL[v.status])}>{STATUS_LABEL[v.status]}</span><span className={cn("absolute right-3 top-3 rounded-md bg-white/90 px-2 py-0.5 text-[11px] font-semibold", ag.tone === "err" ? "text-err" : ag.tone === "warn" ? "text-warn" : "text-n700")}>{v.days}d</span></div>
+                    <div className="p-3.5"><div className="flex items-baseline justify-between"><span className="tnum text-[17px] font-bold text-n900">{money(v.price)}</span><DeltaText v={v} /></div><p className="mt-0.5 text-[13px] font-semibold text-n900">{v.year} {v.make} {v.model}</p><p className="text-[11.5px] text-n500">{v.trim} · {miles(v.mileage)}</p><div className="mt-2 flex items-center gap-2 border-t border-[#e4e7ec] pt-2 text-[11px] text-n500"><span>{v.body}</span><span className="text-n300">·</span><span>{sp.drivetrain}</span><span className="text-n300">·</span><span>{sp.fuel}</span><span className="ml-auto inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ background: v.colorHex }} />{v.color.split(" ").pop()}</span></div></div>
+                  </button>
+                ); })}
+              </div>
+            ) : (
+              <div className="w-full">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-n50/60"><tr className="border-b border-[#e4e7ec] text-[11px] font-bold uppercase tracking-wide text-n500">
+                    <th className="h-10 w-10 px-3"><button onClick={toggleAll} className={cn("grid h-4 w-4 place-items-center rounded-sm border", allSel ? "border-brand bg-brand text-white" : "border-n300 bg-white")}>{allSel && <Check className="h-3 w-3" />}</button></th>
+                    <th className="px-2 text-left">Vehicle</th><th className="px-2 text-right">Price</th><th className="px-2 text-right">Miles</th><th className="px-2 text-left">Body</th><th className="px-2 text-left">Drivetrain</th><th className="px-2 text-left">Fuel</th><th className="px-2 text-left">Ext. color</th><th className="px-2 text-left">Age</th><th className="px-2 text-left">Status</th><th className="w-10 px-2"></th>
+                  </tr></thead>
+                  <tbody>
+                    {list.map((v) => { const ag = agingBucket(v.days); const sp = vehicleSpecs(v); return (
+                      <tr key={v.id} onClick={() => router.push(`/dashboard/inventory/${v.id}`)} className="cursor-pointer border-b border-n100 transition last:border-0 hover:bg-n50">
+                        <td className="w-10 p-3" onClick={(e) => e.stopPropagation()}><button onClick={() => toggleOne(v.id)} className={cn("grid h-4 w-4 place-items-center rounded-sm border", selected.has(v.id) ? "border-brand bg-brand text-white" : "border-n300 bg-white")}>{selected.has(v.id) && <Check className="h-3 w-3" />}</button></td>
+                        <td className="p-2"><div className="flex items-center gap-3"><Thumb v={v} className="h-12 w-12 shrink-0" /><div className="min-w-0 leading-tight"><p className="truncate text-[13px] font-semibold text-n900">{v.year} {v.make} {v.model}</p><p className="truncate text-[11px] text-n500">{v.trim} · {v.stock}</p></div></div></td>
+                        <td className="p-2 text-right"><p className="tnum text-[13px] font-semibold text-n900">{money(v.price)}</p><DeltaText v={v} /></td>
+                        <td className="tnum p-2 text-right text-[13px] text-n700">{(v.mileage / 1000).toFixed(0)}k</td>
+                        <td className="p-2 text-[12.5px] text-n700">{v.body}</td>
+                        <td className="p-2 text-[12.5px] text-n700">{sp.drivetrain}</td>
+                        <td className="p-2 text-[12.5px] text-n700">{sp.fuel}</td>
+                        <td className="p-2"><span className="inline-flex items-center gap-1.5 text-[12.5px] text-n700"><span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ background: v.colorHex }} />{v.color}</span></td>
+                        <td className="p-2"><span className={cn("inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11.5px] font-medium", ag.tone === "err" ? "bg-err-soft text-err" : ag.tone === "warn" ? "bg-warn-soft text-warn" : ag.tone === "brand" ? "bg-brand-soft text-brand" : "bg-ok-soft text-ok")}>{v.days}d · {ag.label}</span></td>
+                        <td className="p-2"><span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold", STATUS_PILL[v.status])}>{STATUS_LABEL[v.status]}</span></td>
+                        <td className="p-2" onClick={(e) => e.stopPropagation()}><RowMenu v={v} /></td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ); })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {view === "list" && (
+            <div className="mt-4 flex items-center justify-between text-[13px] text-n500">
+              <span className="font-medium text-n900">Showing 1 to {list.length} of {list.length}</span>
+              <nav className="flex items-center gap-1"><button disabled className="inline-flex h-9 items-center gap-1 rounded-md px-4 font-medium text-n400"><ChevronLeft className="h-4 w-4" />Previous</button><button className="grid size-9 place-items-center rounded-md border border-[#e4e7ec] bg-white font-medium shadow-sm">1</button><button disabled className="inline-flex h-9 items-center gap-1 rounded-md px-4 font-medium text-n400">Next<ChevronRight className="h-4 w-4" /></button></nav>
             </div>
-          </Card>
-        )}
-
-        {/* detail drawer */}
-        <Drawer open={!!sel} onClose={() => setSel(null)} title={sel ? `${sel.year} ${sel.make} ${sel.model}` : ""} footer={
-          <div className="flex gap-2"><button onClick={() => setSel(null)} className="h-10 rounded-lg px-4 text-[13px] font-medium text-n600 hover:text-n900">Close</button><button className="h-10 flex-1 rounded-lg bg-brand text-[13.5px] font-semibold text-white transition hover:bg-brand-hover">Edit &amp; republish</button></div>
-        }>
-          {sel && <VehicleDetail v={sel} />}
-        </Drawer>
-      </AppMain>
-    </>
-  );
-}
-
-function VehicleDetail({ v }: { v: Vehicle }) {
-  const m = marketDelta(v);
-  const ag = agingBucket(v.days);
-  const suggested = Math.round((v.marketAvg - 350) / 10) * 10;
-  return (
-    <div>
-      <div className="-mx-5 -mt-5"><Thumb v={v} tall /></div>
-      <div className="mt-4 flex items-start justify-between gap-2">
-        <div><p className="tnum text-[24px] font-semibold text-n900">{money(v.price)}</p><p className="text-[12.5px] text-n500">{v.trim} · {v.body}</p></div>
-        <DeltaChip v={v} />
-      </div>
-
-      <div className="mt-4 rounded-lg border border-n200 p-3">
-        <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-n500">Market position</p>
-        <MarketBar v={v} />
-        <p className="mt-2.5 text-[12.5px] text-n600">Priced <span className={cn("font-semibold", m.tone === "ok" ? "text-ok" : m.tone === "err" ? "text-err" : "text-n800")}>{Math.abs(m.pct).toFixed(1)}% {m.delta < 0 ? "below" : "above"}</span> the {money(v.marketAvg)} market average across comparable listings.</p>
-        <div className="mt-2 flex items-center justify-between rounded-md bg-brand-soft px-3 py-2"><span className="text-[12.5px] font-medium text-brand">AI suggests {money(suggested)}</span><button className="text-[12px] font-semibold text-brand hover:underline">Apply</button></div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-        {[
-          ["Stock", v.stock], ["VIN", v.vin], ["Mileage", miles(v.mileage)], ["Body", v.body],
-          ["Cost", money(v.cost)], ["Front gross", money(v.price - v.cost)], ["Days on lot", `${v.days} · ${ag.label}`], ["Color", v.color],
-        ].map(([k, val]) => (
-          <div key={k}><p className="text-[11px] uppercase tracking-[0.04em] text-n500">{k}</p><p className="tnum mt-0.5 text-[13px] font-medium text-n900">{val}</p></div>
-        ))}
-      </div>
-
-      <div className="mt-5">
-        <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-n500">Demand</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-n200 p-3"><p className="tnum text-[18px] font-semibold text-n900">{v.vdpViews}</p><p className="text-[11.5px] text-n500">VDP views · 30d</p></div>
-          <div className="rounded-lg border border-n200 p-3"><p className="tnum text-[18px] font-semibold text-n900">{v.leads}</p><p className="text-[11.5px] text-n500">leads</p></div>
+          )}
         </div>
       </div>
-
-      <div className="mt-5">
-        <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-n500">Syndication</p>
-        {v.channels.length ? (
-          <div className="flex flex-wrap gap-1.5">{v.channels.map((c) => <span key={c} className="inline-flex items-center gap-1.5 rounded-md bg-ok-soft px-2 py-1 text-[11.5px] font-medium text-ok"><Dot tone="ok" />{CH_LABEL[c]}</span>)}</div>
-        ) : (
-          <p className="rounded-lg bg-warn-soft px-3 py-2 text-[12.5px] text-warn">Not published — {v.photos === 0 ? "add photos first" : "publish to go live"}.</p>
-        )}
-      </div>
-    </div>
+    </>
   );
 }

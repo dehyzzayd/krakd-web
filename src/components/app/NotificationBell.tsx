@@ -59,7 +59,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 z-50 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-n200 bg-white sh-raised">
+          <div className="absolute right-0 z-50 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-n200 bg-white sh-raised">
             <div className="flex items-center justify-between border-b border-n200 px-4 py-3">
               <div className="flex items-center gap-2">
                 <h3 className="text-[13.5px] font-semibold text-n900">Notifications</h3>

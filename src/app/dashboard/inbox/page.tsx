@@ -76,7 +76,7 @@ export default function InboxPage() {
               {sel.unread && <div className="flex items-center gap-2 text-[11.5px] text-brand"><Dot tone="brand" />Krakd AI is drafting a reply…</div>}
             </div>
             <div className="border-t border-n200 bg-n50 p-3">
-              <div className="flex items-end gap-2 rounded-xl border border-n200 bg-white p-2">
+              <div className="flex items-end gap-2 rounded-2xl border border-n200 bg-white p-2">
                 <textarea rows={1} placeholder={`Reply via ${CHANNEL_LABEL[sel.channel]}…`} className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent px-1.5 py-1 text-[13px] outline-none placeholder:text-n400" />
                 <button className="h-8 rounded-lg bg-n100 px-3 text-[12.5px] font-semibold text-n600 transition hover:bg-n200">AI reply</button>
                 <button className="h-8 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white transition hover:bg-brand-hover">Send</button>

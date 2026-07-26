@@ -48,6 +48,14 @@ export const IconReports = (p: P) => (
     <path d="M3 17h14" /><rect x="4.5" y="10" width="3" height="5" rx="0.8" /><rect x="8.5" y="6.5" width="3" height="8.5" rx="0.8" /><rect x="12.5" y="8.5" width="3" height="6.5" rx="0.8" />
   </svg>
 );
+export const IconAI = (p: P) => (
+  <svg {...base} {...p} aria-hidden>
+    <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5v4A2.5 2.5 0 0 1 13.5 13H8l-3.6 3v-3H6a2 2 0 0 1-2-2z" />
+    <circle cx="7" cy="8.5" r="0.95" fill="currentColor" stroke="none" />
+    <circle cx="10" cy="8.5" r="0.95" fill="currentColor" stroke="none" />
+    <circle cx="13" cy="8.5" r="0.95" fill="currentColor" stroke="none" />
+  </svg>
+);
 export const IconSettings = (p: P) => (
   <svg {...base} {...p} aria-hidden>
     <path d="M3 6h9M15 6h2M3 14h2M8 14h9" /><circle cx="13.5" cy="6" r="2" /><circle cx="6.5" cy="14" r="2" />
