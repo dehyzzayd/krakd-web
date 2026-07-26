@@ -22,6 +22,11 @@ export const IconInventory = (p: P) => (
     <path d="M3 7l7-3.5L17 7v6l-7 3.5L3 13z" /><path d="M3 7l7 3.5L17 7M10 10.5V17" />
   </svg>
 );
+export const IconWebsite = (p: P) => (
+  <svg {...base} {...p} aria-hidden>
+    <circle cx="10" cy="10" r="7" /><path d="M3 10h14M10 3c2 2.2 2 11.8 0 14M10 3c-2 2.2-2 11.8 0 14" />
+  </svg>
+);
 export const IconLeads = (p: P) => (
   <svg {...base} {...p} aria-hidden>
     <circle cx="7.5" cy="7" r="2.6" /><path d="M3 16.5a4.5 4.5 0 0 1 9 0" />

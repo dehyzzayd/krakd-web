@@ -11,7 +11,7 @@ import { NETWORKS } from "@/lib/marketing";
 import { inboxUnread } from "@/lib/crm";
 import {
   IconOverview, IconInventory, IconLeads, IconInbox, IconMarketing,
-  IconReports, IconChevron, IconAI,
+  IconReports, IconChevron, IconAI, IconWebsite,
 } from "./AppIcons";
 
 const unread = inboxUnread();
@@ -34,7 +34,8 @@ const NAV: Entry[] = [
     ],
   },
   { type: "item", href: "/dashboard/krakd-ai", label: "Krakd AI", Icon: IconAI },
-  { type: "item", href: "/dashboard/inventory", label: "Inventory", Icon: IconInventory, count: 214 },
+  { type: "item", href: "/dashboard/inventory", label: "Inventory", Icon: IconInventory },
+  { type: "item", href: "/dashboard/website", label: "Website", Icon: IconWebsite },
   {
     type: "group", id: "mk", label: "Digital Marketing", Icon: IconMarketing, bases: ["/dashboard/marketing"],
     children: [

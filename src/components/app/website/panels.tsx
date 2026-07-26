@@ -1,0 +1,387 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/cn";
+import { apiFetch, ApiError } from "@/lib/api";
+import { Card } from "@/components/app/AppKit";
+import { SiteView, type SiteData, type SiteVehicle } from "@/components/site/SiteView";
+import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone } from "lucide-react";
+
+export type Web = {
+  id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM"; status: "DRAFT" | "PUBLISHED";
+  logoUrl: string | null; primaryColor: string; headline: string; intro: string; ctaLabel: string;
+  phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
+  hours: { day: string; open: string; close: string }[]; socials: Record<string, string>;
+  domain: string | null; domainProvider: string | null;
+  domainStatus: "NOT_CONNECTED" | "PENDING_DNS" | "PROVISIONING" | "LIVE" | "ACTION_REQUIRED";
+  domainPriceCents: number | null; domainRenewsAt: string | null;
+  liveVehicles: number; publicUrl: string;
+  setup: { steps: { template: boolean; details: boolean; domain: boolean; published: boolean }; done: number; total: number };
+};
+
+const field = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
+const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+const TEMPLATES = [
+  { v: "MODERN", n: "01", name: "Modern", desc: "Balanced homepage and inventory." },
+  { v: "INVENTORY_FIRST", n: "02", name: "Inventory First", desc: "Vehicle search takes priority." },
+  { v: "PREMIUM", n: "03", name: "Premium", desc: "Large visuals and stronger branding." },
+] as const;
+
+const DOMAIN_BADGE: Record<Web["domainStatus"], { label: string; cls: string }> = {
+  NOT_CONNECTED: { label: "Not connected", cls: "bg-n100 text-n600" },
+  PENDING_DNS: { label: "Pending DNS", cls: "bg-warn-soft text-warn" },
+  PROVISIONING: { label: "Provisioning", cls: "bg-brand-soft text-brand" },
+  LIVE: { label: "Live", cls: "bg-ok-soft text-ok" },
+  ACTION_REQUIRED: { label: "Action required", cls: "bg-err-soft text-err" },
+};
+
+/* ─────────────────────────── Overview ─────────────────────────── */
+export function OverviewPanel({ w, reload, go }: { w: Web; reload: () => void; go: (t: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const dstatus = DOMAIN_BADGE[w.domainStatus];
+  const CHECKS: [string, boolean, string, string][] = [
+    ["Template chosen", w.setup.steps.template, "template", TEMPLATES.find((t) => t.v === w.template)!.name],
+    ["Dealership details", w.setup.steps.details, "details", w.setup.steps.details ? "Complete" : "Add contact info"],
+    ["Domain connected", w.setup.steps.domain, "domain", dstatus.label],
+    ["Published", w.setup.steps.published, "publish", w.status === "PUBLISHED" ? "Live" : "Not yet"],
+  ];
+
+  const publish = async (status: "PUBLISHED" | "DRAFT") => {
+    setBusy(true);
+    try { await apiFetch("/website/publish", { method: "POST", body: JSON.stringify({ status }) }); reload(); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Could not update the website."); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[["Template", TEMPLATES.find((t) => t.v === w.template)!.name], ["Website status", w.status === "PUBLISHED" ? "Published" : "Draft"], ["Domain", dstatus.label], ["Live vehicles", `${w.liveVehicles}`]].map(([l, v]) => (
+          <Card key={l} className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.04em] text-n500">{l}</p><p className="mt-1.5 text-[17px] font-semibold text-n900">{v}</p></Card>
+        ))}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <Card className="p-5">
+          <h3 className="text-[14px] font-semibold text-n900">Setup progress</h3>
+          <p className="mt-0.5 text-[12.5px] text-n500">{w.setup.done} of {w.setup.total} steps complete</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-n100"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${(w.setup.done / w.setup.total) * 100}%` }} /></div>
+          <div className="mt-4 space-y-2">
+            {CHECKS.map(([label, done, tab, hint]) => (
+              <button key={label} onClick={() => go(tab)} className="flex w-full items-center gap-3 rounded-lg border border-n200 px-3 py-2.5 text-left transition hover:bg-n50">
+                <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-full", done ? "bg-ok text-white" : "border border-n300 text-transparent")}>{done && <Check className="h-3 w-3" />}</span>
+                <span className="min-w-0 flex-1"><span className="block text-[13px] font-medium text-n900">{label}</span></span>
+                <span className="shrink-0 text-[12px] text-n500">{hint}</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="flex flex-col p-5">
+          <h3 className="text-[14px] font-semibold text-n900">Your website</h3>
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-n50 px-3 py-2.5">
+            <Globe className="h-4 w-4 shrink-0 text-n500" />
+            <span className="min-w-0 flex-1 truncate text-[12.5px] text-n700">{w.publicUrl.replace(/^https?:\/\//, "")}</span>
+            {w.status === "PUBLISHED" && <a href={w.publicUrl} target="_blank" rel="noreferrer" className="shrink-0 text-brand"><ExternalLink className="h-4 w-4" /></a>}
+          </div>
+          <p className="mt-3 text-[12.5px] leading-relaxed text-n500">
+            {w.status === "PUBLISHED" ? "Your site is live. Inventory and leads sync automatically with Krakd." : "Finish setup, then publish to take your dealership site live in minutes."}
+          </p>
+          <div className="mt-auto flex flex-wrap gap-2 pt-4">
+            {w.status === "PUBLISHED" ? (
+              <>
+                <a href={w.publicUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover">View live site<ExternalLink className="h-3.5 w-3.5" /></a>
+                <button disabled={busy} onClick={() => publish("DRAFT")} className="inline-flex h-9 items-center rounded-lg border border-n200 bg-white px-4 text-[12.5px] font-semibold text-n700 hover:bg-n100 disabled:opacity-60">Unpublish</button>
+              </>
+            ) : (
+              <button disabled={busy} onClick={() => publish("PUBLISHED")} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Publish website</button>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Template ─────────────────────────── */
+export function TemplatePanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const pick = async (template: string) => {
+    setBusy(template);
+    try { await apiFetch("/website", { method: "PATCH", body: JSON.stringify({ template }) }); reload(); }
+    finally { setBusy(null); }
+  };
+  return (
+    <div>
+      <p className="mb-4 text-[13.5px] text-n600">Three pre-built layouts. The dealership data stays the same — only the presentation changes. You can switch anytime.</p>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {TEMPLATES.map((t) => {
+          const on = w.template === t.v;
+          return (
+            <Card key={t.v} className={cn("overflow-hidden", on && "ring-2 ring-brand")}>
+              <div className="border-b border-n200 bg-n50 p-3">
+                <div className="rounded-lg bg-white p-3 shadow-sm">
+                  <div className="mb-2 h-2 w-16 rounded bg-n900/80" />
+                  {t.v === "INVENTORY_FIRST" ? <div className="mb-2 h-6 rounded bg-n100" /> : <div className="mb-2 h-3 w-2/3 rounded bg-brand/70" />}
+                  <div className="grid grid-cols-3 gap-1.5">{[0, 1, 2].map((i) => <div key={i} className="h-8 rounded bg-n100" />)}</div>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center gap-2"><span className="text-[11px] font-bold text-n400">{t.n}</span><span className="text-[14px] font-semibold text-n900">{t.name}</span></div>
+                <p className="mt-1 text-[12px] text-n500">{t.desc}</p>
+                <button disabled={busy === t.v || on} onClick={() => pick(t.v)} className={cn("mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[12.5px] font-semibold transition", on ? "border border-brand bg-brand-soft text-brand" : "bg-brand text-white hover:bg-brand-hover")}>
+                  {busy === t.v && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{on ? "Selected" : "Select template"}
+                </button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Details ─────────────────────────── */
+export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [f, setF] = useState({
+    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, primaryColor: w.primaryColor, logoUrl: w.logoUrl ?? "",
+    phone: w.phone ?? "", email: w.email ?? "", address: w.address ?? "", city: w.city ?? "", state: w.state ?? "", zip: w.zip ?? "",
+  });
+  const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const [hours, setHours] = useState<{ day: string; open: string; close: string }[]>(
+    w.hours.length ? w.hours : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({ day, open: "9:00 AM", close: "7:00 PM" }))
+  );
+  const setHour = (i: number, k: "open" | "close", v: string) => setHours((p) => p.map((h, j) => j === i ? { ...h, [k]: v } : h));
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    setErr(null); setBusy(true);
+    try {
+      await apiFetch("/website", { method: "PATCH", body: JSON.stringify({ ...f, logoUrl: f.logoUrl || undefined, hours }) });
+      setSaved(true); setTimeout(() => setSaved(false), 2200); reload();
+    } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
+    finally { setBusy(false); }
+  };
+
+  const L = ({ label, children }: { label: string; children: React.ReactNode }) => <div className="space-y-1.5"><label className="text-[13px] font-medium text-n900">{label}</label>{children}</div>;
+
+  return (
+    <div className="space-y-5">
+      <Card className="p-5">
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Homepage</h3>
+        <div className="space-y-4">
+          <L label="Headline"><input value={f.headline} onChange={(e) => set("headline", e.target.value)} className={field} /></L>
+          <L label="Short introduction"><textarea value={f.intro} onChange={(e) => set("intro", e.target.value)} rows={2} className={cn(field, "h-auto resize-none py-2")} /></L>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <L label="Button label"><input value={f.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} className={field} /></L>
+            <L label="Brand color"><div className="flex items-center gap-2"><input type="color" value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className="h-10 w-12 shrink-0 rounded-md border border-n200" /><input value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className={cn(field, "tnum")} /></div></L>
+            <L label="Logo URL (optional)"><input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" className={field} /></L>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Contact</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <L label="Phone"><input value={f.phone} onChange={(e) => set("phone", e.target.value)} className={cn(field, "tnum")} /></L>
+          <L label="Email"><input value={f.email} onChange={(e) => set("email", e.target.value)} className={field} /></L>
+          <L label="Address"><input value={f.address} onChange={(e) => set("address", e.target.value)} className={field} /></L>
+          <div className="grid grid-cols-3 gap-2">
+            <L label="City"><input value={f.city} onChange={(e) => set("city", e.target.value)} className={field} /></L>
+            <L label="State"><input value={f.state} onChange={(e) => set("state", e.target.value)} className={field} /></L>
+            <L label="ZIP"><input value={f.zip} onChange={(e) => set("zip", e.target.value)} className={cn(field, "tnum")} /></L>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Business hours</h3>
+        <div className="space-y-2">
+          {hours.map((h, i) => (
+            <div key={h.day} className="grid grid-cols-[3rem_1fr_1fr] items-center gap-2">
+              <span className="text-[13px] font-medium text-n700">{h.day}</span>
+              <input value={h.open} onChange={(e) => setHour(i, "open", e.target.value)} className={field} />
+              <input value={h.close} onChange={(e) => setHour(i, "close", e.target.value)} className={field} />
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="flex items-center justify-end gap-3">
+        {err && <span className="text-[12.5px] font-medium text-err">{err}</span>}
+        {saved && <span className="text-[12.5px] font-medium text-ok">Saved</span>}
+        <button onClick={save} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Save details</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Domain ─────────────────────────── */
+export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [mode, setMode] = useState<"existing" | "buy">(w.domainProvider === "krakd" ? "buy" : "existing");
+  const [domain, setDomain] = useState("");
+  const [records, setRecords] = useState<{ type: string; host: string; value: string; note: string }[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState<{ domain: string; available: boolean; priceCents: number }[] | null>(null);
+  const badge = DOMAIN_BADGE[w.domainStatus];
+
+  const connect = async () => {
+    setErr(null); setBusy(true);
+    try { const r = await apiFetch<{ dnsRecords: typeof records }>("/website/domain", { method: "POST", body: JSON.stringify({ domain }) }); setRecords(r.dnsRecords); reload(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Could not connect the domain."); }
+    finally { setBusy(false); }
+  };
+  const verify = async () => {
+    setBusy(true);
+    try { const r = await apiFetch<{ dnsRecords: typeof records }>("/website/domain/verify", { method: "POST", body: "{}" }); setRecords(r.dnsRecords); reload(); }
+    finally { setBusy(false); }
+  };
+  const disconnect = async () => {
+    setBusy(true);
+    try { await apiFetch("/website/domain", { method: "DELETE" }); setRecords(null); reload(); }
+    finally { setBusy(false); }
+  };
+  const runSearch = async () => {
+    setErr(null); setBusy(true); setResults(null);
+    try { const r = await apiFetch<{ results: typeof results }>(`/website/domain/search?q=${encodeURIComponent(search)}`); setResults(r.results); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Search failed."); }
+    finally { setBusy(false); }
+  };
+  const buy = async (d: string, priceCents: number) => {
+    if (!confirm(`Register ${d} for ${money(priceCents)}/yr? This is billed separately from your $149/mo subscription.`)) return;
+    setBusy(true);
+    try { await apiFetch("/website/domain/purchase", { method: "POST", body: JSON.stringify({ domain: d, confirmPriceCents: priceCents }) }); setResults(null); reload(); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Purchase failed."); }
+    finally { setBusy(false); }
+  };
+
+  // currently-connected domain view
+  if (w.domain) {
+    return (
+      <div className="space-y-5">
+        <Card className="p-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <Globe className="h-5 w-5 text-n500" />
+            <div><p className="text-[15px] font-semibold text-n900">{w.domain}</p><p className="text-[12px] text-n500">{w.domainProvider === "krakd" ? "Purchased through Krakd" : "Connected (you own it)"}{w.domainRenewsAt ? ` · renews ${new Date(w.domainRenewsAt).toLocaleDateString()}` : ""}</p></div>
+            <span className={cn("ml-auto inline-flex rounded-full px-2.5 py-1 text-[11.5px] font-semibold", badge.cls)}>{badge.label}</span>
+          </div>
+
+          {(w.domainStatus === "PENDING_DNS" || w.domainStatus === "ACTION_REQUIRED") && (
+            <div className="mt-4 rounded-xl border border-n200 bg-n50 p-4">
+              <p className="text-[13px] font-semibold text-n900">Add these DNS records at your registrar</p>
+              <p className="mt-0.5 text-[12px] text-n500">Then verify — SSL is provisioned automatically once records resolve.</p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-[12.5px]">
+                  <thead><tr className="text-left text-[11px] uppercase tracking-wide text-n500"><th className="py-1.5 pr-3">Type</th><th className="py-1.5 pr-3">Host</th><th className="py-1.5 pr-3">Value</th></tr></thead>
+                  <tbody className="tnum">{(records ?? []).map((r, i) => <tr key={i} className="border-t border-n200"><td className="py-2 pr-3 font-semibold">{r.type}</td><td className="py-2 pr-3">{r.host}</td><td className="py-2 pr-3 text-n700">{r.value}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {w.domainStatus === "PROVISIONING" && <div className="mt-4 rounded-lg bg-brand-soft/40 px-3 py-2.5 text-[12.5px] text-n700">DNS verified. Provisioning your SSL certificate — this usually completes in a moment.</div>}
+          {w.domainStatus === "LIVE" && <div className="mt-4 rounded-lg bg-ok-soft px-3 py-2.5 text-[12.5px] text-ok">Your domain is live and served securely over HTTPS.</div>}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {w.domainStatus !== "LIVE" && <button disabled={busy} onClick={verify} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{w.domainStatus === "PROVISIONING" ? "Check SSL status" : "Verify DNS"}</button>}
+            <button disabled={busy} onClick={disconnect} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-n200 bg-white px-4 text-[12.5px] font-semibold text-err hover:bg-err-soft disabled:opacity-60"><Trash2 className="h-3.5 w-3.5" />Disconnect</button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // no domain yet — choose connect vs buy
+  return (
+    <div className="space-y-5">
+      <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">
+        {(["existing", "buy"] as const).map((m) => <button key={m} onClick={() => setMode(m)} className={cn("h-8 rounded-[7px] px-4 text-[12.5px] font-medium transition", mode === m ? "bg-n100 text-n900" : "text-n600 hover:text-n900")}>{m === "existing" ? "I own a domain" : "Buy through Krakd"}</button>)}
+      </div>
+
+      {mode === "existing" ? (
+        <Card className="max-w-[560px] p-5">
+          <h3 className="text-[14px] font-semibold text-n900">Connect a domain you own</h3>
+          <p className="mt-1 text-[12.5px] text-n500">Enter it, then add the DNS records we show you. SSL is automatic.</p>
+          <div className="mt-3 flex gap-2"><input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="downtownauto.com" className={field} /><button disabled={busy || !domain} onClick={connect} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Connect</button></div>
+          {err && <p className="mt-2 text-[12.5px] font-medium text-err">{err}</p>}
+        </Card>
+      ) : (
+        <Card className="max-w-[620px] p-5">
+          <h3 className="text-[14px] font-semibold text-n900">Buy a domain through Krakd</h3>
+          <p className="mt-1 text-[12.5px] text-n500">Registration is billed separately from your subscription. The price is always shown before you confirm.</p>
+          <div className="mt-3 flex gap-2"><input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && runSearch()} placeholder="downtownauto" className={field} /><button disabled={busy || !search} onClick={runSearch} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Search</button></div>
+          {err && <p className="mt-2 text-[12.5px] font-medium text-err">{err}</p>}
+          {results && (
+            <div className="mt-4 space-y-1.5">
+              {results.map((r) => (
+                <div key={r.domain} className="flex items-center gap-3 rounded-lg border border-n200 px-3 py-2.5">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-n900">{r.domain}</span>
+                  {r.available ? <><span className="tnum text-[12.5px] font-semibold text-n700">{money(r.priceCents)}/yr</span><button disabled={busy} onClick={() => buy(r.domain, r.priceCents)} className="rounded-md bg-brand px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">Buy</button></> : <span className="text-[12px] font-medium text-n400">Taken</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────── Publish (with live preview) ─────────────────────────── */
+export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [vehicles, setVehicles] = useState<SiteVehicle[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<{ items: SiteVehicle[] }>("/inventory")
+      .then((r) => setVehicles((r.items ?? []).filter((v: SiteVehicle & { status?: string }) => v.status !== "SOLD")))
+      .catch(() => setVehicles([]));
+  }, []);
+
+  const preview: SiteData = {
+    slug: w.slug, dealershipName: "Preview", template: w.template, logoUrl: w.logoUrl, primaryColor: w.primaryColor,
+    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, phone: w.phone, email: w.email, address: w.address,
+    city: w.city, state: w.state, zip: w.zip, hours: w.hours, socials: w.socials, vehicles,
+  };
+
+  const publish = async () => {
+    setErr(null); setBusy(true);
+    try { await apiFetch("/website/publish", { method: "POST", body: JSON.stringify({ status: "PUBLISHED" }) }); reload(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Could not publish."); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">
+          <button onClick={() => setDevice("desktop")} className={cn("inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[12.5px] font-medium", device === "desktop" ? "bg-n100 text-n900" : "text-n600")}><Monitor className="h-4 w-4" />Desktop</button>
+          <button onClick={() => setDevice("mobile")} className={cn("inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[12.5px] font-medium", device === "mobile" ? "bg-n100 text-n900" : "text-n600")}><Smartphone className="h-4 w-4" />Mobile</button>
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          {err && <span className="text-[12.5px] font-medium text-err">{err}</span>}
+          {w.status === "PUBLISHED"
+            ? <a href={w.publicUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover">View live site<ExternalLink className="h-3.5 w-3.5" /></a>
+            : <button onClick={publish} disabled={busy} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Publish website</button>}
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-n200 bg-n100 p-4">
+        <div className={cn("mx-auto overflow-hidden rounded-xl border border-n200 bg-white shadow-sm transition-all", device === "mobile" ? "max-w-[390px]" : "max-w-full")}>
+          <div className="max-h-[70vh] overflow-y-auto">
+            <div className="pointer-events-none origin-top">
+              <SiteView data={preview} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <p className="text-center text-[12px] text-n400">Preview reflects your saved settings and live inventory. {w.status !== "PUBLISHED" && "Publishing makes it public at your URL."}</p>
+    </div>
+  );
+}

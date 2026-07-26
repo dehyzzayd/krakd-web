@@ -59,6 +59,7 @@ model Dealership {
   conversations AiConversation[]
   metrics       DailyMetric[]
   aiSettings    AiSettings?
+  website       Website?
 
   @@index([status])
   @@map("dealerships")
@@ -531,4 +532,65 @@ model DailyMetric {
 
   @@unique([dealershipId, date])
   @@map("daily_metrics")
+}
+
+// ─────────────────────────────── Dealer Website module ───────────────────────────────
+
+enum WebsiteTemplate {
+  MODERN         // balanced homepage + inventory
+  INVENTORY_FIRST // vehicle search takes priority
+  PREMIUM        // large visuals, stronger branding
+}
+
+enum WebsiteStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum DomainStatus {
+  NOT_CONNECTED   // no domain selected
+  PENDING_DNS     // waiting for DNS records
+  PROVISIONING    // SSL + routing setup
+  LIVE            // domain is active
+  ACTION_REQUIRED // connection failed
+}
+
+model Website {
+  id           String          @id @default(uuid()) @db.Uuid
+  dealershipId String          @unique @db.Uuid
+  dealership   Dealership      @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+
+  template     WebsiteTemplate @default(MODERN)
+  status       WebsiteStatus   @default(DRAFT)
+  slug         String          @unique // public preview URL: /site/{slug}
+
+  // branding + homepage content (controlled fields — not a page builder)
+  logoUrl      String?
+  primaryColor String          @default("#2b6ba4")
+  headline     String          @default("Find your next vehicle.")
+  intro        String          @default("Browse our latest inventory — updated daily.")
+  ctaLabel     String          @default("Browse inventory")
+
+  // dealership contact shown on the site
+  phone        String?
+  email        String?
+  address      String?
+  city         String?
+  state        String?
+  zip          String?
+  hours        Json            @default("[]")  // [{ day, open, close }]
+  socials      Json            @default("{}")   // { facebook, instagram, ... }
+
+  // domain
+  domain         String?
+  domainProvider String?       // "existing" | "krakd"
+  domainStatus   DomainStatus  @default(NOT_CONNECTED)
+  domainPriceCents Int?        // shown/confirmed price when purchased through Krakd
+  domainRenewsAt DateTime?
+
+  publishedAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("websites")
 }

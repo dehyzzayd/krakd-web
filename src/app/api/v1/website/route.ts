@@ -1,0 +1,58 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/server/auth";
+import { json, route, HttpError } from "@/lib/server/http";
+import { ensureWebsite, setupProgress } from "@/lib/server/website";
+import type { Prisma } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function publicUrl(req: NextRequest, slug: string, domain: string | null, status: string) {
+  if (domain && status === "LIVE") return `https://${domain}`;
+  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  const host = req.headers.get("host") ?? req.nextUrl.host;
+  return `${proto}://${host}/site/${slug}`;
+}
+
+/* GET /api/v1/website → the dealer's website config, live count + setup progress */
+export const GET = route(async (req: NextRequest) => {
+  const { dealershipId } = await requireAuth(req);
+  const w = await ensureWebsite(dealershipId);
+  const liveVehicles = await prisma.vehicle.count({ where: { dealershipId, status: { not: "SOLD" } } });
+  return json({ ...w, liveVehicles, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });
+});
+
+const patchSchema = z.object({
+  template: z.enum(["MODERN", "INVENTORY_FIRST", "PREMIUM"]).optional(),
+  logoUrl: z.string().optional(),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #2b6ba4").optional(),
+  headline: z.string().max(120).optional(),
+  intro: z.string().max(400).optional(),
+  ctaLabel: z.string().max(40).optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  hours: z.array(z.object({ day: z.string(), open: z.string(), close: z.string() })).optional(),
+  socials: z.record(z.string(), z.string()).optional(),
+});
+
+/* PATCH /api/v1/website → update template, branding and homepage content */
+export const PATCH = route(async (req: NextRequest) => {
+  const { dealershipId } = await requireAuth(req);
+  await ensureWebsite(dealershipId);
+  const parsed = patchSchema.safeParse(await req.json());
+  if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
+  const { hours, socials, ...rest } = parsed.data;
+  const data: Prisma.WebsiteUpdateInput = {
+    ...rest,
+    ...(hours ? { hours: hours as unknown as Prisma.InputJsonValue } : {}),
+    ...(socials ? { socials: socials as unknown as Prisma.InputJsonValue } : {}),
+  };
+  const w = await prisma.website.update({ where: { dealershipId }, data });
+  return json({ ...w, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });
+});
