@@ -1,8 +1,9 @@
 // Client for the Krakd platform API (krakd-api / NestJS).
 // Base URL is env-driven so the same build points at localhost or the deployed API.
 
+// Same-origin by default — the API lives in this Next app under /api/v1.
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:4000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "/api/v1";
 
 const TOKEN_KEY = "krakd_token";
 const REFRESH_KEY = "krakd_refresh";

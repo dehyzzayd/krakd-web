@@ -1,0 +1,534 @@
+// Krakd platform data model.
+// Design rules:
+//  - Every tenant-owned row carries `dealershipId` (multi-tenant isolation).
+//  - Money is stored in integer cents; never floats.
+//  - Enums encode lifecycle state machines explicitly.
+//  - Timestamps are UTC; per-dealer localization happens at the edge.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"] // native (local) + Vercel/Render Linux runtime
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // runtime — point at Neon's POOLED host at scale
+}
+
+// ─────────────────────────────── Tenant & identity ───────────────────────────────
+
+enum DealershipStatus {
+  PENDING      // account created, subscription not yet active
+  ACTIVE       // active subscription, full dashboard access
+  PAST_DUE     // payment failed, grace period
+  SUSPENDED    // access revoked
+}
+
+enum InventoryType {
+  INDEPENDENT
+  FRANCHISE
+  GROUP
+}
+
+model Dealership {
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String
+  legalName     String?
+  inventoryType InventoryType    @default(INDEPENDENT)
+  status        DealershipStatus @default(PENDING)
+  timezone      String           @default("America/Chicago")
+  phone         String?
+  email         String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String           @default("US")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  users         User[]
+  subscription  Subscription?
+  payments      Payment[]
+  vehicles      Vehicle[]
+  campaigns     Campaign[]
+  leads         Lead[]
+  activities    LeadActivity[]
+  appointments  Appointment[]
+  conversations AiConversation[]
+  metrics       DailyMetric[]
+  aiSettings    AiSettings?
+
+  @@index([status])
+  @@map("dealerships")
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  STAFF
+  PLATFORM_ADMIN // Krakd staff — cross-tenant oversight
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  dealershipId String     @db.Uuid
+  dealership   Dealership @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  email        String
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole   @default(OWNER)
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  refreshTokens     RefreshToken[]
+  assignedLeads     Lead[]         @relation("LeadAssignee")
+  authoredActivity  LeadActivity[] @relation("ActivityActor")
+  ownedAppointments Appointment[]  @relation("ApptAssignee")
+
+  @@unique([email]) // email is a global login identifier
+  @@index([dealershipId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────── Billing ───────────────────────────────
+
+enum SubscriptionStatus {
+  INACTIVE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  dealershipId         String             @unique @db.Uuid
+  dealership           Dealership         @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  status               SubscriptionStatus @default(INACTIVE)
+  priceCents           Int                @default(14900) // $149/mo
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+enum PaymentType {
+  SUBSCRIPTION
+  CAMPAIGN_BUDGET
+  MANAGEMENT_FEE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                    String        @id @default(uuid()) @db.Uuid
+  dealershipId          String        @db.Uuid
+  dealership            Dealership    @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  type                  PaymentType
+  status                PaymentStatus @default(PENDING)
+  amountCents           Int
+  currency              String        @default("usd")
+  description           String?
+  stripePaymentIntentId String?
+  campaignId            String?       @db.Uuid
+  createdAt             DateTime      @default(now())
+
+  @@index([dealershipId, createdAt])
+  @@map("payments")
+}
+
+// ─────────────────────────────── Inventory ───────────────────────────────
+
+enum VehicleStatus {
+  AVAILABLE
+  RECON
+  RESERVED
+  WHOLESALE
+  SOLD
+}
+
+model Vehicle {
+  id            String        @id @default(uuid()) @db.Uuid
+  dealershipId  String        @db.Uuid
+  dealership    Dealership    @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  vin           String
+  stockNumber   String
+  year          Int
+  make          String
+  model         String
+  trim          String?
+  bodyType      String?
+  mileage       Int           @default(0)
+  status        VehicleStatus @default(RECON)
+  priceCents    Int           @default(0)
+  costCents     Int           @default(0)
+  reconCents    Int           @default(0)
+  packCents     Int           @default(0)
+  exteriorColor String?
+  interiorColor String?
+  drivetrain    String?
+  fuel          String?
+  transmission  String?
+  engine        String?
+  photoUrls     Json          @default("[]")
+  // vAuto-style market signals (cents)
+  marketLowCents  Int?
+  marketAvgCents  Int?
+  marketHighCents Int?
+  vdpViews      Int           @default(0)
+  listedAt      DateTime?
+  soldAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  leads         Lead[]
+  appointments  Appointment[]
+
+  @@unique([dealershipId, stockNumber])
+  @@index([dealershipId, status])
+  @@index([vin])
+  @@map("vehicles")
+}
+
+// ─────────────────────────────── Advertising ───────────────────────────────
+
+enum CampaignChannel {
+  FACEBOOK
+  INSTAGRAM
+  GOOGLE
+}
+
+enum CampaignObjective {
+  LEADS
+  CALLS
+  TRAFFIC
+  MESSAGES
+}
+
+enum CampaignFrequency {
+  ONE_TIME
+  WEEKLY
+  MONTHLY
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  PAUSED
+  ENDED
+  REJECTED
+}
+
+model Campaign {
+  id             String            @id @default(uuid()) @db.Uuid
+  dealershipId   String            @db.Uuid
+  dealership     Dealership        @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  name           String
+  channel        CampaignChannel
+  objective      CampaignObjective @default(LEADS)
+  status         CampaignStatus    @default(DRAFT)
+  frequency      CampaignFrequency @default(MONTHLY)
+  // budget split — client picks budget, Krakd deducts 10% fee, 90% is media spend
+  budgetCents    Int               @default(0)
+  feeCents       Int               @default(0)
+  netSpendCents  Int               @default(0)
+  // targeting snapshot
+  radiusMiles    Int               @default(25)
+  ageMin         Int               @default(18)
+  ageMax         Int               @default(65)
+  gender         String            @default("all")
+  smartTargeting Boolean           @default(true)
+  promotedVehicleIds Json          @default("[]")
+  startDate      DateTime?
+  endDate        DateTime?
+  // rolled-up performance
+  impressions    Int               @default(0)
+  clicks         Int               @default(0)
+  leadCount      Int               @default(0)
+  spentCents     Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  leads Lead[]
+
+  @@index([dealershipId, status])
+  @@map("campaigns")
+}
+
+// ─────────────────────────────── CRM ───────────────────────────────
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  APPOINTMENT
+  SOLD
+  LOST
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum OwnerType {
+  AI
+  HUMAN
+  UNASSIGNED
+}
+
+model Lead {
+  id            String          @id @default(uuid()) @db.Uuid
+  dealershipId  String          @db.Uuid
+  dealership    Dealership      @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  campaignId    String?         @db.Uuid
+  campaign      Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  vehicleId     String?         @db.Uuid
+  vehicle       Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  firstName     String
+  lastName      String?
+  emails        Json            @default("[]") // [{ value, type }]
+  phones        Json            @default("[]")
+  source        String?
+  status        LeadStatus      @default(NEW)
+  temperature   LeadTemperature @default(WARM)
+  score         Int             @default(50)
+  ownerType     OwnerType       @default(AI)
+  assignedToId  String?         @db.Uuid
+  assignedTo    User?           @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  hasTradeIn    Boolean         @default(false)
+  financing     Boolean         @default(false)
+  lastActivityAt DateTime       @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  activities    LeadActivity[]
+  appointments  Appointment[]
+  conversations AiConversation[]
+
+  @@index([dealershipId, status])
+  @@index([dealershipId, lastActivityAt])
+  @@map("leads")
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  SMS
+  EMAIL
+  STATUS_CHANGE
+  AI_MESSAGE
+  APPOINTMENT_SET
+  ASSIGNMENT
+}
+
+enum ActorType {
+  AI
+  USER
+  SYSTEM
+}
+
+model LeadActivity {
+  id           String       @id @default(uuid()) @db.Uuid
+  dealershipId String       @db.Uuid
+  dealership   Dealership   @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  leadId       String       @db.Uuid
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type         ActivityType
+  actorType    ActorType    @default(USER)
+  actorUserId  String?      @db.Uuid
+  actorUser    User?        @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  content      String?
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+
+  @@index([leadId, createdAt])
+  @@map("lead_activities")
+}
+
+enum AppointmentType {
+  TEST_DRIVE
+  DELIVERY
+  PHONE
+  SERVICE
+  TRADE_APPRAISAL
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+model Appointment {
+  id            String            @id @default(uuid()) @db.Uuid
+  dealershipId  String            @db.Uuid
+  dealership    Dealership        @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  leadId        String            @db.Uuid
+  lead          Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  vehicleId     String?           @db.Uuid
+  vehicle       Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  type          AppointmentType   @default(TEST_DRIVE)
+  status        AppointmentStatus @default(SCHEDULED)
+  scheduledStart DateTime
+  scheduledEnd  DateTime
+  assignedToId  String?           @db.Uuid
+  assignedTo    User?             @relation("ApptAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  location      String?
+  notes         String?
+  createdByAi   Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([dealershipId, scheduledStart])
+  @@map("appointments")
+}
+
+// ─────────────────────────────── Krakd AI ───────────────────────────────
+
+enum AiChannel {
+  WEB
+  SMS
+  FBMP
+  EMAIL
+  VOICE
+}
+
+enum AiConversationStatus {
+  ACTIVE
+  HANDED_OFF
+  CLOSED
+}
+
+model AiConversation {
+  id           String               @id @default(uuid()) @db.Uuid
+  dealershipId String               @db.Uuid
+  dealership   Dealership           @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  leadId       String?              @db.Uuid
+  lead         Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  channel      AiChannel            @default(WEB)
+  status       AiConversationStatus @default(ACTIVE)
+  externalRef  String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  messages AiMessage[]
+
+  @@index([dealershipId, status])
+  @@map("ai_conversations")
+}
+
+enum AiRole {
+  BUYER
+  AI
+  HUMAN
+}
+
+model AiMessage {
+  id             String         @id @default(uuid()) @db.Uuid
+  conversationId String         @db.Uuid
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           AiRole
+  content        String
+  toolCalls      Json?          // structured side-effects the agent invoked
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("ai_messages")
+}
+
+enum NegotiationPosture {
+  FLEXIBLE
+  MOSTLY_FIRM
+  NO_NEGOTIATION
+}
+
+enum BookingMode {
+  DISABLED
+  INTERNAL
+  EXTERNAL
+}
+
+model AiSettings {
+  id            String             @id @default(uuid()) @db.Uuid
+  dealershipId  String             @unique @db.Uuid
+  dealership    Dealership         @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  persona       String             @default("Warm & professional")
+  negotiation   NegotiationPosture @default(MOSTLY_FIRM)
+  bookingMode   BookingMode        @default(INTERNAL)
+  tradeInEnabled Boolean           @default(true)
+  financeEnabled Boolean           @default(true)
+  afterHours    Boolean            @default(true)
+  welcomeMessage String            @default("Hey! Looking for something specific? I can check what's on the lot and set up a time to see it.")
+  houseRules    String?
+  inventoryUrl  String?
+  creditAppUrl  String?
+  appointmentUrl String?
+  testDriveUrl  String?
+  aiPhone       String?            // Krakd-provisioned line
+  forwardPhone  String?
+  languages     Json               @default("[\"English\"]")
+  channels      Json               @default("{\"website\":true,\"fbmp\":true,\"sms\":true,\"email\":false}")
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@map("ai_settings")
+}
+
+// ─────────────────────────────── Analytics ───────────────────────────────
+
+model DailyMetric {
+  id             String     @id @default(uuid()) @db.Uuid
+  dealershipId   String     @db.Uuid
+  dealership     Dealership @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  date           DateTime   @db.Date
+  newLeads       Int        @default(0)
+  appointments   Int        @default(0)
+  vehiclesSold   Int        @default(0)
+  adSpendCents   Int        @default(0)
+  grossCents     Int        @default(0)
+  aiConversations Int       @default(0)
+  aiLeadsCaptured Int       @default(0)
+
+  @@unique([dealershipId, date])
+  @@map("daily_metrics")
+}
