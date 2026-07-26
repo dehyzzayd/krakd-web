@@ -2,11 +2,49 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
-import { json, route } from "@/lib/server/http";
+import { json, route, HttpError } from "@/lib/server/http";
 import type { Prisma } from "@prisma/client";
+import { sendLeadNotification } from "@/lib/server/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const createSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  source: z.string().optional(),
+  vehicle: z.string().optional(),
+  temperature: z.enum(["HOT", "WARM", "COLD"]).optional(),
+});
+
+/* POST /api/v1/leads → add a lead to the current dealer */
+export const POST = route(async (req: NextRequest) => {
+  const { dealershipId } = await requireAuth(req);
+  const parsed = createSchema.safeParse(await req.json());
+  if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
+  const d = parsed.data;
+
+  const lead = await prisma.lead.create({
+    data: {
+      dealershipId,
+      firstName: d.firstName,
+      lastName: d.lastName,
+      emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
+      phones: (d.phone ? [{ value: d.phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue,
+      source: d.source,
+      temperature: d.temperature ?? "WARM",
+    },
+  });
+
+  // notify the dealer's owner (best-effort)
+  const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
+  const ownerEmail = dealer?.users[0]?.email;
+  if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: d.source ?? "", vehicle: d.vehicle ?? "", contact: d.phone ?? d.email ?? "", leadId: lead.id });
+
+  return json({ id: lead.id }, 201);
+});
 
 const ago = (d: Date) => {
   const s = Math.floor((Date.now() - d.getTime()) / 1000);

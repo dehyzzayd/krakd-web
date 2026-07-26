@@ -10,6 +10,7 @@ export function useApi<T>(path: string) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     if (!getToken()) { router.replace("/login"); return; }
@@ -24,7 +25,7 @@ export function useApi<T>(path: string) {
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [path, router]);
+  }, [path, router, nonce]);
 
-  return { data, loading, error };
+  return { data, loading, error, reload: () => setNonce((n) => n + 1) };
 }

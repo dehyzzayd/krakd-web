@@ -37,6 +37,25 @@ const shell = (title: string, body: string) => `<!doctype html><html><body style
 <span style="font-size:20px;font-weight:800;color:#0d1117">Krakd<span style="color:#2b6ba4">.</span></span>
 <h1 style="margin:14px 0 8px;font-size:20px">${title}</h1>${body}</td></tr></table></td></tr></table></body></html>`;
 
+export async function sendLeadNotification(p: { to: string; dealershipName: string; leadName: string; source: string; vehicle: string; contact: string; leadId: string }) {
+  const leadUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/dashboard/leads/${p.leadId}`;
+  await send(
+    p.to,
+    `🚗 New lead: ${p.leadName}${p.vehicle ? ` — ${p.vehicle}` : ""}`,
+    shell(
+      "You have a new lead.",
+      `<p style="font-size:14px;line-height:1.6;color:#374151">A new lead just landed for <b>${p.dealershipName}</b>. Krakd AI is already following up.</p>
+       <table width="100%" style="margin:14px 0;font-size:13px">
+         <tr><td style="color:#6b7280;padding:4px 0">Name</td><td style="text-align:right;font-weight:600;padding:4px 0">${p.leadName}</td></tr>
+         <tr><td style="color:#6b7280;padding:4px 0">Interested in</td><td style="text-align:right;font-weight:600;padding:4px 0">${p.vehicle || "—"}</td></tr>
+         <tr><td style="color:#6b7280;padding:4px 0">Source</td><td style="text-align:right;font-weight:600;padding:4px 0">${p.source || "—"}</td></tr>
+         <tr><td style="color:#6b7280;padding:4px 0">Contact</td><td style="text-align:right;font-weight:600;padding:4px 0">${p.contact || "—"}</td></tr>
+       </table>
+       <p style="margin:16px 0"><a href="${leadUrl}" style="background:#2b6ba4;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px">View lead →</a></p>`,
+    ),
+  );
+}
+
 export async function sendPasswordResetEmail(p: { to: string; firstName: string; token: string }) {
   const resetUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/reset?token=${encodeURIComponent(p.token)}`;
   await send(

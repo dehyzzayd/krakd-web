@@ -10,6 +10,7 @@ import {
 import { Topbar } from "@/components/app/Topbar";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
+import { AddLeadSheet } from "@/components/app/AddLeadSheet";
 
 type Row = {
   id: string; name: string; phone: string; email: string; source: string; vehicle: string;
@@ -61,9 +62,10 @@ function ActionsMenu({ r }: { r: Row }) {
 
 export default function LeadsPage() {
   const router = useRouter();
-  const { data, loading } = useApi<LeadsData>("/leads");
+  const { data, loading, reload } = useApi<LeadsData>("/leads");
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"All" | "Active" | "Unassigned">("All");
+  const [adding, setAdding] = useState(false);
 
   const rows = data?.items ?? [];
   const s = data?.stats;
@@ -90,7 +92,7 @@ export default function LeadsPage() {
       <div className="w-full px-6 py-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div><h1 className="text-[20px] font-bold text-n900">Leads</h1><p className="mt-0.5 text-[12px] text-n500">Real-time lead management · {s?.active ?? 0} active</p></div>
-          <button className="btn-brand inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[13px] font-semibold transition"><Plus className="h-4 w-4" />Add a Lead</button>
+          <button onClick={() => setAdding(true)} className="btn-brand inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[13px] font-semibold transition"><Plus className="h-4 w-4" />Add a Lead</button>
         </div>
 
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
@@ -153,6 +155,7 @@ export default function LeadsPage() {
           </div>
         </div>
       </div>
+      {adding && <AddLeadSheet open onClose={() => setAdding(false)} onCreated={reload} />}
     </>
   );
 }
