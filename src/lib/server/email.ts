@@ -51,16 +51,78 @@ export async function sendPasswordResetEmail(p: { to: string; firstName: string;
   );
 }
 
-export async function sendWelcomeEmail(p: { to: string; firstName: string; dealershipName: string }) {
-  const loginUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/dashboard`;
-  await send(
-    p.to,
-    `Welcome to Krakd, ${p.firstName} 🎉`,
-    shell(
-      "Your dealership is live.",
-      `<p style="font-size:14px;line-height:1.6;color:#374151">Hey ${p.firstName}, <b>${p.dealershipName}</b> is set up on Krakd — inventory, CRM, marketing and Krakd AI, all in one place.</p>
-       <p style="margin:16px 0;padding:12px 14px;background:#f6f8fb;border:1px solid #e4e7ec;border-radius:10px;font-size:13px">Plan: <b>Krakd Platform · $149/mo</b> · Status: <b>Active</b> (BETAACCESS)</p>
-       <p style="margin:18px 0"><a href="${loginUrl}" style="background:#2b6ba4;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px">Open your dashboard →</a></p>`,
-    ),
-  );
+export async function sendWelcomeEmail(p: {
+  to: string; firstName: string; lastName?: string; dealershipName: string;
+  customerId: string; email: string; priceLabel?: string; promo?: string;
+}) {
+  const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
+  const dash = `${base}/dashboard`;
+  const nextBilling = new Date(Date.now() + 14 * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const ink = "#0a0a0a", accent = "#ff5a16", muted = "#8a8a8a", line = "#ececec";
+
+  const row = (name: string, sub: string, price: string) => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid ${line}">
+        <div style="font-size:14px;font-weight:600;color:${ink}">${name}</div>
+        <div style="font-size:12px;color:${muted};margin-top:2px">${sub}</div>
+      </td>
+      <td style="padding:12px 0;border-bottom:1px solid ${line};text-align:right;font-size:14px;font-weight:600;color:${ink};white-space:nowrap">${price}</td>
+    </tr>`;
+
+  const meta = (k: string, v: string) => `
+    <tr><td style="padding:5px 0;font-size:12.5px;color:${muted}">${k}</td>
+    <td style="padding:5px 0;text-align:right;font-size:12.5px;font-weight:600;color:${ink}">${v}</td></tr>`;
+
+  const html = `<!doctype html><html><body style="margin:0;background:#ebebeb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${ink}">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+  <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px">
+    <tr><td style="padding:0 4px 16px">
+      <span style="font-size:22px;font-weight:800;letter-spacing:-0.03em;color:${ink}">Krakd<span style="color:${accent}">.</span></span>
+    </td></tr>
+
+    <!-- hero card -->
+    <tr><td style="background:${ink};border-radius:20px;padding:28px 28px 26px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${accent}">Welcome aboard</div>
+      <h1 style="margin:10px 0 6px;font-size:26px;line-height:1.1;letter-spacing:-0.02em;color:#fff">Your dealership is live, ${p.firstName}.</h1>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:rgba(255,255,255,0.7)"><b style="color:#fff">${p.dealershipName}</b> is set up — inventory, CRM, marketing and Krakd AI, all on one screen.</p>
+      <a href="${dash}" style="display:inline-block;margin-top:20px;background:${accent};color:#3a1500;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px">Open your dashboard →</a>
+    </td></tr>
+
+    <tr><td style="height:14px"></td></tr>
+
+    <!-- registration summary -->
+    <tr><td style="background:#fff;border-radius:20px;padding:24px 28px">
+      <div style="font-size:13px;font-weight:700;letter-spacing:0.02em;color:${ink}">Registration summary</div>
+      <table width="100%" style="margin-top:12px">
+        ${meta("Contact", `${p.firstName} ${p.lastName ?? ""}`.trim())}
+        ${meta("Dealership", p.dealershipName)}
+        ${meta("Customer ID", p.customerId)}
+        ${meta("Email", p.email)}
+        ${meta("Promo code", p.promo ?? "—")}
+        ${meta("Next billing date", nextBilling)}
+      </table>
+
+      <div style="margin:20px 0 8px;font-size:13px;font-weight:700;color:${ink}">Your plan</div>
+      <table width="100%">
+        ${row("Krakd Platform + Krakd AI", "AI lead handling, CRM, inventory & reporting", p.priceLabel ?? "$149.00/mo")}
+        ${row("Managed digital ads", "Optional — you fund the budget, Krakd takes 10%", "Pay as you go")}
+      </table>
+
+      <table width="100%" style="margin-top:14px">
+        <tr><td style="font-size:13px;color:${muted}">Promo <b style="color:${ink}">${p.promo ?? "—"}</b></td>
+        <td style="text-align:right;font-size:13px;font-weight:600;color:#1e9e5a">applied</td></tr>
+        <tr><td style="padding-top:6px;font-size:15px;font-weight:700;color:${ink}">Due today</td>
+        <td style="padding-top:6px;text-align:right;font-size:17px;font-weight:800;color:${accent}">$0.00</td></tr>
+      </table>
+      <p style="margin:10px 0 0;font-size:12px;color:${muted}">Beta access — no card charged. Card billing begins later; you'll get notice first. Cancel anytime.</p>
+    </td></tr>
+
+    <tr><td style="padding:20px 6px 0;text-align:center;font-size:12px;color:${muted}">
+      Krakd — the automotive operating platform.<br/>
+      <span style="color:#b8b8b8">Privacy · Terms · Help center</span>
+    </td></tr>
+  </table>
+</td></tr></table></body></html>`;
+
+  await send(p.to, `Welcome to Krakd, ${p.firstName} — ${p.dealershipName} is live 🎉`, html);
 }

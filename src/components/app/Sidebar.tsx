@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch, getToken } from "@/lib/api";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
@@ -50,6 +51,13 @@ export function Sidebar() {
   const pathname = usePathname();
   const { collapsed } = useSidebar();
   const [menu, setMenu] = useState(false);
+  const [dealer, setDealer] = useState<string | null>(null);
+  useEffect(() => {
+    if (!getToken()) return;
+    apiFetch<{ dealershipName: string }>("/overview").then((d) => setDealer(d.dealershipName)).catch(() => {});
+  }, []);
+  const dealerName = dealer ?? "Your dealership";
+  const dealerInitials = dealerName.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const [open, setOpen] = useState<Record<string, boolean>>({
     crm: pathname.startsWith("/dashboard/leads") || pathname.startsWith("/dashboard/crm") || pathname.startsWith("/dashboard/inbox") || pathname.startsWith("/dashboard/appointments"),
     mk: pathname.startsWith("/dashboard/marketing"),
@@ -115,9 +123,9 @@ export function Sidebar() {
             <div className="my-1 h-px bg-n200" /><Link href="/login" className="block rounded-md px-3 py-2 text-[13px] font-medium text-err transition hover:bg-err-soft">Log out</Link>
           </div>
         </>)}
-        <button onClick={() => setMenu((v) => !v)} title={collapsed ? "Downtown Auto" : undefined} className={cn("flex w-full items-center rounded-lg border transition", collapsed ? "justify-center border-transparent p-1 hover:bg-n100" : "gap-2.5 px-3 py-2.5", !collapsed && (menu ? "border-n300 bg-white sh-card" : "border-n200 bg-white hover:bg-n100"))}>
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-ink text-[13px] font-semibold text-white">DA</span>
-          {!collapsed && (<><span className="min-w-0 flex-1 text-left"><span className="block truncate text-[13.5px] font-semibold text-n900">Downtown Auto</span><span className="block text-[11.5px] text-n500">Independent lot</span></span><IconChevron className={cn("h-4 w-4 text-n400 transition", menu && "rotate-180")} /></>)}
+        <button onClick={() => setMenu((v) => !v)} title={collapsed ? dealerName : undefined} className={cn("flex w-full items-center rounded-lg border transition", collapsed ? "justify-center border-transparent p-1 hover:bg-n100" : "gap-2.5 px-3 py-2.5", !collapsed && (menu ? "border-n300 bg-white sh-card" : "border-n200 bg-white hover:bg-n100"))}>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-ink text-[13px] font-semibold text-white">{dealerInitials || "K"}</span>
+          {!collapsed && (<><span className="min-w-0 flex-1 text-left"><span className="block truncate text-[13.5px] font-semibold text-n900">{dealerName}</span><span className="block text-[11.5px] text-n500">Dealership</span></span><IconChevron className={cn("h-4 w-4 text-n400 transition", menu && "rotate-180")} /></>)}
         </button>
       </div>
     </aside>

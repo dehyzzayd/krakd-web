@@ -44,6 +44,15 @@ export const POST = route(async (req: NextRequest) => {
   });
 
   const tokens = await issueTokens({ userId: user.id, dealershipId: user.dealershipId, role: user.role, email: user.email });
-  await sendWelcomeEmail({ to: email, firstName: dto.firstName, dealershipName: dto.dealershipName });
+  await sendWelcomeEmail({
+    to: email,
+    firstName: dto.firstName,
+    lastName: dto.lastName,
+    dealershipName: dto.dealershipName,
+    email,
+    customerId: `KRK-${user.id.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+    priceLabel: "$149.00/mo",
+    promo: "BETAACCESS",
+  });
   return json(tokens);
 });
