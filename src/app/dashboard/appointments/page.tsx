@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { EditAppointmentSheet } from "@/components/app/EditAppointmentSheet";
 import { useApi } from "@/lib/useApi";
 
-type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; status: string; time: string; date: number; day: string; owner: string };
+type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; status: string; time: string; date: number; month: number; year: number; day: string; owner: string };
 type ApiAppt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; statusKey: string; owner: string; start: string };
 
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
@@ -17,9 +17,8 @@ const ST_TONE: Record<string, Tone> = { confirmed: "ok", scheduled: "brand", com
 const ST_LABEL: Record<string, string> = { confirmed: "Confirmed", scheduled: "Scheduled", completed: "Completed", no_show: "No-show", canceled: "Canceled" };
 const TYPE_TONE: Record<string, string> = { "Test drive": "bg-brand", Delivery: "bg-ok", "Phone consultation": "bg-warn", Service: "bg-n500", "Trade appraisal": "bg-n500" };
 
-const OFFSET = 6;
-const TODAY = 25;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function CalendarPage() {
   const { data, reload } = useApi<{ items: ApiAppt[] }>("/appointments");
@@ -28,27 +27,39 @@ export default function CalendarPage() {
     return {
       id: a.id, leadId: a.leadId, name: a.name, vehicle: a.vehicle, type: a.type, status: a.statusKey, owner: a.owner,
       time: st.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-      date: st.getDate(),
+      date: st.getDate(), month: st.getMonth(), year: st.getFullYear(),
       day: st.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     };
   }), [data]);
-  const eventsOn = (d: number) => appts.filter((a) => a.date === d).sort((a, b) => a.time.localeCompare(b.time));
+
+  const now = useMemo(() => new Date(), []);
+  const [anchor, setAnchor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const isCurrentMonth = anchor.y === now.getFullYear() && anchor.m === now.getMonth();
+  const todayNum = now.getDate();
+  const firstWeekday = new Date(anchor.y, anchor.m, 1).getDay();
+  const daysInMonth = new Date(anchor.y, anchor.m + 1, 0).getDate();
+  const monthLabel = `${MONTHS[anchor.m]} ${anchor.y}`;
+  const shiftMonth = (dir: number) => setAnchor((a) => { const d = new Date(a.y, a.m + dir, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+
+  const eventsOn = (d: number) => appts.filter((a) => a.date === d && a.month === anchor.m && a.year === anchor.y).sort((a, b) => a.time.localeCompare(b.time));
 
   const [view, setView] = useState<"month" | "week" | "day">("month");
-  const [day, setDay] = useState(TODAY);
+  const [day, setDay] = useState(() => new Date().getDate());
   const [apptEdit, setApptEdit] = useState<{ appt: null } | null>(null);
   const [sel, setSel] = useState<Appt | null>(null);
-  const cells = [...Array(OFFSET).fill(null), ...Array.from({ length: 31 }, (_, i) => i + 1)];
-  const week = [23, 24, 25, 26, 27, 28, 29];
+  const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const weekStart = day - new Date(anchor.y, anchor.m, day).getDay();
+  const week = Array.from({ length: 7 }, (_, i) => weekStart + i); // day-numbers; out-of-range shown blank
+  const isToday = (d: number) => isCurrentMonth && d === todayNum;
 
   return (
     <>
       <Topbar title="Calendar" />
       <div className="w-full px-6 py-5">
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1"><button className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">‹</button><button className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">›</button></div>
-          <h2 className="text-[17px] font-semibold text-n900">{view === "day" ? `July ${day}, 2026` : "July 2026"}</h2>
-          <button className="h-8 rounded-lg border border-[#e4e7ec] bg-white px-3 text-[12.5px] font-medium text-n700 hover:bg-n100" onClick={() => { setView("day"); setDay(TODAY); }}>Today</button>
+          <div className="flex items-center gap-1"><button onClick={() => shiftMonth(-1)} className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">‹</button><button onClick={() => shiftMonth(1)} className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">›</button></div>
+          <h2 className="text-[17px] font-semibold text-n900">{view === "day" ? `${MONTHS[anchor.m]} ${day}, ${anchor.y}` : monthLabel}</h2>
+          <button className="h-8 rounded-lg border border-[#e4e7ec] bg-white px-3 text-[12.5px] font-medium text-n700 hover:bg-n100" onClick={() => { const d = new Date(); setAnchor({ y: d.getFullYear(), m: d.getMonth() }); setView("day"); setDay(d.getDate()); }}>Today</button>
           <div className="ml-auto flex items-center gap-2">
             <div className="flex items-center rounded-lg border border-[#e4e7ec] bg-white p-0.5">
               {(["month", "week", "day"] as const).map((m) => <button key={m} onClick={() => setView(m)} className={cn("h-8 rounded-[7px] px-3 text-[12.5px] font-medium capitalize transition", view === m ? "bg-n100 text-n900" : "text-n600 hover:text-n900")}>{m}</button>)}
@@ -65,7 +76,7 @@ export default function CalendarPage() {
               {cells.map((d, i) => (
                 <div key={i} className={cn("min-h-[132px] border-b border-r border-[#e4e7ec] p-2 [&:nth-child(7n)]:border-r-0", d === null && "bg-n50/60")}>
                   {d && (<>
-                    <button onClick={() => { setView("day"); setDay(d); }} className={cn("mb-1.5 grid h-7 w-7 place-items-center rounded-full text-[12.5px]", d === TODAY ? "bg-brand font-semibold text-white" : "text-n600 hover:bg-n100")}>{d}</button>
+                    <button onClick={() => { setView("day"); setDay(d); }} className={cn("mb-1.5 grid h-7 w-7 place-items-center rounded-full text-[12.5px]", isToday(d) ? "bg-brand font-semibold text-white" : "text-n600 hover:bg-n100")}>{d}</button>
                     <div className="space-y-1">
                       {eventsOn(d).slice(0, 3).map((a) => (
                         <button key={a.id} onClick={() => setSel(a)} className="flex w-full items-center gap-1.5 rounded-md bg-n50 px-1.5 py-1 text-left text-[11px] transition hover:bg-n100">
@@ -84,9 +95,11 @@ export default function CalendarPage() {
         {/* WEEK */}
         {view === "week" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
-            {week.map((d) => (
-              <div key={d} className={cn("min-h-[420px] rounded-xl border bg-white p-2.5 sh-card", d === TODAY ? "border-brand" : "border-[#e4e7ec]")}>
-                <div className="mb-2 flex items-center justify-between px-1"><span className="text-[11px] font-medium uppercase text-n500">{WEEKDAYS[(OFFSET + d - 1) % 7]}</span><span className={cn("tnum grid h-6 w-6 place-items-center rounded-full text-[12px] font-semibold", d === TODAY ? "bg-brand text-white" : "text-n800")}>{d}</span></div>
+            {week.map((d, i) => {
+              const inMonth = d >= 1 && d <= daysInMonth;
+              return (
+              <div key={i} className={cn("min-h-[420px] rounded-xl border bg-white p-2.5 sh-card", inMonth && isToday(d) ? "border-brand" : "border-[#e4e7ec]", !inMonth && "bg-n50/60")}>
+                <div className="mb-2 flex items-center justify-between px-1"><span className="text-[11px] font-medium uppercase text-n500">{WEEKDAYS[i]}</span>{inMonth && <span className={cn("tnum grid h-6 w-6 place-items-center rounded-full text-[12px] font-semibold", isToday(d) ? "bg-brand text-white" : "text-n800")}>{d}</span>}</div>
                 <div className="space-y-1.5">
                   {eventsOn(d).map((a) => (
                     <button key={a.id} onClick={() => setSel(a)} className="block w-full rounded-lg border border-[#e4e7ec] p-2 text-left transition hover:bg-n50">
@@ -96,14 +109,15 @@ export default function CalendarPage() {
                   {eventsOn(d).length === 0 && <p className="py-2 text-center text-[11px] text-n300">—</p>}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* DAY */}
         {view === "day" && (
           <div className="mx-auto max-w-[760px]">
-            <div className="mb-3 flex items-center gap-2"><button onClick={() => setDay((d) => Math.max(1, d - 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4e7ec] bg-white text-n500 hover:bg-n100">‹</button><p className="text-[14px] font-semibold text-n900">{WEEKDAYS[(OFFSET + day - 1) % 7]}, July {day}</p><button onClick={() => setDay((d) => Math.min(31, d + 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4e7ec] bg-white text-n500 hover:bg-n100">›</button></div>
+            <div className="mb-3 flex items-center gap-2"><button onClick={() => setDay((d) => Math.max(1, d - 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4e7ec] bg-white text-n500 hover:bg-n100">‹</button><p className="text-[14px] font-semibold text-n900">{WEEKDAYS[new Date(anchor.y, anchor.m, day).getDay()]}, {MONTHS[anchor.m]} {day}</p><button onClick={() => setDay((d) => Math.min(daysInMonth, d + 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4e7ec] bg-white text-n500 hover:bg-n100">›</button></div>
             <div className="space-y-2">
               {eventsOn(day).length ? eventsOn(day).map((a) => (
                 <button key={a.id} onClick={() => setSel(a)} className="flex w-full items-center gap-3 rounded-2xl border border-n200 bg-white p-4 text-left sh-card transition hover:sh-raised">
