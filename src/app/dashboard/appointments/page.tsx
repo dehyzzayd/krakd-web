@@ -1,28 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Topbar } from "@/components/app/Topbar";
 import { Badge, Dot, type Tone } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
-import { APPOINTMENTS, LEADS, type Appt } from "@/lib/crm";
 import { EditAppointmentSheet } from "@/components/app/EditAppointmentSheet";
+import { useApi } from "@/lib/useApi";
+
+type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; status: string; time: string; date: number; day: string; owner: string };
+type ApiAppt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; statusKey: string; owner: string; start: string };
 
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
-const avatarBg = (n: string) => ["#2563eb", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][n.charCodeAt(0) % 5];
-const ST_TONE: Record<string, Tone> = { confirmed: "ok", scheduled: "brand", completed: "neutral", no_show: "err", cancelled: "neutral" };
-const ST_LABEL: Record<string, string> = { confirmed: "Confirmed", scheduled: "Scheduled", completed: "Completed", no_show: "No-show", cancelled: "Cancelled" };
-const TYPE_TONE: Record<string, string> = { "Test drive": "bg-brand", Delivery: "bg-ok", "Phone consultation": "bg-warn", Service: "bg-n500" };
+const avatarBg = (n: string) => ["#2b6ba4", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][(n.charCodeAt(0) || 0) % 5];
+const ST_TONE: Record<string, Tone> = { confirmed: "ok", scheduled: "brand", completed: "neutral", no_show: "err", canceled: "neutral" };
+const ST_LABEL: Record<string, string> = { confirmed: "Confirmed", scheduled: "Scheduled", completed: "Completed", no_show: "No-show", canceled: "Canceled" };
+const TYPE_TONE: Record<string, string> = { "Test drive": "bg-brand", Delivery: "bg-ok", "Phone consultation": "bg-warn", Service: "bg-n500", "Trade appraisal": "bg-n500" };
 
-const OFFSET = 6; // Jul 1 2026 = Saturday
+const OFFSET = 6;
 const TODAY = 25;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const eventsOn = (d: number) => APPOINTMENTS.filter((a) => a.date === d).sort((a, b) => a.time.localeCompare(b.time));
 
 export default function CalendarPage() {
+  const { data } = useApi<{ items: ApiAppt[] }>("/appointments");
+  const appts: Appt[] = useMemo(() => (data?.items ?? []).map((a) => {
+    const st = new Date(a.start);
+    return {
+      id: a.id, leadId: a.leadId, name: a.name, vehicle: a.vehicle, type: a.type, status: a.statusKey, owner: a.owner,
+      time: st.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      date: st.getDate(),
+      day: st.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    };
+  }), [data]);
+  const eventsOn = (d: number) => appts.filter((a) => a.date === d).sort((a, b) => a.time.localeCompare(b.time));
+
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [day, setDay] = useState(TODAY);
-  const [apptEdit, setApptEdit] = useState<{ appt: Appt | null } | null>(null);
+  const [apptEdit, setApptEdit] = useState<{ appt: null } | null>(null);
   const [sel, setSel] = useState<Appt | null>(null);
   const cells = [...Array(OFFSET).fill(null), ...Array.from({ length: 31 }, (_, i) => i + 1)];
   const week = [23, 24, 25, 26, 27, 28, 29];
@@ -126,7 +140,7 @@ export default function CalendarPage() {
               <div className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n600">Reminder scheduled 1 hour before. AI will confirm the morning of.</div>
             </div>
             <div className="flex items-center gap-2 border-t border-[#e4e7ec] px-5 py-3">
-              <button onClick={() => { setApptEdit({ appt: sel }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>
+              <button onClick={() => { setApptEdit({ appt: null }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>
               <button className="h-9 rounded-lg px-3 text-[13px] font-medium text-err hover:bg-err-soft">Cancel</button>
               <Link href={`/dashboard/leads/${sel.leadId}`} className="ml-auto h-9 rounded-lg bg-brand px-4 text-[13px] font-semibold leading-9 text-white transition hover:bg-brand-hover">Open lead</Link>
             </div>

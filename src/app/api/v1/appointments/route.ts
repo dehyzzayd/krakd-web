@@ -16,15 +16,22 @@ export const GET = route(async (req: NextRequest) => {
     where: { dealershipId },
     orderBy: { scheduledStart: "asc" },
     take: 200,
-    include: { lead: { select: { firstName: true, lastName: true } }, vehicle: { select: { year: true, make: true, model: true } } },
+    include: {
+      lead: { select: { id: true, firstName: true, lastName: true } },
+      vehicle: { select: { year: true, make: true, model: true } },
+      assignedTo: { select: { firstName: true } },
+    },
   });
 
   const items = rows.map((a) => ({
     id: a.id,
+    leadId: a.leadId,
     name: a.lead ? `${a.lead.firstName} ${a.lead.lastName ?? ""}`.trim() : "—",
     vehicle: a.vehicle ? `${a.vehicle.year} ${a.vehicle.make} ${a.vehicle.model}` : "—",
     type: TYPE_LABEL[a.type] ?? a.type,
     status: STATUS_LABEL[a.status] ?? a.status,
+    statusKey: a.status.toLowerCase(),
+    owner: a.createdByAi ? "Krakd AI" : a.assignedTo?.firstName ?? "—",
     start: a.scheduledStart.toISOString(),
     end: a.scheduledEnd.toISOString(),
     location: a.location ?? "",
