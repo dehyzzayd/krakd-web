@@ -565,11 +565,19 @@ model Website {
   slug         String          @unique // public preview URL: /site/{slug}
 
   // branding + homepage content (controlled fields — not a page builder)
-  logoUrl      String?
+  logoUrl      String?         @db.Text // uploaded asset (data URL) or external URL
+  heroImageUrl String?         @db.Text // optional hero background asset
   primaryColor String          @default("#2b6ba4")
   headline     String          @default("Find your next vehicle.")
   intro        String          @default("Browse our latest inventory — updated daily.")
   ctaLabel     String          @default("Browse inventory")
+
+  // richer multi-page content
+  aboutText     String?        @db.Text
+  financingText String?        @db.Text
+  tradeInText   String?        @db.Text
+  whyUs         Json           @default("[]") // [{ title, body }]
+  staff         Json           @default("[]") // [{ name, role, photoUrl }]
 
   // dealership contact shown on the site
   phone        String?

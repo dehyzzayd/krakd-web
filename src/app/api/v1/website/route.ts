@@ -24,13 +24,22 @@ export const GET = route(async (req: NextRequest) => {
   return json({ ...w, liveVehicles, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });
 });
 
+const ASSET_MAX = 1_500_000; // ~1.5MB data URL cap for an uploaded logo/hero
+const asset = z.string().max(ASSET_MAX, "Image is too large — use one under ~1MB").optional();
+
 const patchSchema = z.object({
   template: z.enum(["MODERN", "INVENTORY_FIRST", "PREMIUM"]).optional(),
-  logoUrl: z.string().optional(),
+  logoUrl: asset,
+  heroImageUrl: asset,
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #2b6ba4").optional(),
   headline: z.string().max(120).optional(),
   intro: z.string().max(400).optional(),
   ctaLabel: z.string().max(40).optional(),
+  aboutText: z.string().max(2000).optional(),
+  financingText: z.string().max(1000).optional(),
+  tradeInText: z.string().max(1000).optional(),
+  whyUs: z.array(z.object({ title: z.string(), body: z.string() })).optional(),
+  staff: z.array(z.object({ name: z.string(), role: z.string(), photoUrl: z.string().optional() })).optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
   address: z.string().optional(),
@@ -47,11 +56,13 @@ export const PATCH = route(async (req: NextRequest) => {
   await ensureWebsite(dealershipId);
   const parsed = patchSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
-  const { hours, socials, ...rest } = parsed.data;
+  const { hours, socials, whyUs, staff, ...rest } = parsed.data;
   const data: Prisma.WebsiteUpdateInput = {
     ...rest,
     ...(hours ? { hours: hours as unknown as Prisma.InputJsonValue } : {}),
     ...(socials ? { socials: socials as unknown as Prisma.InputJsonValue } : {}),
+    ...(whyUs ? { whyUs: whyUs as unknown as Prisma.InputJsonValue } : {}),
+    ...(staff ? { staff: staff as unknown as Prisma.InputJsonValue } : {}),
   };
   const w = await prisma.website.update({ where: { dealershipId }, data });
   return json({ ...w, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });

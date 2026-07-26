@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Card } from "@/components/app/AppKit";
-import { SiteView, type SiteData, type SiteVehicle } from "@/components/site/SiteView";
-import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone } from "lucide-react";
+import { SiteHome } from "@/components/site/SiteHome";
+import { SiteHeader, SiteFooter } from "@/components/site/SiteChrome";
+import type { SiteConfig, SiteVehicle } from "@/lib/server/site";
+import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload } from "lucide-react";
 
 export type Web = {
   id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM"; status: "DRAFT" | "PUBLISHED";
-  logoUrl: string | null; primaryColor: string; headline: string; intro: string; ctaLabel: string;
+  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headline: string; intro: string; ctaLabel: string;
+  aboutText: string | null; financingText: string | null; tradeInText: string | null;
+  whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[];
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[]; socials: Record<string, string>;
   domain: string | null; domainProvider: string | null;
@@ -20,7 +24,49 @@ export type Web = {
 };
 
 const field = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
+const textarea = "w-full rounded-md border border-n200 bg-white px-3 py-2 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 resize-none";
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(new Error("Could not read the file"));
+    r.readAsDataURL(file);
+  });
+}
+
+/** Image asset uploader — reads a chosen file to a data URL (capped ~1MB). */
+function Uploader({ value, onChange, label, aspect = "square" }: { value: string; onChange: (v: string) => void; label: string; aspect?: "square" | "wide" }) {
+  const [err, setErr] = useState<string | null>(null);
+  const pick = async (file?: File) => {
+    setErr(null);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErr("Choose an image file."); return; }
+    if (file.size > 1_000_000) { setErr("Image must be under 1MB."); return; }
+    try { onChange(await fileToDataUrl(file)); } catch { setErr("Could not read the file."); }
+  };
+  const box = aspect === "wide" ? "h-20 w-36" : "h-20 w-20";
+  return (
+    <div>
+      <div className="flex items-center gap-3">
+        <div className={cn("shrink-0 overflow-hidden rounded-lg border border-n200 bg-n50", box)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {value ? <img src={value} alt="" className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center text-[11px] text-n400">No image</div>}
+        </div>
+        <div className="space-y-1.5">
+          <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-n200 bg-white px-3 text-[12.5px] font-semibold text-n700 hover:bg-n100">
+            <Upload className="h-3.5 w-3.5" />Upload {label}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+          </label>
+          {value && <button onClick={() => onChange("")} className="ml-2 text-[12px] font-medium text-err">Remove</button>}
+          <p className="text-[11px] text-n400">PNG, JPG or SVG · under 1MB</p>
+        </div>
+      </div>
+      {err && <p className="mt-1 text-[12px] font-medium text-err">{err}</p>}
+    </div>
+  );
+}
 
 const TEMPLATES = [
   { v: "MODERN", n: "01", name: "Modern", desc: "Balanced homepage and inventory." },
@@ -145,7 +191,9 @@ export function TemplatePanel({ w, reload }: { w: Web; reload: () => void }) {
 /* ─────────────────────────── Details ─────────────────────────── */
 export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [f, setF] = useState({
-    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, primaryColor: w.primaryColor, logoUrl: w.logoUrl ?? "",
+    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, primaryColor: w.primaryColor,
+    logoUrl: w.logoUrl ?? "", heroImageUrl: w.heroImageUrl ?? "",
+    aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
     phone: w.phone ?? "", email: w.email ?? "", address: w.address ?? "", city: w.city ?? "", state: w.state ?? "", zip: w.zip ?? "",
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
@@ -160,7 +208,7 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
   const save = async () => {
     setErr(null); setBusy(true);
     try {
-      await apiFetch("/website", { method: "PATCH", body: JSON.stringify({ ...f, logoUrl: f.logoUrl || undefined, hours }) });
+      await apiFetch("/website", { method: "PATCH", body: JSON.stringify({ ...f, logoUrl: f.logoUrl, heroImageUrl: f.heroImageUrl, hours }) });
       setSaved(true); setTimeout(() => setSaved(false), 2200); reload();
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
     finally { setBusy(false); }
@@ -175,10 +223,28 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
         <div className="space-y-4">
           <L label="Headline"><input value={f.headline} onChange={(e) => set("headline", e.target.value)} className={field} /></L>
           <L label="Short introduction"><textarea value={f.intro} onChange={(e) => set("intro", e.target.value)} rows={2} className={cn(field, "h-auto resize-none py-2")} /></L>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <L label="Button label"><input value={f.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} className={field} /></L>
             <L label="Brand color"><div className="flex items-center gap-2"><input type="color" value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className="h-10 w-12 shrink-0 rounded-md border border-n200" /><input value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className={cn(field, "tnum")} /></div></L>
-            <L label="Logo URL (optional)"><input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" className={field} /></L>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Branding assets</h3>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <L label="Logo"><Uploader value={f.logoUrl} onChange={(v) => set("logoUrl", v)} label="logo" aspect="wide" /></L>
+          <L label="Hero background (optional)"><Uploader value={f.heroImageUrl} onChange={(v) => set("heroImageUrl", v)} label="hero" aspect="wide" /></L>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Page content</h3>
+        <div className="space-y-4">
+          <L label="About your dealership"><textarea value={f.aboutText} onChange={(e) => set("aboutText", e.target.value)} rows={3} placeholder="Tell buyers who you are…" className={textarea} /></L>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <L label="Financing blurb"><textarea value={f.financingText} onChange={(e) => set("financingText", e.target.value)} rows={2} placeholder="How financing works at your store…" className={textarea} /></L>
+            <L label="Trade-in blurb"><textarea value={f.tradeInText} onChange={(e) => set("tradeInText", e.target.value)} rows={2} placeholder="Your sell-us-your-car pitch…" className={textarea} /></L>
           </div>
         </div>
       </Card>
@@ -339,15 +405,22 @@ export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<{ items: SiteVehicle[] }>("/inventory")
-      .then((r) => setVehicles((r.items ?? []).filter((v: SiteVehicle & { status?: string }) => v.status !== "SOLD")))
+    type InvItem = { id: string; year: number; make: string; model: string; trim: string; body?: string; price: number; mileage: number; color?: string; drivetrain?: string; fuel?: string; vin: string; image: string | null; status?: string };
+    apiFetch<{ items: InvItem[] }>("/inventory")
+      .then((r) => setVehicles((r.items ?? []).filter((v) => v.status !== "SOLD").map((v) => ({
+        id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
+        price: v.price, mileage: v.mileage, color: v.color ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
+        transmission: "", vin: v.vin, image: v.image, photos: v.image ? [v.image] : [],
+      }))))
       .catch(() => setVehicles([]));
   }, []);
 
-  const preview: SiteData = {
-    slug: w.slug, dealershipName: "Preview", template: w.template, logoUrl: w.logoUrl, primaryColor: w.primaryColor,
-    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, phone: w.phone, email: w.email, address: w.address,
-    city: w.city, state: w.state, zip: w.zip, hours: w.hours, socials: w.socials, vehicles,
+  const preview: SiteConfig = {
+    slug: w.slug, dealershipName: "Your dealership", template: w.template, logoUrl: w.logoUrl, heroImageUrl: w.heroImageUrl,
+    primaryColor: w.primaryColor, headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel,
+    aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
+    whyUs: w.whyUs ?? [], staff: w.staff ?? [],
+    phone: w.phone, email: w.email, address: w.address, city: w.city, state: w.state, zip: w.zip, hours: w.hours, socials: w.socials,
   };
 
   const publish = async () => {
@@ -374,9 +447,11 @@ export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
 
       <div className="overflow-hidden rounded-2xl border border-n200 bg-n100 p-4">
         <div className={cn("mx-auto overflow-hidden rounded-xl border border-n200 bg-white shadow-sm transition-all", device === "mobile" ? "max-w-[390px]" : "max-w-full")}>
-          <div className="max-h-[70vh] overflow-y-auto">
-            <div className="pointer-events-none origin-top">
-              <SiteView data={preview} />
+          <div className="max-h-[72vh] overflow-y-auto">
+            <div className="app-scope pointer-events-none origin-top" style={{ ["--accent" as string]: preview.primaryColor }}>
+              <SiteHeader config={preview} />
+              <SiteHome config={preview} vehicles={vehicles} preview />
+              <SiteFooter config={preview} />
             </div>
           </div>
         </div>
