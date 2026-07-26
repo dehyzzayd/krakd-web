@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { AI_CONFIG } from "@/lib/krakdai";
+import { authApi } from "@/lib/api";
+import { useApi } from "@/lib/useApi";
 import { Section, Field, Row, Switch, LinkField, inputCls } from "./controls";
-import { MessageCircle, Link2, Phone, ScrollText, Check, RefreshCw } from "lucide-react";
+import { MessageCircle, Link2, Phone, ScrollText, Check, RefreshCw, Loader2 } from "lucide-react";
 
 const TONES = ["Friendly & casual", "Warm & professional", "Concise & direct", "Enthusiastic"];
 const LANGS = ["English", "Spanish", "French", "Portuguese", "Arabic", "Vietnamese"];
 
+type Settings = {
+  persona: string; houseRules: string; languages: string[] | null; forwardPhone: string | null;
+  inventoryUrl: string | null; appointmentUrl: string | null; testDriveUrl: string | null;
+  creditAppUrl: string | null; financeEnabled: boolean;
+};
+
 export function ChatbotTab() {
+  const { data } = useApi<Settings>("/ai/settings");
   const [tone, setTone] = useState(AI_CONFIG.persona);
   const [langs, setLangs] = useState<string[]>(["English", "Spanish"]);
   const [links, setLinks] = useState({ ...AI_CONFIG.links });
@@ -17,8 +26,39 @@ export function ChatbotTab() {
   const [creditApp, setCreditApp] = useState(AI_CONFIG.finance);
   const [forward, setForward] = useState("(512) 555-0100");
   const [rules, setRules] = useState(AI_CONFIG.custom);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const toggleLang = (l: string) => setLangs((p) => p.includes(l) ? p.filter((x) => x !== l) : [...p, l]);
   const setLink = (k: keyof typeof links, v: string) => setLinks((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    if (!data) return;
+    if (data.persona) setTone(data.persona);
+    if (Array.isArray(data.languages) && data.languages.length) setLangs(data.languages);
+    if (data.forwardPhone) setForward(data.forwardPhone);
+    if (typeof data.houseRules === "string") setRules(data.houseRules);
+    setCreditApp(data.financeEnabled);
+    setLinks((p) => ({
+      ...p,
+      inventory: data.inventoryUrl ?? p.inventory,
+      appointment: data.appointmentUrl ?? p.appointment,
+      testDrive: data.testDriveUrl ?? p.testDrive,
+      creditApp: data.creditAppUrl ?? p.creditApp,
+    }));
+  }, [data]);
+
+  async function save() {
+    setSaving(true); setSaved(false);
+    try {
+      await authApi.updateAiSettings({
+        persona: tone, languages: langs, houseRules: rules, forwardPhone: forward,
+        inventoryUrl: links.inventory, appointmentUrl: links.appointment,
+        testDriveUrl: testDrive ? links.testDrive : "", creditAppUrl: creditApp ? links.creditApp : "",
+        financeEnabled: creditApp,
+      });
+      setSaved(true); setTimeout(() => setSaved(false), 2200);
+    } finally { setSaving(false); }
+  }
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -86,6 +126,10 @@ export function ChatbotTab() {
             <p className="text-[12px] font-semibold text-brand">What the agent does</p>
             <p className="mt-1 text-[11.5px] leading-relaxed text-n600">Responds in seconds, confirms the vehicle is still available, qualifies on financing &amp; trade-in, books the visit, and hands off to your team when it&apos;s time.</p>
           </div>
+          <button type="button" onClick={save} disabled={saving} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Save chatbot
+          </button>
+          {saved && <p className="text-center text-[12.5px] font-medium text-ok">Saved</p>}
         </div>
       </div>
     </div>

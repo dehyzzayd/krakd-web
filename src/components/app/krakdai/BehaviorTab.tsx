@@ -1,20 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { AI_CONFIG } from "@/lib/krakdai";
+import { authApi } from "@/lib/api";
+import { useApi } from "@/lib/useApi";
 import { Section, Row, Switch, Seg } from "./controls";
-import { Scale, Wrench, Clock, Radio, Check } from "lucide-react";
+import { Scale, Wrench, Clock, Radio, Check, Loader2 } from "lucide-react";
 
-const POSTURES: { v: "Flexible" | "Mostly firm" | "No negotiation"; title: string; desc: string }[] = [
+type Posture = "Flexible" | "Mostly firm" | "No negotiation";
+type Booking = "Disabled" | "Internal" | "External";
+type Settings = { negotiation: string; bookingMode: string; tradeInEnabled: boolean; financeEnabled: boolean; afterHours: boolean };
+
+const POSTURES: { v: Posture; title: string; desc: string }[] = [
   { v: "Flexible", title: "Flexible", desc: "Signals room to deal; still defers final numbers to your team." },
   { v: "Mostly firm", title: "Mostly firm", desc: "Holds price as set, invites the buyer in to talk numbers." },
   { v: "No negotiation", title: "No negotiation", desc: "States prices are firm; never entertains an offer." },
 ];
 
+const NEG_TO_UI: Record<string, Posture> = { FLEXIBLE: "Flexible", MOSTLY_FIRM: "Mostly firm", NO_NEGOTIATION: "No negotiation" };
+const NEG_TO_DB: Record<Posture, string> = { Flexible: "FLEXIBLE", "Mostly firm": "MOSTLY_FIRM", "No negotiation": "NO_NEGOTIATION" };
+const BOOK_TO_UI: Record<string, Booking> = { DISABLED: "Disabled", INTERNAL: "Internal", EXTERNAL: "External" };
+const BOOK_TO_DB: Record<Booking, string> = { Disabled: "DISABLED", Internal: "INTERNAL", External: "EXTERNAL" };
+
 export function BehaviorTab() {
-  const [posture, setPosture] = useState<"Flexible" | "Mostly firm" | "No negotiation">(AI_CONFIG.negotiation);
-  const [booking, setBooking] = useState<"Disabled" | "Internal" | "External">(AI_CONFIG.booking as "Internal");
+  const { data } = useApi<Settings>("/ai/settings");
+  const [posture, setPosture] = useState<Posture>(AI_CONFIG.negotiation);
+  const [booking, setBooking] = useState<Booking>(AI_CONFIG.booking as "Internal");
   const [followups, setFollowups] = useState(true);
   const [tradeIn, setTradeIn] = useState(AI_CONFIG.tradeIn);
   const [voi, setVoi] = useState(true);
@@ -22,6 +34,27 @@ export function BehaviorTab() {
   const [afterHours, setAfterHours] = useState(AI_CONFIG.afterHours);
   const [channels, setChannels] = useState<Record<string, boolean>>({ website: true, fbmp: true, sms: true, email: false });
   const toggleCh = (k: string) => setChannels((p) => ({ ...p, [k]: !p[k] }));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!data) return;
+    setPosture(NEG_TO_UI[data.negotiation] ?? "Mostly firm");
+    setBooking(BOOK_TO_UI[data.bookingMode] ?? "Internal");
+    setTradeIn(data.tradeInEnabled);
+    setAfterHours(data.afterHours);
+  }, [data]);
+
+  async function save() {
+    setSaving(true); setSaved(false);
+    try {
+      await authApi.updateAiSettings({
+        negotiation: NEG_TO_DB[posture], bookingMode: BOOK_TO_DB[booking],
+        tradeInEnabled: tradeIn, afterHours,
+      });
+      setSaved(true); setTimeout(() => setSaved(false), 2200);
+    } finally { setSaving(false); }
+  }
 
   return (
     <div className="space-y-5">
@@ -57,6 +90,13 @@ export function BehaviorTab() {
             <Row key={k} title={label} last={i === arr.length - 1}><Switch on={channels[k]} onChange={() => toggleCh(k)} /></Row>
           ))}
         </Section>
+      </div>
+
+      <div className="flex items-center justify-end gap-3 border-t border-n200 pt-4">
+        {saved && <span className="text-[12.5px] font-medium text-ok">Saved</span>}
+        <button type="button" onClick={save} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
+          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Save behavior
+        </button>
       </div>
     </div>
   );

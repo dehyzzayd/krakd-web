@@ -76,4 +76,7 @@ export const authApi = {
 
   verifyOtp: (code: string) =>
     apiFetch<{ ok: true }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ code }) }),
+
+  updateAiSettings: (body: Record<string, unknown>) =>
+    apiFetch("/ai/settings", { method: "PATCH", body: JSON.stringify(body) }),
 };
