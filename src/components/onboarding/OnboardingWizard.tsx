@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, setSession, ApiError } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
@@ -171,7 +171,7 @@ function PhoneField({ value, onChange }: { value: string; onChange: (v: string) 
 
 /* ─────────────────────────────── steps ─────────────────────────────── */
 
-function VerifyStep({ digits, setDigits, onNext }: { digits: string[]; setDigits: (d: string[]) => void; onNext: () => void }) {
+function VerifyStep({ digits, setDigits, onVerify, onResend, email, busy, error }: { digits: string[]; setDigits: (d: string[]) => void; onVerify: () => void; onResend: () => void; email: string; busy: boolean; error: string | null }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const set = (i: number, v: string) => {
     const c = v.replace(/\D/g, "").slice(-1);
@@ -183,15 +183,16 @@ function VerifyStep({ digits, setDigits, onNext }: { digits: string[]; setDigits
   };
   return (
     <div>
-      <StepHeader n={1} title="Verify your email" sub="During beta, enter any 6 digits (e.g. 123456) to continue — live email verification is coming." />
+      <StepHeader n={1} title="Verify your email" sub={email ? `We sent a 6-digit code to ${email}. Enter it below to continue.` : "Enter the 6-digit code we emailed you."} />
       <div className="flex gap-2.5 sm:gap-3">
         {digits.map((d, i) => (
           <input key={i} ref={(el) => { refs.current[i] = el; }} value={d} onChange={(e) => set(i, e.target.value)} onKeyDown={(e) => onKey(i, e)} inputMode="numeric" maxLength={1} aria-label={`Digit ${i + 1}`}
             className="h-14 w-full rounded-[12px] bg-[#f4f4f5] text-center text-[22px] font-semibold text-ink outline-none ring-1 ring-black/[0.04] transition focus:bg-white focus:ring-2 focus:ring-ink/25" />
         ))}
       </div>
-      <p className="mt-4 text-[13.5px] text-muted">Didn&apos;t get it? <button type="button" className="font-medium text-ink underline underline-offset-4 hover:text-ink/70">Resend code</button></p>
-      <Nav onNext={onNext} nextLabel="Verify" />
+      <p className="mt-4 text-[13.5px] text-muted">Didn&apos;t get it? <button type="button" onClick={onResend} className="font-medium text-ink underline underline-offset-4 hover:text-ink/70">Resend code</button></p>
+      {error && <p className="mt-2 text-[13px] font-medium text-[#dc2626]">{error}</p>}
+      <Nav onNext={onVerify} nextLabel={busy ? "Verifying…" : "Verify"} />
     </div>
   );
 }
@@ -411,7 +412,43 @@ export function OnboardingWizard() {
   const [beta, setBeta] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const otpSent = useRef(false);
   const router = useRouter();
+
+  // Email the verification code once, using the address captured at sign-up.
+  useEffect(() => {
+    const raw = sessionStorage.getItem("krakd_signup");
+    if (!raw) return;
+    const e = (JSON.parse(raw) as { email?: string }).email ?? "";
+    setEmail(e);
+    if (e && !otpSent.current) {
+      otpSent.current = true;
+      authApi.sendOtp(e).catch(() => {});
+    }
+  }, []);
+
+  const verifyEmail = async () => {
+    setOtpError(null);
+    const code = otp.join("");
+    if (code.length !== 6) { setOtpError("Enter all 6 digits."); return; }
+    setOtpBusy(true);
+    try {
+      await authApi.verifyOtp(code);
+      next();
+    } catch (e) {
+      setOtpError(e instanceof ApiError ? e.message : "Verification failed.");
+    } finally {
+      setOtpBusy(false);
+    }
+  };
+
+  const resendOtp = () => {
+    setOtpError(null);
+    if (email) authApi.sendOtp(email).catch(() => {});
+  };
 
   const update = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const toggleType = (id: string) =>
@@ -460,7 +497,7 @@ export function OnboardingWizard() {
 
   return (
     <Panel step={Math.min(step, 4)}>
-      {step === 0 && <VerifyStep digits={otp} setDigits={setOtp} onNext={next} />}
+      {step === 0 && <VerifyStep digits={otp} setDigits={setOtp} onVerify={verifyEmail} onResend={resendOtp} email={email} busy={otpBusy} error={otpError} />}
       {step === 1 && <StoreStep form={form} update={update} toggleType={toggleType} onNext={next} />}
       {step === 2 && <ContactStep form={form} update={update} onBack={back} onNext={next} />}
       {step === 3 && <PlanStep plan={plan} setPlan={setPlan} cycle={cycle} setCycle={setCycle} promo={promo} setPromo={setPromo} promoOk={promoOk} beta={beta} applyPromo={applyPromo} onBack={back} onNext={next} />}

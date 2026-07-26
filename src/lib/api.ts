@@ -69,4 +69,10 @@ export const authApi = {
 
   resetPassword: (token: string, password: string) =>
     apiFetch<{ ok: true }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
+
+  sendOtp: (email: string) =>
+    apiFetch<{ ok: true }>("/auth/send-otp", { method: "POST", body: JSON.stringify({ email }) }),
+
+  verifyOtp: (code: string) =>
+    apiFetch<{ ok: true }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ code }) }),
 };

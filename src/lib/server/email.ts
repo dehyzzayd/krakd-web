@@ -5,14 +5,31 @@ const key = process.env.RESEND_API_KEY;
 const from = process.env.EMAIL_FROM ?? "Krakd <onboarding@resend.dev>";
 const resend = key ? new Resend(key) : null;
 
+// While the Resend domain is unverified, route every email to the test inbox.
+const override = process.env.EMAIL_TEST_OVERRIDE;
+
 async function send(to: string, subject: string, html: string) {
-  if (!resend) { console.log(`[email disabled] would send "${subject}" to ${to}`); return; }
+  const recipient = override || to;
+  if (!resend) { console.log(`[email disabled] would send "${subject}" to ${recipient}`); return; }
   try {
-    const { error } = await resend.emails.send({ from, to, subject, html });
-    if (error) console.warn(`resend error to ${to}: ${error.message}`);
+    const { error } = await resend.emails.send({ from, to: recipient, subject, html });
+    if (error) console.warn(`resend error to ${recipient}: ${error.message}`);
   } catch (e) {
     console.error("email failed:", e);
   }
+}
+
+export async function sendOtpEmail(p: { to: string; code: string }) {
+  await send(
+    p.to,
+    `Your Krakd verification code: ${p.code}`,
+    shell(
+      "Verify your email",
+      `<p style="font-size:14px;line-height:1.6;color:#374151">Enter this code to continue setting up your Krakd account. It expires in 10 minutes.</p>
+       <p style="margin:16px 0;font-size:34px;font-weight:800;letter-spacing:8px;color:#0d1117">${p.code}</p>
+       <p style="font-size:13px;color:#6b7280">If you didn't request this, you can ignore this email.</p>`,
+    ),
+  );
 }
 
 const shell = (title: string, body: string) => `<!doctype html><html><body style="margin:0;background:#f4f5f7;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1d21">

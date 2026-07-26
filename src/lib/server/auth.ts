@@ -20,6 +20,21 @@ export async function issueTokens(p: Principal) {
   return { accessToken, refreshToken, tokenType: "Bearer" };
 }
 
+export async function signOtp(email: string, code: string) {
+  return new SignJWT({ email, code, purpose: "otp" })
+    .setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("10m").sign(refreshSecret());
+}
+
+export async function verifyOtp(token: string): Promise<{ email: string; code: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, refreshSecret());
+    if (payload.purpose !== "otp") return null;
+    return { email: payload.email as string, code: payload.code as string };
+  } catch {
+    return null;
+  }
+}
+
 export async function signResetToken(userId: string) {
   return new SignJWT({ purpose: "pwreset" })
     .setProtectedHeader({ alg: "HS256" }).setSubject(userId).setIssuedAt().setExpirationTime("30m").sign(refreshSecret());
