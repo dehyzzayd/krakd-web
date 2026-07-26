@@ -20,6 +20,20 @@ const shell = (title: string, body: string) => `<!doctype html><html><body style
 <span style="font-size:20px;font-weight:800;color:#0d1117">Krakd<span style="color:#2b6ba4">.</span></span>
 <h1 style="margin:14px 0 8px;font-size:20px">${title}</h1>${body}</td></tr></table></td></tr></table></body></html>`;
 
+export async function sendPasswordResetEmail(p: { to: string; firstName: string; token: string }) {
+  const resetUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/reset?token=${encodeURIComponent(p.token)}`;
+  await send(
+    p.to,
+    "Reset your Krakd password",
+    shell(
+      "Reset your password",
+      `<p style="font-size:14px;line-height:1.6;color:#374151">Hi ${p.firstName}, we got a request to reset your password. This link expires in 30 minutes.</p>
+       <p style="margin:18px 0"><a href="${resetUrl}" style="background:#2b6ba4;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px">Reset password →</a></p>
+       <p style="font-size:13px;color:#6b7280">If you didn't request this, ignore this email.</p>`,
+    ),
+  );
+}
+
 export async function sendWelcomeEmail(p: { to: string; firstName: string; dealershipName: string }) {
   const loginUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/dashboard`;
   await send(

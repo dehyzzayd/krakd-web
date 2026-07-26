@@ -20,6 +20,20 @@ export async function issueTokens(p: Principal) {
   return { accessToken, refreshToken, tokenType: "Bearer" };
 }
 
+export async function signResetToken(userId: string) {
+  return new SignJWT({ purpose: "pwreset" })
+    .setProtectedHeader({ alg: "HS256" }).setSubject(userId).setIssuedAt().setExpirationTime("30m").sign(refreshSecret());
+}
+
+export async function verifyResetToken(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, refreshSecret());
+    return payload.purpose === "pwreset" ? (payload.sub as string) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function verifyAccess(token: string): Promise<Principal | null> {
   try {
     const { payload } = await jwtVerify(token, accessSecret());
