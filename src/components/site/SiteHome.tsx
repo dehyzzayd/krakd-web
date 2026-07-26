@@ -39,7 +39,7 @@ function SearchBar({ slug, accent, makes, ui, preview }: { slug: string; accent:
         <input value={q.model} onChange={(e) => set("model", e.target.value)} placeholder="Model" className={sel} />
         <select value={q.body} onChange={(e) => set("body", e.target.value)} className={sel}><option value="">Any type</option>{["Sedan", "SUV", "Truck", "Coupe", "Van", "Hatchback"].map((b) => <option key={b}>{b}</option>)}</select>
         <select value={q.maxPrice} onChange={(e) => set("maxPrice", e.target.value)} className={sel}><option value="">Any price</option>{["15000", "20000", "30000", "45000", "60000"].map((p) => <option key={p} value={p}>Under ${(+p).toLocaleString()}</option>)}</select>
-        <button onClick={() => go()} className={`inline-flex h-12 items-center justify-center gap-2 text-white ${ui.btnRadius} ${ui.btnCase}`} style={{ background: accent }}><Search className="h-4 w-4" />Search</button>
+        <button onClick={() => go()} className={`col-span-2 inline-flex h-12 items-center justify-center gap-2 text-white lg:col-span-1 ${ui.btnRadius} ${ui.btnCase}`} style={{ background: accent }}><Search className="h-4 w-4" />Search</button>
       </div>
     </div>
   );
@@ -121,24 +121,28 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
           </div>
         </section>
       ) : (
-        <section className="relative w-full overflow-hidden" style={heroImg ? undefined : { background: `linear-gradient(120deg, ${accent} 0%, ${ui.band} 85%)` }}>
+        <section className="relative w-full overflow-hidden" style={heroImg ? { background: "#0a0a0a" } : { background: `linear-gradient(120deg, ${accent} 0%, ${ui.band} 85%)` }}>
           {heroImg && <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0" style={{ background: ui.hero === "cinematic" ? "linear-gradient(0deg, rgba(11,11,13,0.92), rgba(11,11,13,0.35))" : "linear-gradient(110deg, rgba(10,10,10,0.88), rgba(10,10,10,0.45))" }} />
+            <img src={heroImg} alt="" className="absolute inset-0 h-full w-full object-cover object-center" />
+            <div className="absolute inset-0" style={{ background: ui.hero === "cinematic"
+              ? "linear-gradient(to top, rgba(8,8,10,0.92) 0%, rgba(8,8,10,0.3) 45%, rgba(8,8,10,0.6) 100%)"
+              : "linear-gradient(90deg, rgba(8,8,10,0.9) 0%, rgba(8,8,10,0.62) 42%, rgba(8,8,10,0.2) 100%)" }} />
+            {/* bottom fade so the search bar reads and the section blends into the trust bar */}
+            <div className="absolute inset-x-0 bottom-0 h-40" style={{ background: "linear-gradient(to top, rgba(8,8,10,0.85), rgba(8,8,10,0))" }} />
           </>}
-          <div className={`relative mx-auto ${C} px-5 ${ui.hero === "cinematic" ? "py-28 text-center sm:py-40" : "py-24 sm:py-32"}`}>
-            <div className={ui.hero === "cinematic" ? "mx-auto max-w-[820px]" : "max-w-[760px]"}>
+          <div className={`relative mx-auto flex ${C} flex-col justify-center px-5 pt-20 pb-28 ${ui.hero === "cinematic" ? "min-h-[660px] text-center sm:min-h-[820px]" : "min-h-[600px] sm:min-h-[760px]"}`}>
+            <div className={ui.hero === "cinematic" ? "mx-auto max-w-[860px]" : "max-w-[820px]"}>
               <p className={ui.eyebrow} style={{ color: accent }}>{config.dealershipName}</p>
-              <h1 className={`mt-3 ${ui.display} ${ui.h1} text-white`}>{config.headline}</h1>
-              {config.intro && <p className={`mt-5 text-[16px] leading-relaxed text-white/85 sm:text-[18px] ${ui.hero === "cinematic" ? "mx-auto max-w-[60ch]" : "max-w-[56ch]"}`}>{config.intro}</p>}
-              <div className={`mt-8 flex flex-wrap gap-3 ${ui.hero === "cinematic" ? "justify-center" : ""}`}>
-                <Link href={link(`/site/${config.slug}/inventory`)} className={`bg-white px-8 py-4 ${ui.btnRadius} ${ui.btnCase}`} style={{ color: accent }}>{config.ctaLabel}</Link>
-                <Link href={link(`/site/${config.slug}/financing`)} className={`border border-white/40 px-8 py-4 text-white hover:bg-white/10 ${ui.btnRadius} ${ui.btnCase}`}>Get pre-qualified</Link>
+              <h1 className={`mt-3 ${ui.display} ${ui.h1} text-white drop-shadow-sm`}>{config.headline}</h1>
+              {config.intro && <p className={`mt-5 text-[16px] leading-relaxed text-white/90 sm:text-[19px] ${ui.hero === "cinematic" ? "mx-auto max-w-[60ch]" : "max-w-[58ch]"}`}>{config.intro}</p>}
+              <div className={`mt-9 flex flex-wrap gap-3 ${ui.hero === "cinematic" ? "justify-center" : ""}`}>
+                <Link href={link(`/site/${config.slug}/inventory`)} className={`bg-white px-8 py-4 shadow-lg ${ui.btnRadius} ${ui.btnCase}`} style={{ color: accent }}>{config.ctaLabel}</Link>
+                <Link href={link(`/site/${config.slug}/financing`)} className={`border border-white/50 px-8 py-4 text-white backdrop-blur-sm hover:bg-white/10 ${ui.btnRadius} ${ui.btnCase}`}>Get pre-qualified</Link>
               </div>
             </div>
           </div>
-          <div className={`relative z-10 mx-auto ${C} px-5 ${ui.hero === "cinematic" ? "pb-10" : "-mt-8 pb-2"}`}><SearchBar slug={config.slug} accent={accent} makes={makes} ui={ui} preview={preview} /></div>
+          <div className={`relative z-10 mx-auto ${C} px-5 ${ui.hero === "cinematic" ? "-mt-6 pb-10" : "-mt-12 pb-2"}`}><SearchBar slug={config.slug} accent={accent} makes={makes} ui={ui} preview={preview} /></div>
         </section>
       )}
 

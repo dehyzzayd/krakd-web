@@ -42,7 +42,7 @@ const WEBSITE = {
   headline: "Find your next ride.",
   intro: "Hand-picked, fully inspected vehicles priced to the market — with financing options for every situation. No pressure, no games.",
   ctaLabel: "Shop inventory",
-  heroImageUrl: img("1517672651691-24622a91b550"),
+  heroImageUrl: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=2000&q=80",
   aboutText: "Dehy Auto Sales is a locally owned dealership built on straight talk and fair pricing. We hand-select every vehicle, put it through a multi-point inspection, and price it to the live market — so you always know you're getting a real deal. Whether you're buying your first car or your fifth, our team makes the process simple and honest from test drive to keys in hand.",
   financingText: "Good credit, bad credit, or no credit — we work with a network of lenders to get you approved. Get pre-qualified online in minutes with no impact to your credit score.",
   tradeInText: "Trade in your current vehicle and put its value straight toward your next one. Get a fair, fast written offer — no obligation to buy.",
