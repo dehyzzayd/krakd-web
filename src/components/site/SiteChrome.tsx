@@ -51,7 +51,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <nav className="ml-auto hidden items-center gap-7 lg:flex">
             {items.map((it) => {
               const active = pathname === it.href;
-              return <Link key={it.href} href={it.href} className="text-[14px] font-medium transition" style={{ color: active ? accent : dark ? "rgba(255,255,255,0.82)" : "#334155" }}>{it.label}</Link>;
+              return <Link key={it.href} href={it.href} className={`transition ${dark ? "font-display text-[13.5px] font-medium uppercase tracking-[0.09em]" : "text-[14px] font-medium"}`} style={{ color: active ? accent : dark ? "rgba(255,255,255,0.82)" : "#334155" }}>{it.label}</Link>;
             })}
           </nav>
           <Link href={`/site/${config.slug}/financing`} className="ml-auto hidden rounded-lg px-4 py-2 text-[13.5px] font-semibold text-white lg:ml-4 lg:inline-block" style={{ background: accent }}>Get financing</Link>

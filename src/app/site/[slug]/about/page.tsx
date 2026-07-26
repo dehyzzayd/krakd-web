@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSite, accentOf } from "@/lib/server/site";
+import { siteTheme } from "@/components/site/theme";
 import { ShieldCheck, BadgeCheck, Wrench } from "lucide-react";
 
 export const runtime = "nodejs";
@@ -23,6 +24,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
   const config = await getSite(slug);
   if (!config) notFound();
   const accent = accentOf(config.primaryColor);
+  const ui = siteTheme(config.template);
   const why = config.whyUs.length ? config.whyUs : DEFAULT_WHY;
   const icons = [ShieldCheck, BadgeCheck, Wrench];
 
@@ -30,7 +32,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
     <>
       <section className="w-full bg-[#f8fafc]">
         <div className="mx-auto max-w-[1280px] px-5 py-16">
-          <h1 className="text-[32px] font-extrabold tracking-tight sm:text-[40px]">About {config.dealershipName}</h1>
+          <h1 className={`${ui.display} ${ui.h1} text-[#0f172a]`}>About {config.dealershipName}</h1>
           <p className="mt-4 max-w-[70ch] text-[15px] leading-relaxed text-[#475569]">{config.aboutText || `${config.dealershipName} is a locally trusted dealership focused on honest pricing and a straightforward buying experience. We hand-pick our inventory, recondition every vehicle, and make financing easy — so you can drive home with confidence.`}</p>
         </div>
       </section>

@@ -24,13 +24,24 @@ const VEHICLES = [
     photos: [img("1605559424843-9e4c228bf1c2"), img("1550355291-bbee04a92027")] },
 ];
 
+// Real SVG logo (emblem + wordmark) — reads on dark and light headers. Stored as a data URL.
+const LOGO_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='190' height='40' viewBox='0 0 190 40'>
+<rect x='0' y='4' width='32' height='32' rx='7' fill='#EA580C'/>
+<path d='M9 12 L18 20 L9 28' fill='none' stroke='#fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>
+<path d='M16 12 L25 20 L16 28' fill='none' stroke='#fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' opacity='0.55'/>
+<text x='42' y='24' font-family='Arial Narrow, Arial, sans-serif' font-weight='700' font-size='22' letter-spacing='0.5' fill='#EA580C'>DEHY</text>
+<text x='43' y='34' font-family='Arial, sans-serif' font-weight='700' font-size='8.5' letter-spacing='3' fill='#9ca3af'>AUTO SALES</text>
+</svg>`;
+const LOGO_URL = "data:image/svg+xml," + encodeURIComponent(LOGO_SVG);
+
 const WEBSITE = {
-  template: "MODERN",
+  template: "INVENTORY_FIRST", // "Bold" — dark, condensed, inventory-forward
   status: "PUBLISHED",
-  primaryColor: "#2b6ba4",
-  headline: "Drive home something you love.",
+  primaryColor: "#EA580C",
+  logoUrl: LOGO_URL,
+  headline: "Find your next ride.",
   intro: "Hand-picked, fully inspected vehicles priced to the market — with financing options for every situation. No pressure, no games.",
-  ctaLabel: "Browse inventory",
+  ctaLabel: "Shop inventory",
   heroImageUrl: img("1517672651691-24622a91b550"),
   aboutText: "Dehy Auto Sales is a locally owned dealership built on straight talk and fair pricing. We hand-select every vehicle, put it through a multi-point inspection, and price it to the live market — so you always know you're getting a real deal. Whether you're buying your first car or your fifth, our team makes the process simple and honest from test drive to keys in hand.",
   financingText: "Good credit, bad credit, or no credit — we work with a network of lenders to get you approved. Get pre-qualified online in minutes with no impact to your credit score.",
@@ -81,7 +92,7 @@ const WEBSITE = {
   await p.website.update({
     where: { dealershipId },
     data: {
-      template: WEBSITE.template, status: WEBSITE.status, primaryColor: WEBSITE.primaryColor,
+      template: WEBSITE.template, status: WEBSITE.status, primaryColor: WEBSITE.primaryColor, logoUrl: WEBSITE.logoUrl,
       headline: WEBSITE.headline, intro: WEBSITE.intro, ctaLabel: WEBSITE.ctaLabel, heroImageUrl: WEBSITE.heroImageUrl,
       aboutText: WEBSITE.aboutText, financingText: WEBSITE.financingText, tradeInText: WEBSITE.tradeInText,
       whyUs: WEBSITE.whyUs, staff: WEBSITE.staff, hours: WEBSITE.hours, socials: WEBSITE.socials,
