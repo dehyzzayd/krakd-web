@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { Card } from "@/components/app/AppKit";
 import { useApi } from "@/lib/useApi";
@@ -27,6 +28,7 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
 
 export default function CampaignsPage() {
   const { data, reload } = useApi<Data>("/campaigns");
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const items = data?.items ?? [];
   const stats = data?.stats;
@@ -74,7 +76,7 @@ export default function CampaignsPage() {
                   {items.map((c) => {
                     const s = STATUS[c.status] ?? STATUS.DRAFT;
                     return (
-                      <tr key={c.id} className="border-b border-n100 last:border-0 hover:bg-n50">
+                      <tr key={c.id} onClick={() => router.push(`/dashboard/marketing/campaigns/${c.id}`)} className="cursor-pointer border-b border-n100 last:border-0 hover:bg-n50">
                         <td className="px-4 py-3 font-medium text-n900">{c.name}</td>
                         <td className="px-3 py-3 text-n600">{CHANNEL_LABEL[c.channel] ?? c.channel}</td>
                         <td className="px-3 py-3 text-n600">{OBJ_LABEL[c.objective] ?? c.objective}</td>
