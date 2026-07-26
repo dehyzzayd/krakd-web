@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
+import { apiFetch, ApiError } from "@/lib/api";
 import type { Contact } from "@/lib/crm";
 import { Mail, Phone, Plus, Trash2, ChevronDown } from "lucide-react";
 
@@ -17,7 +18,7 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
   return <div className="space-y-1.5"><label className="text-[13px] font-medium text-n900">{label}</label>{children}</div>;
 }
 
-export function EditContactSheet({ open, onClose, contact }: { open: boolean; onClose: () => void; contact?: Contact | null }) {
+export function EditContactSheet({ open, onClose, contact, onCreated }: { open: boolean; onClose: () => void; contact?: Contact | null; onCreated?: () => void }) {
   const [first, setFirst] = useState(contact?.name.split(" ")[0] ?? "");
   const [last, setLast] = useState(contact?.name.split(" ").slice(1).join(" ") ?? "");
   const [emails, setEmails] = useState<Email[]>([{ value: contact?.email ?? "", type: "personal" }]);
@@ -30,6 +31,23 @@ export function EditContactSheet({ open, onClose, contact }: { open: boolean; on
   const setPhone = (i: number, patch: Partial<PhoneN>) => setPhones((p) => p.map((e, j) => (j === i ? { ...e, ...patch } : e)));
   const setAddr = (i: number, patch: Partial<Addr>) => setAddrs((p) => p.map((e, j) => (j === i ? { ...e, ...patch } : e)));
 
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const save = async () => {
+    setErr(null);
+    if (!first.trim()) { setErr("Enter a first name."); return; }
+    setBusy(true);
+    try {
+      await apiFetch("/leads", { method: "POST", body: JSON.stringify({ firstName: first, lastName: last || undefined, email: emails[0]?.value || undefined, phone: phones[0]?.value || undefined, source: source || undefined }) });
+      onCreated?.();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Could not save the contact.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const AddBtn = ({ onClick, label }: { onClick: () => void; label: string }) => (
     <button type="button" onClick={onClick} className="flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium text-brand transition hover:bg-brand-soft/60"><Plus className="h-4 w-4" />{label}</button>
   );
@@ -38,9 +56,10 @@ export function EditContactSheet({ open, onClose, contact }: { open: boolean; on
     <Sheet open={open} onClose={onClose} title={contact ? "Edit contact" : "Add contact"} subtitle="Update contact information"
       footer={<>
         <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>
-        <button onClick={onClose} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold">Save changes</button>
+        <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : contact ? "Save changes" : "Add contact"}</button>
       </>}>
       <div className="space-y-6">
+        {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
         {/* name */}
         <div className="grid grid-cols-2 gap-4">
           <Labeled label="First name"><input value={first} onChange={(e) => setFirst(e.target.value)} className={fieldCls} /></Labeled>

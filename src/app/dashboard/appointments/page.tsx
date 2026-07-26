@@ -22,7 +22,7 @@ const TODAY = 25;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function CalendarPage() {
-  const { data } = useApi<{ items: ApiAppt[] }>("/appointments");
+  const { data, reload } = useApi<{ items: ApiAppt[] }>("/appointments");
   const appts: Appt[] = useMemo(() => (data?.items ?? []).map((a) => {
     const st = new Date(a.start);
     return {
@@ -148,7 +148,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {apptEdit && <EditAppointmentSheet open appt={apptEdit.appt} onClose={() => setApptEdit(null)} />}
+      {apptEdit && <EditAppointmentSheet open onClose={() => setApptEdit(null)} onCreated={reload} />}
     </>
   );
 }

@@ -16,7 +16,7 @@ const avatarBg = (n: string) => ["#2b6ba4", "#1f8a65", "#c08532", "#6b5bab", "#b
 const TEMP: Record<string, Tone> = { Hot: "err", Warm: "warn", Cold: "brand" };
 
 export default function ContactsPage() {
-  const { data, loading } = useApi<LeadsData>("/leads");
+  const { data, loading, reload } = useApi<LeadsData>("/leads");
   const [q, setQ] = useState("");
   const [edit, setEdit] = useState<{ contact: Contact | null } | null>(null);
 
@@ -69,7 +69,7 @@ export default function ContactsPage() {
           )}
         </Card>
 
-        {edit && <EditContactSheet open contact={edit.contact} onClose={() => setEdit(null)} />}
+        {edit && <EditContactSheet open contact={edit.contact} onClose={() => setEdit(null)} onCreated={reload} />}
       </AppMain>
     </>
   );
