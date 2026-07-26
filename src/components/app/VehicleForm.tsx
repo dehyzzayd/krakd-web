@@ -2,8 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
+import { apiFetch, ApiError } from "@/lib/api";
 import { money, type Vehicle, type VStatus } from "@/lib/inventory";
 import { Barcode, Sparkles, Camera, Upload, DollarSign, Car, ImageIcon } from "lucide-react";
 
@@ -42,8 +44,36 @@ const inputCls = "h-9 w-full rounded-lg border border-n200 bg-white px-2.5 text-
 
 export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   const edit = !!vehicle;
+  const router = useRouter();
   const [f, setF] = useState<Form>(() => seed(vehicle));
   const set = (k: keyof Form, v: string | number) => setF((p) => ({ ...p, [k]: v }));
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    setErr(null);
+    if (!f.vin || !f.year || !f.make || !f.model || !f.stock) { setErr("Fill in VIN, year, make, model and stock #."); return; }
+    setSaving(true);
+    try {
+      const priceCents = Math.round((+f.price || 0) * 100);
+      const costCents = Math.round((+f.cost || 0) * 100);
+      if (edit && vehicle) {
+        await apiFetch(`/inventory/${vehicle.id}`, { method: "PATCH", body: JSON.stringify({ priceCents, costCents, mileage: +f.mileage || 0, status: f.status, exteriorColor: f.color || undefined }) });
+        router.push(`/dashboard/inventory/${vehicle.id}`);
+      } else {
+        const res = await apiFetch<{ id: string }>("/inventory", { method: "POST", body: JSON.stringify({
+          vin: f.vin, stockNumber: f.stock, year: +f.year, make: f.make, model: f.model,
+          trim: f.trim || undefined, bodyType: f.body || undefined, mileage: +f.mileage || 0,
+          priceCents, costCents, status: f.status, exteriorColor: f.color || undefined,
+        }) });
+        router.push(`/dashboard/inventory/${res.id}`);
+      }
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Could not save the vehicle.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const cost = +f.cost || 0, recon = +f.recon || 0, pack = +f.pack || 0, price = +f.price || 0;
   const gross = price - cost - recon - pack;
@@ -156,9 +186,10 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
               </div>
             )}
 
+            {err && <p className="mb-2 text-[12.5px] font-medium text-err">{err}</p>}
             <div className="flex items-center gap-2">
               <Link href="/dashboard/inventory" className="h-10 flex-1 rounded-lg border border-n200 bg-white text-center text-[13px] font-semibold leading-10 text-n700 transition hover:bg-n50">Cancel</Link>
-              <Link href="/dashboard/inventory" className="h-10 flex-1 rounded-lg bg-brand text-center text-[13px] font-semibold leading-10 text-white transition hover:bg-brand-hover">{edit ? "Save changes" : "Add to inventory"}</Link>
+              <button onClick={save} disabled={saving} className="h-10 flex-1 rounded-lg bg-brand text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">{saving ? "Saving…" : edit ? "Save changes" : "Add to inventory"}</button>
             </div>
           </div>
         </div>

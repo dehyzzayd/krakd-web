@@ -1,12 +1,49 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
-import { json, route } from "@/lib/server/http";
+import { json, route, HttpError } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const days = (d: Date | null) => (d ? Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000)) : 0);
+
+const createSchema = z.object({
+  vin: z.string().min(5),
+  stockNumber: z.string().min(1),
+  year: z.coerce.number().int().min(1980),
+  make: z.string().min(1),
+  model: z.string().min(1),
+  trim: z.string().optional(),
+  bodyType: z.string().optional(),
+  mileage: z.coerce.number().int().min(0).default(0),
+  priceCents: z.coerce.number().int().min(0).default(0),
+  costCents: z.coerce.number().int().min(0).default(0),
+  status: z.enum(["AVAILABLE", "RECON", "RESERVED", "WHOLESALE", "SOLD"]).default("RECON"),
+  exteriorColor: z.string().optional(),
+});
+
+/* POST /api/v1/inventory → add a vehicle to the current dealer's lot */
+export const POST = route(async (req: NextRequest) => {
+  const { dealershipId } = await requireAuth(req);
+  const parsed = createSchema.safeParse(await req.json());
+  if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
+  const d = parsed.data;
+
+  const v = await prisma.vehicle.create({
+    data: {
+      dealershipId,
+      vin: d.vin.toUpperCase(),
+      stockNumber: d.stockNumber,
+      year: d.year, make: d.make, model: d.model, trim: d.trim, bodyType: d.bodyType,
+      mileage: d.mileage, priceCents: d.priceCents, costCents: d.costCents,
+      status: d.status, exteriorColor: d.exteriorColor,
+      listedAt: d.status === "AVAILABLE" ? new Date() : null,
+    },
+  });
+  return json({ id: v.id }, 201);
+});
 
 /* GET /api/v1/inventory → { items, stats } for the current dealer */
 export const GET = route(async (req: NextRequest) => {
