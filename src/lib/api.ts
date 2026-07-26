@@ -33,6 +33,7 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestInit = {}
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     ...opts,
+    credentials: "same-origin", // send/receive the OTP cookie
     headers: {
       "content-type": "application/json",
       ...(token ? { authorization: `Bearer ${token}` } : {}),

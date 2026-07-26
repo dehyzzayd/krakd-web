@@ -18,10 +18,12 @@ export const POST = route(async (req: NextRequest) => {
   const token = await signOtp(email, code);
   await sendOtpEmail({ to: email, code });
 
+  // secure only over real HTTPS — so http://localhost works even under `next start`
+  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
   const res = json({ ok: true });
   res.cookies.set("krakd_otp", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: proto === "https",
     sameSite: "lax",
     maxAge: 600,
     path: "/",
