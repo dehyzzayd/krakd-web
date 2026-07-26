@@ -1,0 +1,34 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/server/auth";
+import { json, route, HttpError } from "@/lib/server/http";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/* GET /api/v1/campaigns/[id] */
+export const GET = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
+  const { dealershipId } = await requireAuth(req);
+  const { id } = await ctx.params;
+  const campaign = await prisma.campaign.findFirst({ where: { id, dealershipId } });
+  if (!campaign) throw new HttpError(404, "Campaign not found");
+  return json(campaign);
+});
+
+const patchSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "PAUSED", "ENDED"]).optional(),
+});
+
+/* PATCH /api/v1/campaigns/[id] — rename, pause/resume, submit for review, end */
+export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
+  const { dealershipId } = await requireAuth(req);
+  const { id } = await ctx.params;
+  const parsed = patchSchema.safeParse(await req.json());
+  if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
+  const existing = await prisma.campaign.findFirst({ where: { id, dealershipId } });
+  if (!existing) throw new HttpError(404, "Campaign not found");
+  const campaign = await prisma.campaign.update({ where: { id }, data: parsed.data });
+  return json(campaign);
+});
