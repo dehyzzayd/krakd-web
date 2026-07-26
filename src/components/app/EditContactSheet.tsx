@@ -53,7 +53,7 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title={contact ? "Edit contact" : "Add contact"} subtitle="Update contact information"
+    <Sheet open={open} onClose={onClose} width="max-w-[420px]" title={contact ? "Edit contact" : "Add contact"} subtitle="Update contact information"
       footer={<>
         <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>
         <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : contact ? "Save changes" : "Add contact"}</button>

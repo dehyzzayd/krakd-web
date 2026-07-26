@@ -43,7 +43,7 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Add a lead" subtitle="Krakd AI starts following up the moment it's saved."
+    <Sheet open={open} onClose={onClose} width="max-w-[420px]" title="Add a lead" subtitle="Krakd AI starts following up the moment it's saved."
       footer={<>
         <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>
         <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Adding…" : "Add lead"}</button>
