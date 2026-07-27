@@ -33,7 +33,7 @@ export default function WebsitePreview() {
         whyUs: w.whyUs || [], staff: w.staff || [], reviews: w.reviews || [],
         phone: w.phone ?? null, email: w.email ?? null, address: w.address ?? null, city: w.city ?? null, state: w.state ?? null, zip: w.zip ?? null,
         hours: w.hours || [], socials: w.socials || {}, sections: w.sections || {},
-        pages: w.pages || [], vdpButtonLabel: w.vdpButtonLabel ?? null, vdpButtonUrl: w.vdpButtonUrl ?? null,
+        pages: w.pages || [], nav: w.nav || [], vdpButtonLabel: w.vdpButtonLabel ?? null, vdpButtonUrl: w.vdpButtonUrl ?? null,
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",

@@ -17,11 +17,13 @@ export type SiteConfig = {
   socials: Record<string, string>;
   sections: Record<string, boolean>;
   pages: CustomPage[];
+  nav: NavItem[];
   vdpButtonLabel: string | null;
   vdpButtonUrl: string | null;
 };
 
 export type CustomPage = { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean };
+export type NavItem = { id: string; label: string; type: "home" | "inventory" | "financing" | "about" | "contact" | "page" | "link"; value?: string; visible?: boolean };
 
 export type SiteVehicle = {
   id: string; year: number; make: string; model: string; trim: string; body: string;
@@ -63,6 +65,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     socials: (w.socials ?? {}) as Record<string, string>,
     sections: (w.sections ?? {}) as Record<string, boolean>,
     pages: (Array.isArray(w.pages) ? w.pages : []) as CustomPage[],
+    nav: (Array.isArray(w.nav) ? w.nav : []) as NavItem[],
     vdpButtonLabel: w.vdpButtonLabel, vdpButtonUrl: w.vdpButtonUrl,
   };
 });

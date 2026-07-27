@@ -581,6 +581,7 @@ model Website {
   staff         Json           @default("[]") // [{ name, role, photoUrl }]
   reviews       Json           @default("[]") // [{ name, rating, body }]
   pages         Json           @default("[]") // custom pages: [{ id, slug, title, body, inNav, showSidebar }]
+  nav           Json           @default("[]") // curated navbar: [{ id, label, type, value, visible }] (empty = defaults)
   vdpButtonLabel String?       // custom CTA button shown on every vehicle detail page
   vdpButtonUrl   String?
 

@@ -12,6 +12,7 @@ export type Web = {
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
   pages: { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean }[];
+  nav: { id: string; label: string; type: "home" | "inventory" | "financing" | "about" | "contact" | "page" | "link"; value?: string; visible?: boolean }[];
   vdpButtonLabel: string | null; vdpButtonUrl: string | null;
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[]; socials: Record<string, string>; sections: Record<string, boolean>;
@@ -367,6 +368,61 @@ export function VehiclePanel({ w, reload }: { w: Web; reload: () => void }) {
         </div>
       </Card>
       <SaveBar {...s} onSave={() => s.save({ vdpButtonLabel: label, vdpButtonUrl: url })} label="Save vehicle page" />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Navbar / menu ─────────────────────────── */
+type NavRow = Web["nav"][number];
+function seedNav(w: Web): NavRow[] {
+  if (w.nav?.length) return w.nav;
+  const base: NavRow[] = [
+    { id: "home", label: "Home", type: "home", visible: true },
+    { id: "inventory", label: "Inventory", type: "inventory", visible: true },
+    { id: "financing", label: "Financing", type: "financing", visible: true },
+    { id: "about", label: "About", type: "about", visible: true },
+    { id: "contact", label: "Contact", type: "contact", visible: true },
+  ];
+  for (const p of w.pages ?? []) if (p.inNav) base.push({ id: `page-${p.slug}`, label: p.title, type: "page", value: p.slug, visible: true });
+  return base;
+}
+export function NavbarPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [nav, setNav] = useState<NavRow[]>(() => seedNav(w));
+  const s = useSave(reload);
+  const move = (i: number, dir: number) => setNav((p) => { const a = [...p]; const j = i + dir; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; });
+  const upd = (i: number, patch: Partial<NavRow>) => setNav((p) => p.map((x, j) => j === i ? { ...x, ...patch } : x));
+  const del = (i: number) => setNav((p) => p.filter((_, j) => j !== i));
+  const used = new Set(nav.filter((n) => n.type === "page").map((n) => n.value));
+  const addable = (w.pages ?? []).filter((p) => !used.has(p.slug));
+  const addPage = (slug: string) => { const pg = w.pages.find((p) => p.slug === slug); if (pg) setNav((p) => [...p, { id: `page-${slug}`, label: pg.title, type: "page", value: slug, visible: true }]); };
+  const addLink = () => setNav((p) => [...p, { id: `link-${p.length}-${p.length + 1}`, label: "New link", type: "link", value: "", visible: true }]);
+  return (
+    <div className="space-y-5">
+      <div><h3 className="text-[15px] font-semibold text-n900">Navbar menu</h3><p className="text-[12.5px] text-n500">Reorder, rename, hide items, or add custom pages and external links. This is exactly what shows in your site header.</p></div>
+      <Card className="p-3">
+        <div className="space-y-2">
+          {nav.map((it, i) => {
+            const on = it.visible !== false;
+            return (
+              <div key={it.id} className="flex items-center gap-2 rounded-lg border border-n200 bg-white p-2">
+                <div className="flex flex-col">
+                  <button onClick={() => move(i, -1)} disabled={i === 0} className="grid h-4 w-5 place-items-center text-[11px] text-n400 hover:text-n900 disabled:opacity-30">▲</button>
+                  <button onClick={() => move(i, 1)} disabled={i === nav.length - 1} className="grid h-4 w-5 place-items-center text-[11px] text-n400 hover:text-n900 disabled:opacity-30">▼</button>
+                </div>
+                <input value={it.label} onChange={(e) => upd(i, { label: e.target.value })} className={cn(field, "flex-1")} />
+                {it.type === "link" ? <input value={it.value ?? ""} onChange={(e) => upd(i, { value: e.target.value })} placeholder="https://…" className={cn(field, "flex-1")} /> : <span className="shrink-0 rounded bg-n100 px-2 py-1 text-[10.5px] font-medium uppercase tracking-wide text-n500">{it.type === "page" ? `/${it.value}` : it.type}</span>}
+                <button onClick={() => upd(i, { visible: !on })} title={on ? "Visible" : "Hidden"} className={cn("relative h-5 w-9 shrink-0 rounded-full transition", on ? "bg-brand" : "bg-n300")}><span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", on ? "left-4" : "left-0.5")} /></button>
+                <button onClick={() => del(i)} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-n200 pt-3">
+          <button onClick={addLink} className="inline-flex items-center gap-1 rounded-lg border border-n200 px-3 py-1.5 text-[12.5px] font-semibold text-n700 hover:bg-n50"><Plus className="h-3.5 w-3.5" />External link</button>
+          {addable.map((p) => <button key={p.slug} onClick={() => addPage(p.slug)} className="inline-flex items-center gap-1 rounded-lg border border-n200 px-3 py-1.5 text-[12.5px] font-semibold text-n700 hover:bg-n50"><Plus className="h-3.5 w-3.5" />{p.title}</button>)}
+        </div>
+      </Card>
+      <SaveBar {...s} onSave={() => s.save({ nav })} label="Save menu" />
     </div>
   );
 }

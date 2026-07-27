@@ -22,8 +22,18 @@ import { accentOf } from "@/lib/server/site";
 import { cn } from "@/lib/cn";
 import { siteTheme } from "./theme";
 
-function navItems(config: SiteConfig) {
+function navItems(config: SiteConfig): { href: string; label: string; external?: boolean }[] {
   const base = `/site/${config.slug}`;
+  const builtin: Record<string, string> = { home: base, inventory: `${base}/inventory`, financing: `${base}/financing`, about: `${base}/about`, contact: `${base}/contact` };
+  // curated menu wins
+  if (config.nav && config.nav.length) {
+    return config.nav.filter((i) => i.visible !== false).map((i) => {
+      if (i.type === "link") return { href: i.value || "#", label: i.label, external: true };
+      if (i.type === "page") return { href: `${base}/${i.value ?? ""}`, label: i.label };
+      return { href: builtin[i.type] ?? base, label: i.label };
+    });
+  }
+  // default: built-ins + any page flagged inNav
   const items = [
     { href: base, label: "Home" },
     { href: `${base}/inventory`, label: "Inventory" },
@@ -60,12 +70,14 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
         : <span className={cn("text-[18px] font-extrabold tracking-tight", struct === "editorial" && "font-display text-[19px] font-light uppercase tracking-[0.22em]", dark ? "text-white" : "text-[#0f172a]")}>{config.dealershipName}</span>}
     </Link>
   );
-  const navLink = (it: { href: string; label: string }, extra?: string) => {
+  const navLink = (it: { href: string; label: string; external?: boolean }, extra?: string) => {
     const active = pathname === it.href;
     const base = struct === "bold" ? "font-display text-[13.5px] font-medium uppercase tracking-[0.1em]"
       : struct === "editorial" ? "font-display text-[12px] font-medium uppercase tracking-[0.2em]"
       : "text-[14px] font-medium";
-    return <Link key={it.href} href={it.href} className={cn("transition", base, extra)} style={{ color: active ? navActive : navIdle }}>{it.label}</Link>;
+    const cls = cn("transition", base, extra);
+    if (it.external) return <a key={it.href} href={it.href} target="_blank" rel="noreferrer" className={cls} style={{ color: navIdle }}>{it.label}</a>;
+    return <Link key={it.href} href={it.href} className={cls} style={{ color: active ? navActive : navIdle }}>{it.label}</Link>;
   };
 
   return (

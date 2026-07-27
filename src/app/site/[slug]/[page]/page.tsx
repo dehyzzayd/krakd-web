@@ -39,7 +39,11 @@ export default async function CustomPage({ params }: { params: Promise<{ slug: s
 
   return (
     <section className="mx-auto max-w-[1180px] px-5 py-14">
-      <div className={p.showSidebar ? "grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]" : "mx-auto max-w-[760px]"}>
+      <div className={p.showSidebar ? "grid gap-10 lg:grid-cols-[minmax(0,1fr)_220px]" : "mx-auto max-w-[760px]"}>
+        <div>
+          <h1 className="text-[34px] font-extrabold tracking-tight text-[#0f172a] sm:text-[40px]">{p.title}</h1>
+          <div className="mt-6"><Body text={p.body} /></div>
+        </div>
         {p.showSidebar && (
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-[#94a3b8]">Pages</p>
@@ -51,10 +55,6 @@ export default async function CustomPage({ params }: { params: Promise<{ slug: s
             </nav>
           </aside>
         )}
-        <div>
-          <h1 className="text-[34px] font-extrabold tracking-tight text-[#0f172a] sm:text-[40px]">{p.title}</h1>
-          <div className="mt-6"><Body text={p.body} /></div>
-        </div>
       </div>
     </section>
   );
