@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { getSite, getSitePage, accentOf } from "@/lib/server/site";
+import { getSite, getSitePage } from "@/lib/server/site";
+import { PageSidebar } from "@/components/site/PageSidebar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,27 +34,15 @@ export default async function CustomPage({ params }: { params: Promise<{ slug: s
   if (!config) notFound();
   const p = await getSitePage(slug, page);
   if (!p) notFound();
-  const accent = accentOf(config.primaryColor);
-  const navPages = config.pages.filter((x) => x.inNav || x.showSidebar);
 
   return (
     <section className="mx-auto max-w-[1180px] px-5 py-14">
-      <div className={p.showSidebar ? "grid gap-10 lg:grid-cols-[minmax(0,1fr)_220px]" : "mx-auto max-w-[760px]"}>
+      <div className={p.showSidebar ? "grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]" : "mx-auto max-w-[760px]"}>
         <div>
           <h1 className="text-[34px] font-extrabold tracking-tight text-[#0f172a] sm:text-[40px]">{p.title}</h1>
           <div className="mt-6"><Body text={p.body} /></div>
         </div>
-        {p.showSidebar && (
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-[#94a3b8]">Pages</p>
-            <nav className="space-y-1">
-              {navPages.map((x) => {
-                const active = x.slug === p.slug;
-                return <Link key={x.id} href={`/site/${slug}/${x.slug}`} className="block rounded-lg px-3 py-2 text-[13.5px] font-medium transition" style={active ? { background: accent, color: "#fff" } : { color: "#334155" }}>{x.title}</Link>;
-              })}
-            </nav>
-          </aside>
-        )}
+        {p.showSidebar && <PageSidebar config={config} activeSlug={p.slug} />}
       </div>
     </section>
   );

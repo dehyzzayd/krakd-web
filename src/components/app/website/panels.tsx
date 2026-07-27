@@ -13,6 +13,7 @@ export type Web = {
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
   pages: { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean }[];
   nav: { id: string; label: string; type: "home" | "inventory" | "financing" | "about" | "contact" | "page" | "link"; value?: string; visible?: boolean }[];
+  sidebar: { id: string; type: "contactForm" | "address" | "hours" | "phone" | "pages" | "text"; title?: string; body?: string }[];
   vdpButtonLabel: string | null; vdpButtonUrl: string | null;
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[]; socials: Record<string, string>; sections: Record<string, boolean>;
@@ -326,7 +327,7 @@ const slugify = (x: string) => x.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-"
 export function PagesPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [pages, setPages] = useState(w.pages ?? []);
   const upd = (i: number, patch: Partial<(typeof pages)[number]>) => setPages((p) => p.map((x, j) => j === i ? { ...x, ...patch } : x));
-  const add = () => setPages((p) => [...p, { id: `p${p.length}-${Math.max(1, p.length + 1)}`, slug: "", title: "", body: "", inNav: true, showSidebar: false }]);
+  const add = () => setPages((p) => [...p, { id: `p${p.length}-${Math.max(1, p.length + 1)}`, slug: "", title: "", body: "", inNav: true, showSidebar: true }]);
   const s = useSave(reload);
   return (
     <div className="space-y-5">
@@ -423,6 +424,50 @@ export function NavbarPanel({ w, reload }: { w: Web; reload: () => void }) {
         </div>
       </Card>
       <SaveBar {...s} onSave={() => s.save({ nav })} label="Save menu" />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Page sidebar ─────────────────────────── */
+type SbRow = Web["sidebar"][number];
+const SB_META: Record<SbRow["type"], string> = { contactForm: "Contact form", address: "Address & map", hours: "Business hours", phone: "Call button", pages: "Page links", text: "Custom text" };
+const SB_DEFAULT: SbRow[] = [{ id: "d1", type: "contactForm" }, { id: "d2", type: "address" }, { id: "d3", type: "hours" }, { id: "d4", type: "pages" }];
+export function SidebarPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [blocks, setBlocks] = useState<SbRow[]>(() => (w.sidebar?.length ? w.sidebar : SB_DEFAULT));
+  const s = useSave(reload);
+  const move = (i: number, d: number) => setBlocks((p) => { const a = [...p]; const j = i + d; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; });
+  const upd = (i: number, patch: Partial<SbRow>) => setBlocks((p) => p.map((x, j) => j === i ? { ...x, ...patch } : x));
+  const del = (i: number) => setBlocks((p) => p.filter((_, j) => j !== i));
+  const add = (type: SbRow["type"]) => setBlocks((p) => [...p, { id: `${type}-${p.length}-${p.length + 1}`, type }]);
+  const present = new Set(blocks.map((b) => b.type));
+  return (
+    <div className="space-y-5">
+      <div><h3 className="text-[15px] font-semibold text-n900">Page sidebar</h3><p className="text-[12.5px] text-n500">One sidebar shared across every page that has &quot;page sidebar&quot; on. Add, remove and reorder blocks.</p></div>
+      <Card className="p-3">
+        <div className="space-y-2">
+          {blocks.map((b, i) => (
+            <div key={b.id} className="rounded-lg border border-n200 bg-white p-3">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col"><button onClick={() => move(i, -1)} disabled={i === 0} className="grid h-4 w-5 place-items-center text-[11px] text-n400 hover:text-n900 disabled:opacity-30">▲</button><button onClick={() => move(i, 1)} disabled={i === blocks.length - 1} className="grid h-4 w-5 place-items-center text-[11px] text-n400 hover:text-n900 disabled:opacity-30">▼</button></div>
+                <span className="flex-1 text-[13px] font-semibold text-n900">{SB_META[b.type]}</span>
+                <button onClick={() => del(i)} className="grid h-8 w-8 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
+              </div>
+              {b.type === "text" ? (
+                <div className="mt-2 space-y-2"><input value={b.title ?? ""} onChange={(e) => upd(i, { title: e.target.value })} placeholder="Heading" className={field} /><textarea value={b.body ?? ""} onChange={(e) => upd(i, { body: e.target.value })} rows={3} placeholder="Text…" className={textarea} /></div>
+              ) : b.type !== "phone" ? (
+                <input value={b.title ?? ""} onChange={(e) => upd(i, { title: e.target.value })} placeholder="Custom heading (optional)" className={cn(field, "mt-2")} />
+              ) : null}
+            </div>
+          ))}
+          {blocks.length === 0 && <p className="py-4 text-center text-[12.5px] text-n500">No blocks. Add one below.</p>}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-n200 pt-3">
+          {(Object.keys(SB_META) as SbRow["type"][]).map((t) => (
+            <button key={t} onClick={() => add(t)} disabled={t !== "text" && present.has(t)} className="inline-flex items-center gap-1 rounded-lg border border-n200 px-3 py-1.5 text-[12.5px] font-semibold text-n700 hover:bg-n50 disabled:opacity-40"><Plus className="h-3.5 w-3.5" />{SB_META[t]}</button>
+          ))}
+        </div>
+      </Card>
+      <SaveBar {...s} onSave={() => s.save({ sidebar: blocks })} label="Save sidebar" />
     </div>
   );
 }

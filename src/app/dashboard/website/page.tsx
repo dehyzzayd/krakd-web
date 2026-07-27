@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
 import { cn } from "@/lib/cn";
-import { OverviewPanel, TemplatePanel, BrandingPanel, HomepagePanel, ContactPanel, PagesPanel, NavbarPanel, VehiclePanel, DomainPanel, PublishPanel, type Web } from "@/components/app/website/panels";
-import { LayoutDashboard, Palette, Image as ImageIcon, Home, Menu, Phone, FileText, Car, Globe, Rocket } from "lucide-react";
+import { OverviewPanel, TemplatePanel, BrandingPanel, HomepagePanel, ContactPanel, PagesPanel, NavbarPanel, SidebarPanel, VehiclePanel, DomainPanel, PublishPanel, type Web } from "@/components/app/website/panels";
+import { LayoutDashboard, Palette, Image as ImageIcon, Home, Menu, PanelRight, Phone, FileText, Car, Globe, Rocket } from "lucide-react";
 
 const SECTIONS = [
   { id: "overview", label: "Overview", Icon: LayoutDashboard, group: "Set up" },
@@ -14,6 +14,7 @@ const SECTIONS = [
   { id: "homepage", label: "Homepage", Icon: Home, group: "Design" },
   { id: "navbar", label: "Navbar menu", Icon: Menu, group: "Design" },
   { id: "pages", label: "Pages", Icon: FileText, group: "Design" },
+  { id: "sidebar", label: "Page sidebar", Icon: PanelRight, group: "Design" },
   { id: "contact", label: "Contact & team", Icon: Phone, group: "Design" },
   { id: "vehicle", label: "Vehicle page", Icon: Car, group: "Design" },
   { id: "domain", label: "Domain", Icon: Globe, group: "Launch" },
@@ -33,6 +34,7 @@ export default function WebsitePage() {
       case "contact": return <ContactPanel w={w} reload={reload} />;
       case "pages": return <PagesPanel w={w} reload={reload} />;
       case "navbar": return <NavbarPanel w={w} reload={reload} />;
+      case "sidebar": return <SidebarPanel w={w} reload={reload} />;
       case "vehicle": return <VehiclePanel w={w} reload={reload} />;
       case "domain": return <DomainPanel w={w} reload={reload} />;
       case "publish": return <PublishPanel w={w} reload={reload} />;
