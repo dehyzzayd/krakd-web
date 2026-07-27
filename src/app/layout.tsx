@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { Oswald } from "next/font/google";
+import { Oswald, Fraunces } from "next/font/google";
 import "./globals.css";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 
 const oswald = Oswald({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-display" });
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["300", "400", "500", "600"], style: ["normal", "italic"], variable: "--font-serif" });
 
 export const metadata: Metadata = {
   title: "Krakd — The Automotive Operating System",
@@ -31,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable} ${oswald.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${oswald.variable} ${fraunces.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-dvh antialiased">

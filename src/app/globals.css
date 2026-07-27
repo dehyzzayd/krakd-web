@@ -128,6 +128,13 @@
 
   /* dealer-site display type (Oswald) — condensed, industrial */
   .font-display { font-family: var(--font-display), "Oswald", ui-sans-serif, system-ui, sans-serif; }
+  /* editorial serif (Fraunces) — luxury template */
+  .font-serif { font-family: var(--font-serif), "Fraunces", ui-serif, Georgia, serif; }
+  /* marquee ticker (bold template) */
+  .marquee { display: inline-flex; white-space: nowrap; animation: marquee 28s linear infinite; }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .hscroll { scrollbar-width: none; }
+  .hscroll::-webkit-scrollbar { display: none; }
   .site-scroll::-webkit-scrollbar { width: 10px; }
   .site-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 8px; }
 }

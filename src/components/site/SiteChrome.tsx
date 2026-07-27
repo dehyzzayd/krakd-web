@@ -117,7 +117,7 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
   const mapQuery = encodeURIComponent([config.address, cityLine].filter(Boolean).join(", "));
 
   return (
-    <footer className="w-full text-white" style={{ background: "#0f172a" }}>
+    <footer className="w-full text-white" style={{ background: siteTheme(config.template).band }}>
       <div className={`mx-auto grid ${C} gap-8 px-5 py-12 sm:grid-cols-2 lg:grid-cols-4`}>
         <div>
           <p className="text-[16px] font-bold">{config.dealershipName}</p>

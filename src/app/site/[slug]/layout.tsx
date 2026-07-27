@@ -10,8 +10,9 @@ export default async function SiteLayout({ children, params }: { children: React
   const config = await getSite(slug);
   if (!config) notFound();
 
+  const bg = config.template === "PREMIUM" ? "#f4f0e8" : "#ffffff";
   return (
-    <div className="min-h-screen overflow-x-clip bg-white text-[#0f172a]" style={{ ["--accent" as string]: accentOf(config.primaryColor) }}>
+    <div className="min-h-screen overflow-x-clip text-[#0f172a]" style={{ background: bg, ["--accent" as string]: accentOf(config.primaryColor) }}>
       <SiteHeader config={config} />
       <main>{children}</main>
       <SiteFooter config={config} />
