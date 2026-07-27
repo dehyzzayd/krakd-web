@@ -568,6 +568,7 @@ model Website {
   logoUrl      String?         @db.Text // uploaded asset (data URL) or external URL
   heroImageUrl String?         @db.Text // optional hero background asset
   primaryColor String          @default("#2b6ba4")
+  headerStyle  String          @default("auto") // auto | light | dark | accent
   headline     String          @default("Find your next vehicle.")
   intro        String          @default("Browse our latest inventory — updated daily.")
   ctaLabel     String          @default("Browse inventory")

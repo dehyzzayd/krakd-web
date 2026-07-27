@@ -8,7 +8,7 @@ import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Uploa
 
 export type Web = {
   id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM"; status: "DRAFT" | "PUBLISHED";
-  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headline: string; intro: string; ctaLabel: string;
+  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; headline: string; intro: string; ctaLabel: string;
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[];
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
@@ -188,7 +188,7 @@ export function TemplatePanel({ w, reload }: { w: Web; reload: () => void }) {
 /* ─────────────────────────── Details ─────────────────────────── */
 export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [f, setF] = useState({
-    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, primaryColor: w.primaryColor,
+    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, primaryColor: w.primaryColor, headerStyle: w.headerStyle ?? "auto",
     logoUrl: w.logoUrl ?? "", heroImageUrl: w.heroImageUrl ?? "",
     aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
     phone: w.phone ?? "", email: w.email ?? "", address: w.address ?? "", city: w.city ?? "", state: w.state ?? "", zip: w.zip ?? "",
@@ -224,6 +224,14 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
             <L label="Button label"><input value={f.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} className={field} /></L>
             <L label="Brand color"><div className="flex items-center gap-2"><input type="color" value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className="h-10 w-12 shrink-0 rounded-md border border-n200" /><input value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className={cn(field, "tnum")} /></div></L>
           </div>
+          <L label="Navbar style">
+            <div className="grid grid-cols-4 gap-1.5">
+              {([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"], ["accent", "Brand"]] as const).map(([v, lbl]) => (
+                <button key={v} type="button" onClick={() => set("headerStyle", v)} className={cn("h-9 rounded-md border text-[12.5px] font-medium transition", f.headerStyle === v ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n50")}>{lbl}</button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11.5px] text-n400"><span className="font-medium">Brand</span> paints the navbar in your brand color · <span className="font-medium">Auto</span> follows the template.</p>
+          </L>
         </div>
       </Card>
 

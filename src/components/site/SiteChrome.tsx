@@ -22,7 +22,14 @@ function navItems(slug: string) {
 export function SiteHeader({ config }: { config: SiteConfig }) {
   const accent = accentOf(config.primaryColor);
   const ui = siteTheme(config.template);
-  const dark = ui.header === "dark";
+  // header color is dealer-controlled: "auto" defers to the template, else light | dark | accent
+  const eff = config.headerStyle && config.headerStyle !== "auto" ? config.headerStyle : ui.header;
+  const dark = eff !== "light";
+  const barBg = eff === "accent" ? accent : eff === "dark" ? "#0a0a0a" : undefined;
+  const navActive = eff === "accent" ? "#ffffff" : accent;
+  const navIdle = dark ? "rgba(255,255,255,0.82)" : "#334155";
+  const btnBg = eff === "accent" ? "#ffffff" : accent;
+  const btnColor = eff === "accent" ? accent : "#ffffff";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const items = navItems(config.slug);
@@ -31,7 +38,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   return (
     <header className="sticky top-0 z-40 w-full">
       {/* utility strip (light headers only) */}
-      {!dark && (
+      {eff === "light" && (
         <div className="hidden w-full text-white sm:block" style={{ background: "#0f172a" }}>
           <div className={`mx-auto flex h-9 ${ui.container} items-center gap-5 px-5 text-[12px] text-white/80`}>
             {config.address && <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{config.address}{cityLine ? `, ${cityLine}` : ""}</span>}
@@ -40,7 +47,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
         </div>
       )}
       {/* main bar */}
-      <div className={dark ? "w-full border-b border-white/10" : "w-full border-b border-black/8 bg-white"} style={dark ? { background: "#0f172a" } : undefined}>
+      <div className={dark ? "w-full border-b border-white/15" : "w-full border-b border-black/8 bg-white"} style={barBg ? { background: barBg } : undefined}>
         <div className={`mx-auto flex ${dark ? "h-[68px]" : "h-16"} ${ui.container} items-center gap-4 px-5`}>
           <Link href={`/site/${config.slug}`} className="flex items-center gap-2.5">
             {config.logoUrl
@@ -51,17 +58,17 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <nav className="ml-auto hidden items-center gap-7 lg:flex">
             {items.map((it) => {
               const active = pathname === it.href;
-              return <Link key={it.href} href={it.href} className={`transition ${dark ? "font-display text-[13.5px] font-medium uppercase tracking-[0.09em]" : "text-[14px] font-medium"}`} style={{ color: active ? accent : dark ? "rgba(255,255,255,0.82)" : "#334155" }}>{it.label}</Link>;
+              return <Link key={it.href} href={it.href} className={`transition ${dark ? "font-display text-[13.5px] font-medium uppercase tracking-[0.09em]" : "text-[14px] font-medium"}`} style={{ color: active ? navActive : navIdle }}>{it.label}</Link>;
             })}
           </nav>
-          <Link href={`/site/${config.slug}/financing`} className="ml-auto hidden rounded-lg px-4 py-2 text-[13.5px] font-semibold text-white lg:ml-4 lg:inline-block" style={{ background: accent }}>Get financing</Link>
+          <Link href={`/site/${config.slug}/financing`} className="ml-auto hidden rounded-lg px-4 py-2 text-[13.5px] font-semibold lg:ml-4 lg:inline-block" style={{ background: btnBg, color: btnColor }}>Get financing</Link>
           <button onClick={() => setOpen((v) => !v)} className={`ml-auto grid h-10 w-10 place-items-center rounded-lg lg:hidden ${dark ? "text-white" : "text-[#334155]"}`}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
         </div>
         {open && (
-          <div className={dark ? "border-t border-white/10 lg:hidden" : "border-t border-black/8 bg-white lg:hidden"} style={dark ? { background: "#0f172a" } : undefined}>
+          <div className={dark ? "border-t border-white/15 lg:hidden" : "border-t border-black/8 bg-white lg:hidden"} style={barBg ? { background: barBg } : undefined}>
             <div className={`mx-auto ${ui.container} px-5 py-2`}>
               {items.map((it) => <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className={`block py-2.5 text-[15px] font-medium ${dark ? "text-white/85" : "text-[#334155]"}`}>{it.label}</Link>)}
-              <Link href={`/site/${config.slug}/financing`} onClick={() => setOpen(false)} className="mt-2 mb-3 block rounded-lg py-2.5 text-center text-[14px] font-semibold text-white" style={{ background: accent }}>Get financing</Link>
+              <Link href={`/site/${config.slug}/financing`} onClick={() => setOpen(false)} className="mt-2 mb-3 block rounded-lg py-2.5 text-center text-[14px] font-semibold" style={{ background: btnBg, color: btnColor }}>Get financing</Link>
             </div>
           </div>
         )}

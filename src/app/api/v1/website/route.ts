@@ -32,6 +32,7 @@ const patchSchema = z.object({
   logoUrl: asset,
   heroImageUrl: asset,
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #2b6ba4").optional(),
+  headerStyle: z.enum(["auto", "light", "dark", "accent"]).optional(),
   headline: z.string().max(120).optional(),
   intro: z.string().max(400).optional(),
   ctaLabel: z.string().max(40).optional(),

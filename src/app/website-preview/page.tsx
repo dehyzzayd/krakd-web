@@ -25,7 +25,7 @@ export default function WebsitePreview() {
     ]).then(([w, inv]) => {
       setConfig({
         slug: w.slug, dealershipName: (w.dealershipName as string) || "Your dealership", template: (w.template as SiteConfig["template"]) || "MODERN",
-        logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor,
+        logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor, headerStyle: (w.headerStyle as string) || "auto",
         headline: w.headline || "", intro: w.intro || "", ctaLabel: w.ctaLabel || "Browse inventory",
         aboutText: w.aboutText || "", financingText: w.financingText || "", tradeInText: w.tradeInText || "",
         whyUs: w.whyUs || [], staff: w.staff || [],
