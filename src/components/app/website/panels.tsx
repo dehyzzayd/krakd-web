@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Card } from "@/components/app/AppKit";
@@ -70,6 +70,28 @@ const TEMPLATES = [
   { v: "INVENTORY_FIRST", n: "02", name: "Inventory First", desc: "Vehicle search takes priority." },
   { v: "PREMIUM", n: "03", name: "Premium", desc: "Large visuals and stronger branding." },
 ] as const;
+
+/** Fills its card width with a scaled, live preview of one template's home. */
+function TemplateThumb({ template, height = 240 }: { template: string; height?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.3);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setScale(el.clientWidth / 1280);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className="relative w-full overflow-hidden bg-n100" style={{ height }}>
+      <iframe src={`/website-preview?template=${template}`} title={`${template} preview`} scrolling="no" tabIndex={-1}
+        className="pointer-events-none origin-top-left"
+        style={{ width: 1280, height: Math.ceil(height / scale), transform: `scale(${scale})` }} />
+    </div>
+  );
+}
 
 const DOMAIN_BADGE: Record<Web["domainStatus"], { label: string; cls: string }> = {
   NOT_CONNECTED: { label: "Not connected", cls: "bg-n100 text-n600" },
@@ -163,12 +185,10 @@ export function TemplatePanel({ w, reload }: { w: Web; reload: () => void }) {
           const on = w.template === t.v;
           return (
             <Card key={t.v} className={cn("overflow-hidden transition", on && "ring-2 ring-brand")}>
-              {/* live scaled preview of this template's home */}
-              <div className="relative h-[240px] overflow-hidden border-b border-n200 bg-n100">
-                <iframe src={`/website-preview?template=${t.v}`} title={`${t.name} preview`} scrolling="no" tabIndex={-1}
-                  className="pointer-events-none origin-top-left"
-                  style={{ width: 1280, height: 860, transform: "scale(0.286)" }} />
-                {on && <span className="absolute right-2 top-2 rounded-full bg-brand px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-white shadow">Live</span>}
+              {/* live scaled preview of this template's home — fills the card width */}
+              <div className="relative border-b border-n200">
+                <TemplateThumb template={t.v} />
+                {on && <span className="absolute right-2 top-2 z-10 rounded-full bg-brand px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-white shadow">Selected</span>}
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-2"><span className="text-[11px] font-bold text-n400">{t.n}</span><span className="text-[14px] font-semibold text-n900">{t.name}</span></div>
