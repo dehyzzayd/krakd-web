@@ -58,6 +58,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
   const whyIcons = [ShieldCheck, BadgeCheck, Wrench];
   const heroImg = config.heroImageUrl;
   const dark = ui.hero !== "light";
+  const show = (k: string) => config.sections?.[k] !== false; // missing = shown
 
   const featuredSection = (
     <section className={`mx-auto ${C} px-5 py-14`}>
@@ -148,6 +149,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
       )}
 
       {/* ── TRUST BAR ── */}
+      {show("trustBar") && (
       <section className="w-full" style={{ background: ui.band }}>
         <div className={`mx-auto ${C} grid grid-cols-2 gap-6 px-5 py-8 lg:grid-cols-4`}>
           {[
@@ -163,10 +165,12 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
           ))}
         </div>
       </section>
+      )}
 
-      {ui.inventoryFirst ? <>{featuredSection}{bodySection}</> : <>{bodySection}{featuredSection}</>}
+      {ui.inventoryFirst ? <>{featuredSection}{show("shopByType") && bodySection}</> : <>{show("shopByType") && bodySection}{featuredSection}</>}
 
       {/* ── FINANCING BAND ── */}
+      {show("financing") && (
       <section className="w-full" style={{ background: `linear-gradient(120deg, ${accent} 0%, ${ui.band} 100%)` }}>
         <div className={`mx-auto ${C} flex flex-col items-start gap-5 px-5 py-14 md:flex-row md:items-center`}>
           <div className="flex-1">
@@ -177,8 +181,10 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
           <Link href={link(`/site/${config.slug}/financing`)} className={`shrink-0 bg-white px-8 py-4 ${ui.btnRadius} ${ui.btnCase}`} style={{ color: accent }}>Start now</Link>
         </div>
       </section>
+      )}
 
       {/* ── WHY US ── */}
+      {show("whyUs") && (
       <section className={`mx-auto ${C} px-5 py-16`}>
         <p className={ui.eyebrow} style={{ color: accent }}>The difference</p>
         <h2 className={`mt-1 ${ui.display} ${ui.h2} text-[#0f172a]`}>Why {config.dealershipName}</h2>
@@ -195,8 +201,10 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
           })}
         </div>
       </section>
+      )}
 
       {/* ── REVIEWS ── */}
+      {show("reviews") && (
       <section className="w-full bg-[#f8fafc] py-16">
         <div className={`mx-auto ${C} px-5`}>
           <div className="flex items-center gap-3">
@@ -214,8 +222,10 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
           </div>
         </div>
       </section>
+      )}
 
       {/* ── ABOUT ── */}
+      {show("about") && (
       <section className={`mx-auto ${C} px-5 py-16`}>
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
@@ -234,6 +244,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
           </div>
         </div>
       </section>
+      )}
     </>
   );
 }

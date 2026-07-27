@@ -30,7 +30,7 @@ export default function WebsitePreview() {
         aboutText: w.aboutText || "", financingText: w.financingText || "", tradeInText: w.tradeInText || "",
         whyUs: w.whyUs || [], staff: w.staff || [], reviews: w.reviews || [],
         phone: w.phone ?? null, email: w.email ?? null, address: w.address ?? null, city: w.city ?? null, state: w.state ?? null, zip: w.zip ?? null,
-        hours: w.hours || [], socials: w.socials || {},
+        hours: w.hours || [], socials: w.socials || {}, sections: w.sections || {},
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",

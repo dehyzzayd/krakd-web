@@ -50,6 +50,7 @@ const patchSchema = z.object({
   zip: z.string().optional(),
   hours: z.array(z.object({ day: z.string(), open: z.string(), close: z.string() })).optional(),
   socials: z.record(z.string(), z.string()).optional(),
+  sections: z.record(z.string(), z.boolean()).optional(),
 });
 
 /* PATCH /api/v1/website → update template, branding and homepage content */
@@ -58,7 +59,7 @@ export const PATCH = route(async (req: NextRequest) => {
   await ensureWebsite(dealershipId);
   const parsed = patchSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
-  const { hours, socials, whyUs, staff, reviews, ...rest } = parsed.data;
+  const { hours, socials, whyUs, staff, reviews, sections, ...rest } = parsed.data;
   const data: Prisma.WebsiteUpdateInput = {
     ...rest,
     ...(hours ? { hours: hours as unknown as Prisma.InputJsonValue } : {}),
@@ -66,6 +67,7 @@ export const PATCH = route(async (req: NextRequest) => {
     ...(whyUs ? { whyUs: whyUs as unknown as Prisma.InputJsonValue } : {}),
     ...(staff ? { staff: staff as unknown as Prisma.InputJsonValue } : {}),
     ...(reviews ? { reviews: reviews as unknown as Prisma.InputJsonValue } : {}),
+    ...(sections ? { sections: sections as unknown as Prisma.InputJsonValue } : {}),
   };
   const w = await prisma.website.update({ where: { dealershipId }, data });
   return json({ ...w, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });

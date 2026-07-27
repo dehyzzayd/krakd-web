@@ -15,6 +15,7 @@ export type SiteConfig = {
   address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[];
   socials: Record<string, string>;
+  sections: Record<string, boolean>;
 };
 
 export type SiteVehicle = {
@@ -55,6 +56,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     phone: w.phone, email: w.email, address: w.address, city: w.city, state: w.state, zip: w.zip,
     hours: (Array.isArray(w.hours) ? w.hours : []) as SiteConfig["hours"],
     socials: (w.socials ?? {}) as Record<string, string>,
+    sections: (w.sections ?? {}) as Record<string, boolean>,
   };
 });
 

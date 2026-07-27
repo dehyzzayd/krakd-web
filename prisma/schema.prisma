@@ -590,6 +590,7 @@ model Website {
   zip          String?
   hours        Json            @default("[]")  // [{ day, open, close }]
   socials      Json            @default("{}")   // { facebook, instagram, ... }
+  sections     Json            @default("{}")   // { trustBar, shopByType, financing, reviews, whyUs, about } — missing = shown
 
   // domain
   domain         String?

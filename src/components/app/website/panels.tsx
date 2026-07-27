@@ -12,7 +12,7 @@ export type Web = {
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
-  hours: { day: string; open: string; close: string }[]; socials: Record<string, string>;
+  hours: { day: string; open: string; close: string }[]; socials: Record<string, string>; sections: Record<string, boolean>;
   domain: string | null; domainProvider: string | null;
   domainStatus: "NOT_CONNECTED" | "PENDING_DNS" | "PROVISIONING" | "LIVE" | "ACTION_REQUIRED";
   domainPriceCents: number | null; domainRenewsAt: string | null;
@@ -203,6 +203,10 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [whyUs, setWhyUs] = useState<{ title: string; body: string }[]>(w.whyUs?.length ? w.whyUs : []);
   const [staff, setStaff] = useState<{ name: string; role: string; photoUrl?: string }[]>(w.staff ?? []);
   const [reviews, setReviews] = useState<{ name: string; rating: number; body: string }[]>(w.reviews ?? []);
+  const [sections, setSections] = useState<Record<string, boolean>>(w.sections ?? {});
+  const [socials, setSocials] = useState<Record<string, string>>(w.socials ?? {});
+  const toggleSection = (k: string) => setSections((p) => ({ ...p, [k]: p[k] === false }));
+  const setSocial = (k: string, v: string) => setSocials((p) => ({ ...p, [k]: v }));
 
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -216,6 +220,7 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
         whyUs: whyUs.filter((x) => x.title.trim() || x.body.trim()),
         staff: staff.filter((x) => x.name.trim()),
         reviews: reviews.filter((x) => x.body.trim()),
+        sections, socials,
       }) });
       setSaved(true); setTimeout(() => setSaved(false), 2200); reload();
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
@@ -350,6 +355,33 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
               </div>
               <textarea value={row.body} placeholder="What they said…" rows={2} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} />
             </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Homepage sections — show/hide */}
+      <Card className="p-5">
+        <h3 className="mb-1 text-[14px] font-semibold text-n900">Homepage sections</h3>
+        <p className="mb-3 text-[12px] text-n500">Turn sections on or off. Hero and featured inventory always show.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([["trustBar", "Trust bar"], ["shopByType", "Shop by type"], ["financing", "Financing band"], ["reviews", "Customer reviews"], ["whyUs", "Why choose us"], ["about", "About / welcome"]] as const).map(([k, label]) => {
+            const on = sections[k] !== false;
+            return (
+              <button key={k} type="button" onClick={() => toggleSection(k)} className="flex items-center justify-between rounded-lg border border-n200 px-3 py-2.5 text-left transition hover:bg-n50">
+                <span className="text-[13px] font-medium text-n900">{label}</span>
+                <span className={cn("relative h-5 w-9 rounded-full transition", on ? "bg-brand" : "bg-n300")}><span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", on ? "left-4" : "left-0.5")} /></span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Social links */}
+      <Card className="p-5">
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Social links <span className="font-normal text-n400">· shown in the footer</span></h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(["facebook", "instagram", "youtube", "twitter", "linkedin"] as const).map((k) => (
+            <L key={k} label={k[0].toUpperCase() + k.slice(1)}><input value={socials[k] ?? ""} onChange={(e) => setSocial(k, e.target.value)} placeholder="https://…" className={field} /></L>
           ))}
         </div>
       </Card>
