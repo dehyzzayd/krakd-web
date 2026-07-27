@@ -20,7 +20,7 @@ export type SiteConfig = {
 export type SiteVehicle = {
   id: string; year: number; make: string; model: string; trim: string; body: string;
   price: number; mileage: number; color: string; drivetrain: string; fuel: string;
-  transmission: string; vin: string; image: string | null; photos: string[];
+  transmission: string; vin: string; image: string | null; photos: string[]; photoCount: number;
 };
 
 function mapVehicle(v: {
@@ -33,7 +33,7 @@ function mapVehicle(v: {
     id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim ?? "", body: v.bodyType ?? "",
     price: Math.round(v.priceCents / 100), mileage: v.mileage, color: v.exteriorColor ?? "",
     drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "", transmission: v.transmission ?? "",
-    vin: v.vin, image: photos[0] ?? null, photos,
+    vin: v.vin, image: photos[0] ?? null, photos, photoCount: photos.length,
   };
 }
 
@@ -72,7 +72,8 @@ export const getSiteVehicles = cache(async (slug: string): Promise<SiteVehicle[]
     where: { dealershipId, status: { in: ["AVAILABLE", "RESERVED"] } },
     orderBy: { createdAt: "desc" }, take: 200,
   });
-  return rows.map(mapVehicle);
+  // list view only needs the cover + count — drop the heavy per-photo array from the payload
+  return rows.map(mapVehicle).map((v) => ({ ...v, photos: v.image ? [v.image] : [] }));
 });
 
 export const getSiteVehicle = cache(async (slug: string, id: string): Promise<SiteVehicle | null> => {

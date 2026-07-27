@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
@@ -22,6 +23,7 @@ const createSchema = z.object({
   costCents: z.coerce.number().int().min(0).default(0),
   status: z.enum(["AVAILABLE", "RECON", "RESERVED", "WHOLESALE", "SOLD"]).default("RECON"),
   exteriorColor: z.string().optional(),
+  photoUrls: z.array(z.string().max(1_500_000)).max(24).optional(),
 });
 
 /* POST /api/v1/inventory → add a vehicle to the current dealer's lot */
@@ -39,6 +41,7 @@ export const POST = route(async (req: NextRequest) => {
       year: d.year, make: d.make, model: d.model, trim: d.trim, bodyType: d.bodyType,
       mileage: d.mileage, priceCents: d.priceCents, costCents: d.costCents,
       status: d.status, exteriorColor: d.exteriorColor,
+      ...(d.photoUrls ? { photoUrls: d.photoUrls as unknown as Prisma.InputJsonValue } : {}),
       listedAt: d.status === "AVAILABLE" ? new Date() : null,
     },
   });

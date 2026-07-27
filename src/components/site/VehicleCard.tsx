@@ -40,7 +40,7 @@ export function VehicleCard({ slug, accent, v, variant = "soft", preview }: {
             {badges.map((b) => <span key={b.label} className={`rounded px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide ${BADGE_TONE[b.tone]}`}>{b.label}</span>)}
           </div>
         )}
-        {v.photos.length > 1 && <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white"><Camera className="h-3 w-3" />{v.photos.length}</span>}
+        {(v.photoCount ?? v.photos.length) > 1 && <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white"><Camera className="h-3 w-3" />{v.photoCount ?? v.photos.length}</span>}
       </Link>
 
       <div className={`flex flex-1 flex-col ${editorial ? "p-5" : "p-4"}`}>

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
@@ -37,6 +38,7 @@ const patchSchema = z.object({
   mileage: z.coerce.number().int().min(0).optional(),
   status: z.enum(["AVAILABLE", "RECON", "RESERVED", "WHOLESALE", "SOLD"]).optional(),
   exteriorColor: z.string().optional(),
+  photoUrls: z.array(z.string().max(1_500_000)).max(24).optional(),
 });
 
 export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
@@ -47,11 +49,12 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   const owned = await prisma.vehicle.findFirst({ where: { id, dealershipId }, select: { id: true } });
   if (!owned) throw new HttpError(404, "Vehicle not found");
 
-  const d = parsed.data;
+  const { photoUrls, ...d } = parsed.data;
   await prisma.vehicle.update({
     where: { id },
     data: {
       ...d,
+      ...(photoUrls ? { photoUrls: photoUrls as unknown as Prisma.InputJsonValue } : {}),
       ...(d.status === "AVAILABLE" ? { listedAt: new Date() } : {}),
       ...(d.status === "SOLD" ? { soldAt: new Date() } : {}),
     },

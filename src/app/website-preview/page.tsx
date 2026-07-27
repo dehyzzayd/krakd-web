@@ -18,7 +18,7 @@ export default function WebsitePreview() {
   useEffect(() => {
     if (!getToken()) { setReady(true); return; }
     type W = Partial<SiteConfig> & { slug: string; primaryColor: string };
-    type Inv = { id: string; year: number; make: string; model: string; trim: string; body?: string; price: number; mileage: number; color?: string; drivetrain?: string; fuel?: string; vin: string; image: string | null; status?: string };
+    type Inv = { id: string; year: number; make: string; model: string; trim: string; body?: string; price: number; mileage: number; color?: string; drivetrain?: string; fuel?: string; vin: string; image: string | null; photos?: number; status?: string };
     Promise.all([
       apiFetch<W>("/website"),
       apiFetch<{ items: Inv[] }>("/inventory").catch(() => ({ items: [] as Inv[] })),
@@ -35,7 +35,7 @@ export default function WebsitePreview() {
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
         price: v.price, mileage: v.mileage, color: v.color ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
-        transmission: "", vin: v.vin, image: v.image, photos: v.image ? [v.image] : [],
+        transmission: "", vin: v.vin, image: v.image, photos: v.image ? [v.image] : [], photoCount: typeof v.photos === "number" ? v.photos : (v.image ? 1 : 0),
       })));
       setReady(true);
     }).catch(() => setReady(true));

@@ -18,13 +18,17 @@ const DECODE = { year: "2022", make: "Toyota", model: "Camry", trim: "XSE", body
 type Form = {
   vin: string; year: string; make: string; model: string; trim: string; body: string;
   mileage: string; color: string; stock: string; status: VStatus;
-  cost: string; recon: string; pack: string; price: string; photos: number;
+  cost: string; recon: string; pack: string; price: string; photoUrls: string[];
 };
 
-function seed(v?: Vehicle): Form {
-  if (!v) return { vin: "", year: "", make: "", model: "", trim: "", body: "", mileage: "", color: "", stock: "", status: "recon", cost: "", recon: "1250", pack: "695", price: "", photos: 0 };
-  return { vin: v.vin, year: String(v.year), make: v.make, model: v.model, trim: v.trim, body: v.body, mileage: String(v.mileage), color: v.color, stock: v.stock, status: v.status, cost: String(v.cost), recon: "1250", pack: "695", price: String(v.price), photos: v.photos };
+function seed(v: Vehicle | undefined, initialPhotos: string[]): Form {
+  if (!v) return { vin: "", year: "", make: "", model: "", trim: "", body: "", mileage: "", color: "", stock: "", status: "recon", cost: "", recon: "1250", pack: "695", price: "", photoUrls: initialPhotos };
+  return { vin: v.vin, year: String(v.year), make: v.make, model: v.model, trim: v.trim, body: v.body, mileage: String(v.mileage), color: v.color, stock: v.stock, status: v.status, cost: String(v.cost), recon: "1250", pack: "695", price: String(v.price), photoUrls: initialPhotos };
 }
+
+const fileToDataUrl = (file: File): Promise<string> => new Promise((res, rej) => {
+  const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(new Error("read failed")); r.readAsDataURL(file);
+});
 
 function Section({ icon: Icon, title, desc, children }: { icon: React.ComponentType<{ className?: string }>; title: string; desc: string; children: ReactNode }) {
   return (
@@ -42,13 +46,29 @@ function Field({ label, children, wide }: { label: string; children: ReactNode; 
 }
 const inputCls = "h-9 w-full rounded-lg border border-n200 bg-white px-2.5 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 placeholder:text-n400";
 
-export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
+export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle; initialPhotos?: string[] }) {
   const edit = !!vehicle;
   const router = useRouter();
-  const [f, setF] = useState<Form>(() => seed(vehicle));
+  const [f, setF] = useState<Form>(() => seed(vehicle, initialPhotos));
   const set = (k: keyof Form, v: string | number) => setF((p) => ({ ...p, [k]: v }));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [photoErr, setPhotoErr] = useState<string | null>(null);
+
+  const addPhotos = async (files: FileList | null) => {
+    if (!files) return;
+    setPhotoErr(null);
+    const picks = Array.from(files).slice(0, 24);
+    const urls: string[] = [];
+    for (const file of picks) {
+      if (!file.type.startsWith("image/")) continue;
+      if (file.size > 1_500_000) { setPhotoErr("Some images were over 1.5MB and skipped."); continue; }
+      try { urls.push(await fileToDataUrl(file)); } catch { /* skip */ }
+    }
+    if (urls.length) setF((p) => ({ ...p, photoUrls: [...p.photoUrls, ...urls].slice(0, 24) }));
+  };
+  const removePhoto = (i: number) => setF((p) => ({ ...p, photoUrls: p.photoUrls.filter((_, j) => j !== i) }));
+  const makeCover = (i: number) => setF((p) => { const a = [...p.photoUrls]; const [x] = a.splice(i, 1); return { ...p, photoUrls: [x, ...a] }; });
 
   const save = async () => {
     setErr(null);
@@ -58,13 +78,13 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
       const priceCents = Math.round((+f.price || 0) * 100);
       const costCents = Math.round((+f.cost || 0) * 100);
       if (edit && vehicle) {
-        await apiFetch(`/inventory/${vehicle.id}`, { method: "PATCH", body: JSON.stringify({ priceCents, costCents, mileage: +f.mileage || 0, status: f.status, exteriorColor: f.color || undefined }) });
+        await apiFetch(`/inventory/${vehicle.id}`, { method: "PATCH", body: JSON.stringify({ priceCents, costCents, mileage: +f.mileage || 0, status: f.status, exteriorColor: f.color || undefined, photoUrls: f.photoUrls }) });
         router.push(`/dashboard/inventory/${vehicle.id}`);
       } else {
         const res = await apiFetch<{ id: string }>("/inventory", { method: "POST", body: JSON.stringify({
           vin: f.vin, stockNumber: f.stock, year: +f.year, make: f.make, model: f.model,
           trim: f.trim || undefined, bodyType: f.body || undefined, mileage: +f.mileage || 0,
-          priceCents, costCents, status: f.status, exteriorColor: f.color || undefined,
+          priceCents, costCents, status: f.status, exteriorColor: f.color || undefined, photoUrls: f.photoUrls,
         }) });
         router.push(`/dashboard/inventory/${res.id}`);
       }
@@ -130,21 +150,37 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
             </div>
           </Section>
 
-          <Section icon={ImageIcon} title="Photos" desc="Units with 24+ photos sell up to 30% faster.">
-            {f.photos > 0 ? (
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-                {Array.from({ length: Math.min(11, f.photos) }).map((_, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <span key={i} className="relative block aspect-square overflow-hidden rounded-lg bg-n100">{edit && <img src={vehicle!.image} alt="" className="h-full w-full object-cover" />}{i === 0 && <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">Cover</span>}</span>
-                ))}
-                <button type="button" className="grid aspect-square place-items-center rounded-lg border border-dashed border-n300 text-n400 transition hover:bg-n50"><Upload className="h-4 w-4" /></button>
-              </div>
+          <Section icon={ImageIcon} title="Photos" desc="The first photo is the cover shown on your website. Hover a photo to set cover or remove.">
+            {f.photoUrls.length > 0 ? (
+              <>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {f.photoUrls.map((src, i) => (
+                    <div key={i} className="group relative aspect-square overflow-hidden rounded-lg bg-n100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="h-full w-full object-cover" />
+                      {i === 0 && <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white">Cover</span>}
+                      <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100">
+                        {i !== 0 && <button type="button" onClick={() => makeCover(i)} className="rounded bg-white/90 px-2 py-1 text-[10px] font-semibold text-n900">Cover</button>}
+                        <button type="button" onClick={() => removePhoto(i)} className="rounded bg-white/90 px-2 py-1 text-[10px] font-semibold text-err">Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  {f.photoUrls.length < 24 && (
+                    <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-n300 text-n400 transition hover:bg-n50">
+                      <Upload className="h-4 w-4" />
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addPhotos(e.target.files)} />
+                    </label>
+                  )}
+                </div>
+                <p className="mt-2 text-[12px] text-n500"><b className="text-n800">{f.photoUrls.length}</b> photo{f.photoUrls.length === 1 ? "" : "s"} attached</p>
+              </>
             ) : (
-              <button type="button" onClick={() => set("photos", 24)} className="grid w-full place-items-center gap-1 rounded-xl border-2 border-dashed border-warn/40 bg-warn-soft/30 py-8 text-center transition hover:bg-warn-soft/50">
-                <Camera className="h-6 w-6 text-warn" /><p className="text-[13px] font-semibold text-warn">No photos yet — required to go live</p><p className="text-[11.5px] text-n500">Drag &amp; drop or click to upload</p>
-              </button>
+              <label className="grid w-full cursor-pointer place-items-center gap-1 rounded-xl border-2 border-dashed border-n300 bg-n50/50 py-8 text-center transition hover:bg-n50">
+                <Camera className="h-6 w-6 text-n400" /><p className="text-[13px] font-semibold text-n700">Upload photos</p><p className="text-[11.5px] text-n500">Click to choose images (up to 24 · 1.5MB each)</p>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addPhotos(e.target.files)} />
+              </label>
             )}
-            {f.photos > 0 && <p className="mt-2 text-[12px] text-n500"><b className="text-n800">{f.photos}</b> photos attached</p>}
+            {photoErr && <p className="mt-2 text-[12px] font-medium text-warn">{photoErr}</p>}
           </Section>
         </div>
 
@@ -152,9 +188,9 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
         <div>
           <div className="sticky top-4 space-y-4">
             <div className="overflow-hidden rounded-2xl border border-n200 bg-white sh-card">
-              {edit ? (
+              {(f.photoUrls[0] || (edit && vehicle!.image)) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={vehicle!.image} alt="" className="aspect-[16/10] w-full object-cover" />
+                <img src={f.photoUrls[0] || vehicle!.image} alt="" className="aspect-[16/10] w-full object-cover" />
               ) : (
                 <div className="grid aspect-[16/10] place-items-center bg-n100 text-n400"><Car className="h-8 w-8" /></div>
               )}
