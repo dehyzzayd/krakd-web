@@ -56,7 +56,10 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const navIdle = dark ? "rgba(255,255,255,0.82)" : "#334155";
   const btnBg = eff === "accent" ? "#ffffff" : accent;
   const btnColor = eff === "accent" ? accent : "#ffffff";
-  const struct = config.template === "INVENTORY_FIRST" ? "bold" : config.template === "PREMIUM" ? "editorial" : "classic";
+  const struct = config.template === "INVENTORY_FIRST" || config.template === "SPORT" ? "bold"
+    : config.template === "PREMIUM" ? "editorial"
+    : config.template === "MINIMAL" ? "minimal"
+    : "classic";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const items = navItems(config);
@@ -74,6 +77,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
     const active = pathname === it.href;
     const base = struct === "bold" ? "font-display text-[13.5px] font-medium uppercase tracking-[0.1em]"
       : struct === "editorial" ? "font-display text-[12px] font-medium uppercase tracking-[0.2em]"
+      : struct === "minimal" ? "text-[12.5px] font-medium uppercase tracking-[0.16em]"
       : "text-[14px] font-medium";
     const cls = cn("transition", base, extra);
     if (it.external) return <a key={it.href} href={it.href} target="_blank" rel="noreferrer" className={cls} style={{ color: navIdle }}>{it.label}</a>;

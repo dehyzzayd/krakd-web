@@ -537,9 +537,12 @@ model DailyMetric {
 // ─────────────────────────────── Dealer Website module ───────────────────────────────
 
 enum WebsiteTemplate {
-  MODERN         // balanced homepage + inventory
-  INVENTORY_FIRST // vehicle search takes priority
-  PREMIUM        // large visuals, stronger branding
+  MODERN         // bright bento, rounded (CarMax/Carvana)
+  INVENTORY_FIRST // black industrial + ticker, inventory-forward
+  PREMIUM        // ivory serif editorial (luxury)
+  CLASSIC        // corporate franchise, utility bar, blue/boxy
+  SPORT          // charcoal performance/exotic, angular
+  MINIMAL        // airy Scandinavian/EV, hairlines + whitespace
 }
 
 enum WebsiteStatus {

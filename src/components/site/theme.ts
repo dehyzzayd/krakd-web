@@ -83,6 +83,52 @@ const LUXE: TplUI = {
   invCols: "sm:grid-cols-2 lg:grid-cols-3", inventoryFirst: false,
 };
 
+const CLASSIC: TplUI = {
+  name: "Classic", header: "light", hero: "light",
+  display: "tracking-tight",
+  h1: "text-[34px] leading-[1.06] sm:text-[48px] font-bold tracking-tight",
+  h2: "text-[24px] sm:text-[28px] font-bold tracking-tight",
+  eyebrow: "text-[12px] font-bold uppercase tracking-[0.12em]",
+  container: "max-w-[1280px]", band: "#10233f",
+  card: "soft", cardRadius: "rounded-lg", photo: "aspect-[4/3]",
+  btnRadius: "rounded-md", btnCase: "text-[13.5px] font-bold uppercase tracking-[0.04em]",
+  chip: "rounded-md", featuredCols: "sm:grid-cols-2 lg:grid-cols-4",
+  invCols: "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", inventoryFirst: false,
+};
+
+const SPORT: TplUI = {
+  name: "Sport", header: "dark", hero: "bleed",
+  display: "font-display uppercase italic tracking-[0.02em]",
+  h1: "text-[46px] leading-[0.92] sm:text-[80px] font-bold italic uppercase",
+  h2: "text-[28px] sm:text-[38px] font-bold italic uppercase",
+  eyebrow: "font-display text-[12px] font-semibold uppercase tracking-[0.24em]",
+  container: "max-w-[1320px]", band: "#141416",
+  card: "sharp", cardRadius: "rounded-md", photo: "aspect-[16/10]",
+  btnRadius: "rounded-none", btnCase: "font-display uppercase tracking-[0.12em] text-[13px] font-semibold italic",
+  chip: "rounded-none", featuredCols: "sm:grid-cols-2 lg:grid-cols-3",
+  invCols: "sm:grid-cols-2 lg:grid-cols-3", inventoryFirst: false,
+};
+
+const MINIMAL: TplUI = {
+  name: "Minimal", header: "light", hero: "light",
+  display: "tracking-tight",
+  h1: "text-[36px] leading-[1.08] sm:text-[52px] font-medium tracking-[-0.02em]",
+  h2: "text-[22px] sm:text-[26px] font-medium tracking-tight",
+  eyebrow: "text-[11px] font-medium uppercase tracking-[0.24em]",
+  container: "max-w-[1160px]", band: "#111111",
+  card: "sharp", cardRadius: "rounded-none", photo: "aspect-[4/3]",
+  btnRadius: "rounded-none", btnCase: "text-[12.5px] font-medium uppercase tracking-[0.16em]",
+  chip: "rounded-none", featuredCols: "sm:grid-cols-2 lg:grid-cols-3",
+  invCols: "sm:grid-cols-2 lg:grid-cols-3", inventoryFirst: false,
+};
+
 export function siteTheme(t: Template): TplUI {
-  return t === "INVENTORY_FIRST" ? BOLD : t === "PREMIUM" ? LUXE : CLEAN;
+  switch (t) {
+    case "INVENTORY_FIRST": return BOLD;
+    case "PREMIUM": return LUXE;
+    case "CLASSIC": return CLASSIC;
+    case "SPORT": return SPORT;
+    case "MINIMAL": return MINIMAL;
+    default: return CLEAN;
+  }
 }

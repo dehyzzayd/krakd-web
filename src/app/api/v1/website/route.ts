@@ -28,7 +28,7 @@ const ASSET_MAX = 1_500_000; // ~1.5MB data URL cap for an uploaded logo/hero
 const asset = z.string().max(ASSET_MAX, "Image is too large — use one under ~1MB").optional();
 
 const patchSchema = z.object({
-  template: z.enum(["MODERN", "INVENTORY_FIRST", "PREMIUM"]).optional(),
+  template: z.enum(["MODERN","INVENTORY_FIRST","PREMIUM","CLASSIC","SPORT","MINIMAL"]).optional(),
   logoUrl: asset,
   heroImageUrl: asset,
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #2b6ba4").optional(),

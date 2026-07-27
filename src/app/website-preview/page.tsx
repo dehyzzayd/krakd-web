@@ -24,7 +24,7 @@ export default function WebsitePreview() {
       apiFetch<{ items: Inv[] }>("/inventory").catch(() => ({ items: [] as Inv[] })),
     ]).then(([w, inv]) => {
       const override = new URLSearchParams(window.location.search).get("template");
-      const tpl = (["MODERN", "INVENTORY_FIRST", "PREMIUM"].includes(override ?? "") ? override : (w.template as string)) as SiteConfig["template"];
+      const tpl = (["MODERN","INVENTORY_FIRST","PREMIUM","CLASSIC","SPORT","MINIMAL"].includes(override ?? "") ? override : (w.template as string)) as SiteConfig["template"];
       setConfig({
         slug: w.slug, dealershipName: (w.dealershipName as string) || "Your dealership", template: tpl || "MODERN",
         logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor, headerStyle: (w.headerStyle as string) || "auto",

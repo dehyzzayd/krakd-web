@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 export type SiteConfig = {
   slug: string;
   dealershipName: string;
-  template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM";
+  template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL";
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string;
   headline: string; intro: string; ctaLabel: string;
   aboutText: string; financingText: string; tradeInText: string;

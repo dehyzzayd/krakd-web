@@ -7,7 +7,7 @@ import { Card } from "@/components/app/AppKit";
 import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
 export type Web = {
-  id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM"; status: "DRAFT" | "PUBLISHED";
+  id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL"; status: "DRAFT" | "PUBLISHED";
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; headline: string; intro: string; ctaLabel: string;
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
@@ -70,9 +70,12 @@ function Uploader({ value, onChange, label, aspect = "square" }: { value: string
 }
 
 const TEMPLATES = [
-  { v: "MODERN", n: "01", name: "Modern", desc: "Balanced homepage and inventory." },
-  { v: "INVENTORY_FIRST", n: "02", name: "Inventory First", desc: "Vehicle search takes priority." },
-  { v: "PREMIUM", n: "03", name: "Premium", desc: "Large visuals and stronger branding." },
+  { v: "MODERN", n: "01", name: "Modern", desc: "Bright bento layout — rounded, friendly, colorful." },
+  { v: "INVENTORY_FIRST", n: "02", name: "Inventory First", desc: "Black & industrial with a scrolling ticker; cars up front." },
+  { v: "PREMIUM", n: "03", name: "Premium", desc: "Ivory + serif editorial — luxury gallery feel." },
+  { v: "CLASSIC", n: "04", name: "Classic", desc: "Corporate franchise — utility bar, blue, boxy and trustworthy." },
+  { v: "SPORT", n: "05", name: "Sport", desc: "Charcoal performance look — angular, bold, accent-lined." },
+  { v: "MINIMAL", n: "06", name: "Minimal", desc: "Airy & Scandinavian — hairlines, whitespace, restrained." },
 ] as const;
 
 /** Fills its card width with a scaled, live preview of one template's home. */
