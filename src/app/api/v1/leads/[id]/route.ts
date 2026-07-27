@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
@@ -45,15 +46,43 @@ export const GET = route(async (req: NextRequest, ctx: { params: Promise<{ id: s
 const patchSchema = z.object({
   status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "APPOINTMENT", "SOLD", "LOST"]).optional(),
   temperature: z.enum(["HOT", "WARM", "COLD"]).optional(),
+  firstName: z.string().trim().min(1).optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  source: z.string().optional(),
+  vehicleId: z.string().uuid().nullable().optional(),
+  hasTradeIn: z.boolean().optional(),
+  financing: z.boolean().optional(),
 });
 
 export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
   const { dealershipId } = await requireAuth(req);
   const { id } = await ctx.params;
   const parsed = patchSchema.safeParse(await req.json());
-  if (!parsed.success) throw new HttpError(400, "Invalid update");
-  const owned = await prisma.lead.findFirst({ where: { id, dealershipId }, select: { id: true } });
-  if (!owned) throw new HttpError(404, "Lead not found");
-  await prisma.lead.update({ where: { id }, data: { ...parsed.data, lastActivityAt: new Date() } });
+  if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
+  const existing = await prisma.lead.findFirst({ where: { id, dealershipId }, select: { id: true, status: true } });
+  if (!existing) throw new HttpError(404, "Lead not found");
+
+  const { phone, email, vehicleId, status, ...rest } = parsed.data;
+  const data: Prisma.LeadUpdateInput = { ...rest, lastActivityAt: new Date() };
+  if (status) data.status = status;
+  if (phone !== undefined) data.phones = (phone ? [{ value: phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue;
+  if (email !== undefined) data.emails = (email ? [{ value: email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue;
+  if (vehicleId !== undefined) {
+    if (vehicleId) {
+      const v = await prisma.vehicle.findFirst({ where: { id: vehicleId, dealershipId }, select: { id: true } });
+      if (!v) throw new HttpError(400, "That vehicle isn't in your inventory");
+      data.vehicle = { connect: { id: vehicleId } };
+    } else {
+      data.vehicle = { disconnect: true };
+    }
+  }
+
+  await prisma.lead.update({ where: { id }, data });
+  // log a status change to the timeline
+  if (status && status !== existing.status) {
+    await prisma.leadActivity.create({ data: { dealershipId, leadId: id, type: "STATUS_CHANGE", actorType: "USER", content: `Status set to ${STATUS_LABEL[status] ?? status}` } }).catch(() => {});
+  }
   return json(await load(dealershipId, id));
 });

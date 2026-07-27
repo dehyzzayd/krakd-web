@@ -8,13 +8,10 @@ import { cn } from "@/lib/cn";
 import { Logo } from "@/components/layout/Logo";
 import { useSidebar } from "./SidebarContext";
 import { NETWORKS } from "@/lib/marketing";
-import { inboxUnread } from "@/lib/crm";
 import {
   IconOverview, IconInventory, IconLeads, IconInbox, IconMarketing,
   IconReports, IconChevron, IconAI, IconWebsite,
 } from "./AppIcons";
-
-const unread = inboxUnread();
 
 type Child = { href: string; label: string; logo?: string; connected?: boolean; badge?: number };
 type Entry =
@@ -29,7 +26,7 @@ const NAV: Entry[] = [
       { href: "/dashboard/leads", label: "Pipeline" },
       { href: "/dashboard/crm/contacts", label: "Contacts" },
       { href: "/dashboard/crm/credit", label: "Credit apps" },
-      { href: "/dashboard/inbox", label: "Inbox", badge: unread },
+      { href: "/dashboard/inbox", label: "Inbox" },
       { href: "/dashboard/appointments", label: "Calendar" },
     ],
   },
