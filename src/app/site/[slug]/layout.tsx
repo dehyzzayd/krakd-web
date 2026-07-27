@@ -11,7 +11,7 @@ export default async function SiteLayout({ children, params }: { children: React
   if (!config) notFound();
 
   return (
-    <div className="min-h-screen bg-white text-[#0f172a]" style={{ ["--accent" as string]: accentOf(config.primaryColor) }}>
+    <div className="min-h-screen overflow-x-clip bg-white text-[#0f172a]" style={{ ["--accent" as string]: accentOf(config.primaryColor) }}>
       <SiteHeader config={config} />
       <main>{children}</main>
       <SiteFooter config={config} />

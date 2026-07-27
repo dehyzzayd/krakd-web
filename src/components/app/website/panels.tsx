@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Card } from "@/components/app/AppKit";
-import { SiteHome } from "@/components/site/SiteHome";
-import { SiteHeader, SiteFooter } from "@/components/site/SiteChrome";
-import type { SiteConfig, SiteVehicle } from "@/lib/server/site";
-import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload } from "lucide-react";
+import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw } from "lucide-react";
 
 export type Web = {
   id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM"; status: "DRAFT" | "PUBLISHED";
@@ -400,43 +397,25 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
 /* ─────────────────────────── Publish (with live preview) ─────────────────────────── */
 export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
-  const [vehicles, setVehicles] = useState<SiteVehicle[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    type InvItem = { id: string; year: number; make: string; model: string; trim: string; body?: string; price: number; mileage: number; color?: string; drivetrain?: string; fuel?: string; vin: string; image: string | null; status?: string };
-    apiFetch<{ items: InvItem[] }>("/inventory")
-      .then((r) => setVehicles((r.items ?? []).filter((v) => v.status !== "SOLD").map((v) => ({
-        id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
-        price: v.price, mileage: v.mileage, color: v.color ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
-        transmission: "", vin: v.vin, image: v.image, photos: v.image ? [v.image] : [],
-      }))))
-      .catch(() => setVehicles([]));
-  }, []);
-
-  const preview: SiteConfig = {
-    slug: w.slug, dealershipName: "Your dealership", template: w.template, logoUrl: w.logoUrl, heroImageUrl: w.heroImageUrl,
-    primaryColor: w.primaryColor, headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel,
-    aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
-    whyUs: w.whyUs ?? [], staff: w.staff ?? [],
-    phone: w.phone, email: w.email, address: w.address, city: w.city, state: w.state, zip: w.zip, hours: w.hours, socials: w.socials,
-  };
+  const [nonce, setNonce] = useState(0);
 
   const publish = async () => {
     setErr(null); setBusy(true);
-    try { await apiFetch("/website/publish", { method: "POST", body: JSON.stringify({ status: "PUBLISHED" }) }); reload(); }
+    try { await apiFetch("/website/publish", { method: "POST", body: JSON.stringify({ status: "PUBLISHED" }) }); reload(); setNonce((n) => n + 1); }
     catch (e) { setErr(e instanceof ApiError ? e.message : "Could not publish."); }
     finally { setBusy(false); }
   };
+  const tab = (v: "desktop" | "mobile", Icon: typeof Monitor, label: string) => (
+    <button onClick={() => setDevice(v)} className={cn("inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[12.5px] font-medium", device === v ? "bg-n100 text-n900" : "text-n600")}><Icon className="h-4 w-4" />{label}</button>
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">
-          <button onClick={() => setDevice("desktop")} className={cn("inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[12.5px] font-medium", device === "desktop" ? "bg-n100 text-n900" : "text-n600")}><Monitor className="h-4 w-4" />Desktop</button>
-          <button onClick={() => setDevice("mobile")} className={cn("inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[12.5px] font-medium", device === "mobile" ? "bg-n100 text-n900" : "text-n600")}><Smartphone className="h-4 w-4" />Mobile</button>
-        </div>
+        <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">{tab("desktop", Monitor, "Desktop")}{tab("mobile", Smartphone, "Mobile")}</div>
+        <button onClick={() => setNonce((n) => n + 1)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-n200 bg-white px-3 text-[12.5px] font-medium text-n600 hover:bg-n100"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
         <div className="ml-auto flex items-center gap-3">
           {err && <span className="text-[12.5px] font-medium text-err">{err}</span>}
           {w.status === "PUBLISHED"
@@ -445,18 +424,12 @@ export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-n200 bg-n100 p-4">
-        <div className={cn("mx-auto overflow-hidden rounded-xl border border-n200 bg-white shadow-sm transition-all", device === "mobile" ? "max-w-[390px]" : "max-w-full")}>
-          <div className="max-h-[72vh] overflow-y-auto">
-            <div className="app-scope pointer-events-none origin-top" style={{ ["--accent" as string]: preview.primaryColor }}>
-              <SiteHeader config={preview} />
-              <SiteHome config={preview} vehicles={vehicles} preview />
-              <SiteFooter config={preview} />
-            </div>
-          </div>
+      <div className="rounded-2xl border border-n200 bg-n100 p-3 sm:p-5">
+        <div className={cn("mx-auto overflow-hidden rounded-xl border border-n300 bg-white shadow-sm transition-all", device === "mobile" ? "w-[390px] max-w-full" : "w-full")}>
+          <iframe key={nonce} src="/website-preview" title="Website preview" className="h-[74vh] w-full border-0" />
         </div>
       </div>
-      <p className="text-center text-[12px] text-n400">Preview reflects your saved settings and live inventory. {w.status !== "PUBLISHED" && "Publishing makes it public at your URL."}</p>
+      <p className="text-center text-[12px] text-n400">True-to-device preview of your saved settings and inventory. Toggle Desktop / Mobile — the mobile view is exactly what phones see.{w.status !== "PUBLISHED" && " Publishing makes it public at your URL."}</p>
     </div>
   );
 }
