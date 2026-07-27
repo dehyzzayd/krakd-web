@@ -157,25 +157,28 @@ export function TemplatePanel({ w, reload }: { w: Web; reload: () => void }) {
   };
   return (
     <div>
-      <p className="mb-4 text-[13.5px] text-n600">Three pre-built layouts. The dealership data stays the same — only the presentation changes. You can switch anytime.</p>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <p className="mb-4 text-[13.5px] text-n600">Three pre-built designs, previewed with <span className="font-semibold text-n800">your</span> content and inventory. The data stays the same — only the look changes. Switch anytime.</p>
+      <div className="grid gap-5 lg:grid-cols-3">
         {TEMPLATES.map((t) => {
           const on = w.template === t.v;
           return (
-            <Card key={t.v} className={cn("overflow-hidden", on && "ring-2 ring-brand")}>
-              <div className="border-b border-n200 bg-n50 p-3">
-                <div className="rounded-lg bg-white p-3 shadow-sm">
-                  <div className="mb-2 h-2 w-16 rounded bg-n900/80" />
-                  {t.v === "INVENTORY_FIRST" ? <div className="mb-2 h-6 rounded bg-n100" /> : <div className="mb-2 h-3 w-2/3 rounded bg-brand/70" />}
-                  <div className="grid grid-cols-3 gap-1.5">{[0, 1, 2].map((i) => <div key={i} className="h-8 rounded bg-n100" />)}</div>
-                </div>
+            <Card key={t.v} className={cn("overflow-hidden transition", on && "ring-2 ring-brand")}>
+              {/* live scaled preview of this template's home */}
+              <div className="relative h-[240px] overflow-hidden border-b border-n200 bg-n100">
+                <iframe src={`/website-preview?template=${t.v}`} title={`${t.name} preview`} scrolling="no" tabIndex={-1}
+                  className="pointer-events-none origin-top-left"
+                  style={{ width: 1280, height: 860, transform: "scale(0.286)" }} />
+                {on && <span className="absolute right-2 top-2 rounded-full bg-brand px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-white shadow">Live</span>}
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-2"><span className="text-[11px] font-bold text-n400">{t.n}</span><span className="text-[14px] font-semibold text-n900">{t.name}</span></div>
                 <p className="mt-1 text-[12px] text-n500">{t.desc}</p>
-                <button disabled={busy === t.v || on} onClick={() => pick(t.v)} className={cn("mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[12.5px] font-semibold transition", on ? "border border-brand bg-brand-soft text-brand" : "bg-brand text-white hover:bg-brand-hover")}>
-                  {busy === t.v && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{on ? "Selected" : "Select template"}
-                </button>
+                <div className="mt-3 flex gap-2">
+                  <a href={`/website-preview?template=${t.v}`} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg border border-n200 bg-white px-3 text-[12.5px] font-semibold text-n700 hover:bg-n50">Full preview</a>
+                  <button disabled={busy === t.v || on} onClick={() => pick(t.v)} className={cn("inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[12.5px] font-semibold transition", on ? "border border-brand bg-brand-soft text-brand" : "bg-brand text-white hover:bg-brand-hover")}>
+                    {busy === t.v && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{on ? "Selected" : "Use this design"}
+                  </button>
+                </div>
               </div>
             </Card>
           );
