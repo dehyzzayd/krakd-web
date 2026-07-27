@@ -6,7 +6,8 @@ import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Phone, MessageSquare, Calendar, StickyNote, Pencil, X, Loader2 } from "lucide-react";
+import { Sheet } from "@/components/app/Sheet";
+import { Phone, MessageSquare, Calendar, StickyNote, Pencil } from "lucide-react";
 
 type Activity = { id: string; type: string; content: string; actor: string; when: string };
 type Lead = {
@@ -22,18 +23,8 @@ const STATUSES = [["NEW", "New"], ["CONTACTED", "Contacted"], ["QUALIFIED", "Qua
 const APPT_TYPES = [["TEST_DRIVE", "Test drive"], ["PHONE", "Phone consult"], ["DELIVERY", "Delivery"], ["TRADE_APPRAISAL", "Trade appraisal"], ["SERVICE", "Service"]] as const;
 const field = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="app-scope fixed inset-0 z-[70] grid place-items-center bg-black/10 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-[440px] rounded-2xl border border-n200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-n200 px-5 py-3.5">
-          <h3 className="text-[14px] font-semibold text-n900">{title}</h3>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md text-n500 hover:bg-n100"><X className="h-4.5 w-4.5" /></button>
-        </div>
-        <div className="p-5">{children}</div>
-      </div>
-    </div>
-  );
+function CancelBtn({ onClose }: { onClose: () => void }) {
+  return <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>;
 }
 
 export function LeadDetailClient({ id }: { id: string }) {
@@ -140,10 +131,10 @@ function NoteModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
   const [text, setText] = useState(""); const [busy, setBusy] = useState(false);
   const save = async () => { if (!text.trim()) return; setBusy(true); try { await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type: "NOTE", content: text }) }); onDone(); onClose(); } finally { setBusy(false); } };
   return (
-    <Modal title="Add a note" onClose={onClose}>
-      <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Log a note about this lead…" className={cn(field, "h-auto resize-none py-2")} />
-      <button onClick={save} disabled={busy || !text.trim()} className="btn-brand mt-3 h-9 w-full rounded-md text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : "Add note"}</button>
-    </Modal>
+    <Sheet open onClose={onClose} width="max-w-[440px]" title="Add a note" subtitle="Logged to this lead's timeline."
+      footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy || !text.trim()} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : "Add note"}</button></>}>
+      <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder="Log a note about this lead…" className={cn(field, "h-auto resize-none py-2")} />
+    </Sheet>
   );
 }
 
@@ -153,15 +144,17 @@ function MessageModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; o
   const to = channel === "SMS" ? lead.phone : lead.email;
   const save = async () => { if (!text.trim()) return; setBusy(true); try { await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type: channel, content: `To ${to || "lead"}: ${text}` }) }); onDone(); onClose(); } finally { setBusy(false); } };
   return (
-    <Modal title="Send a message" onClose={onClose}>
-      <div className="mb-3 inline-flex rounded-lg border border-n200 bg-white p-0.5">
-        {(["SMS", "EMAIL"] as const).map((c) => <button key={c} onClick={() => setChannel(c)} className={cn("h-8 rounded-[7px] px-4 text-[12.5px] font-medium", channel === c ? "bg-n100 text-n900" : "text-n600")}>{c === "SMS" ? "Text" : "Email"}</button>)}
+    <Sheet open onClose={onClose} width="max-w-[440px]" title="Send a message" subtitle="Recorded on the lead and in your inbox."
+      footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy || !text.trim()} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Sending…" : "Send & log"}</button></>}>
+      <div className="space-y-3">
+        <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">
+          {(["SMS", "EMAIL"] as const).map((c) => <button key={c} onClick={() => setChannel(c)} className={cn("h-8 rounded-[7px] px-4 text-[12.5px] font-medium", channel === c ? "bg-n100 text-n900" : "text-n600")}>{c === "SMS" ? "Text" : "Email"}</button>)}
+        </div>
+        <p className="text-[12px] text-n500">To: <span className="font-medium text-n800">{to || "—"}</span></p>
+        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder={channel === "SMS" ? "Type your text…" : "Type your email…"} className={cn(field, "h-auto resize-none py-2")} />
+        <p className="text-[11px] text-n400">Live send hooks up once your number/email channel is connected.</p>
       </div>
-      <p className="mb-2 text-[12px] text-n500">To: <span className="font-medium text-n800">{to || "—"}</span></p>
-      <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder={channel === "SMS" ? "Type your text…" : "Type your email…"} className={cn(field, "h-auto resize-none py-2")} />
-      <p className="mt-1.5 text-[11px] text-n400">Recorded on the lead and in your inbox. (Live send hooks up once your number/email channel is connected.)</p>
-      <button onClick={save} disabled={busy || !text.trim()} className="btn-brand mt-3 h-9 w-full rounded-md text-[13px] font-semibold disabled:opacity-60">{busy ? "Sending…" : "Send & log"}</button>
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -181,7 +174,8 @@ function ApptModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
     finally { setBusy(false); }
   };
   return (
-    <Modal title="Book an appointment" onClose={onClose}>
+    <Sheet open onClose={onClose} width="max-w-[440px]" title="Book an appointment" subtitle="Books it and advances the lead."
+      footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Booking…" : "Book appointment"}</button></>}>
       <div className="space-y-3">
         <div><span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-n500">Type</span><select value={type} onChange={(e) => setType(e.target.value)} className={field}>{APPT_TYPES.map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}</select></div>
         <div className="grid grid-cols-2 gap-3">
@@ -189,9 +183,8 @@ function ApptModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
           <div><span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-n500">Time</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} /></div>
         </div>
         {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
-        <button onClick={save} disabled={busy} className="btn-brand h-9 w-full rounded-md text-[13px] font-semibold disabled:opacity-60">{busy ? "Booking…" : "Book appointment"}</button>
       </div>
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -210,8 +203,9 @@ function EditModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; onCl
   };
   const L = ({ label, children }: { label: string; children: React.ReactNode }) => <div className="space-y-1.5"><label className="text-[12px] font-medium text-n700">{label}</label>{children}</div>;
   return (
-    <Modal title="Edit lead" onClose={onClose}>
-      <div className="space-y-3">
+    <Sheet open onClose={onClose} width="max-w-[440px]" title="Edit lead" subtitle="Update this lead's information."
+      footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : "Save changes"}</button></>}>
+      <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <L label="First name"><input value={f.firstName} onChange={(e) => set("firstName", e.target.value)} className={field} /></L>
           <L label="Last name"><input value={f.lastName} onChange={(e) => set("lastName", e.target.value)} className={field} /></L>
@@ -224,8 +218,7 @@ function EditModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; onCl
           <label className="flex items-center gap-2 text-[13px] text-n700"><input type="checkbox" checked={f.financing} onChange={(e) => set("financing", e.target.checked)} />Financing</label>
         </div>
         {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
-        <button onClick={save} disabled={busy} className="btn-brand h-9 w-full rounded-md text-[13px] font-semibold disabled:opacity-60">{busy && <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" />}Save changes</button>
       </div>
-    </Modal>
+    </Sheet>
   );
 }
