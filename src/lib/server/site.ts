@@ -16,7 +16,12 @@ export type SiteConfig = {
   hours: { day: string; open: string; close: string }[];
   socials: Record<string, string>;
   sections: Record<string, boolean>;
+  pages: CustomPage[];
+  vdpButtonLabel: string | null;
+  vdpButtonUrl: string | null;
 };
+
+export type CustomPage = { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean };
 
 export type SiteVehicle = {
   id: string; year: number; make: string; model: string; trim: string; body: string;
@@ -57,7 +62,14 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     hours: (Array.isArray(w.hours) ? w.hours : []) as SiteConfig["hours"],
     socials: (w.socials ?? {}) as Record<string, string>,
     sections: (w.sections ?? {}) as Record<string, boolean>,
+    pages: (Array.isArray(w.pages) ? w.pages : []) as CustomPage[],
+    vdpButtonLabel: w.vdpButtonLabel, vdpButtonUrl: w.vdpButtonUrl,
   };
+});
+
+export const getSitePage = cache(async (slug: string, pageSlug: string): Promise<CustomPage | null> => {
+  const c = await getSite(slug);
+  return c?.pages.find((p) => p.slug === pageSlug) ?? null;
 });
 
 /** The dealership id behind a slug (for inventory queries). */

@@ -76,6 +76,7 @@ export function VehicleDetailView({ config, vehicle, similar = [] }: { config: S
               <LeadForm slug={config.slug} accent={accent} vehicle={vehicle} compact />
             </div>
             {config.phone && <a href={`tel:${config.phone}`} className={`mt-3 flex items-center justify-center gap-2 border border-black/12 py-3 text-[13.5px] font-semibold ${ui.btnRadius}`} style={{ color: accent }}><Phone className="h-4 w-4" />Call {config.phone}</a>}
+            {config.vdpButtonLabel && config.vdpButtonUrl && <a href={config.vdpButtonUrl} target="_blank" rel="noreferrer" className={`mt-3 flex items-center justify-center gap-2 py-3 text-[13.5px] font-semibold text-white ${ui.btnRadius}`} style={{ background: accent }}>{config.vdpButtonLabel}</a>}
           </div>
           <PaymentCalculator price={vehicle.price} accent={accent} />
         </aside>

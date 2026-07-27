@@ -22,15 +22,17 @@ import { accentOf } from "@/lib/server/site";
 import { cn } from "@/lib/cn";
 import { siteTheme } from "./theme";
 
-function navItems(slug: string) {
-  const base = `/site/${slug}`;
-  return [
+function navItems(config: SiteConfig) {
+  const base = `/site/${config.slug}`;
+  const items = [
     { href: base, label: "Home" },
     { href: `${base}/inventory`, label: "Inventory" },
     { href: `${base}/financing`, label: "Financing" },
     { href: `${base}/about`, label: "About" },
     { href: `${base}/contact`, label: "Contact" },
   ];
+  for (const p of config.pages ?? []) if (p.inNav) items.push({ href: `${base}/${p.slug}`, label: p.title });
+  return items;
 }
 
 export function SiteHeader({ config }: { config: SiteConfig }) {
@@ -47,7 +49,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const struct = config.template === "INVENTORY_FIRST" ? "bold" : config.template === "PREMIUM" ? "editorial" : "classic";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const items = navItems(config.slug);
+  const items = navItems(config);
   const cityLine = [config.city, config.state].filter(Boolean).join(", ");
 
   const Logo = ({ className }: { className?: string }) => (
@@ -112,7 +114,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
 export function SiteFooter({ config }: { config: SiteConfig }) {
   const accent = accentOf(config.primaryColor);
   const C = siteTheme(config.template).container;
-  const items = navItems(config.slug);
+  const items = navItems(config);
   const cityLine = [config.city, config.state, config.zip].filter(Boolean).join(", ");
   const mapQuery = encodeURIComponent([config.address, cityLine].filter(Boolean).join(", "));
 

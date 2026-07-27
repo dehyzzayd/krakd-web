@@ -11,6 +11,8 @@ export type Web = {
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; headline: string; intro: string; ctaLabel: string;
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
+  pages: { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean }[];
+  vdpButtonLabel: string | null; vdpButtonUrl: string | null;
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[]; socials: Record<string, string>; sections: Record<string, boolean>;
   domain: string | null; domainProvider: string | null;
@@ -106,8 +108,8 @@ export function OverviewPanel({ w, reload, go }: { w: Web; reload: () => void; g
   const [busy, setBusy] = useState(false);
   const dstatus = DOMAIN_BADGE[w.domainStatus];
   const CHECKS: [string, boolean, string, string][] = [
-    ["Template chosen", w.setup.steps.template, "template", TEMPLATES.find((t) => t.v === w.template)!.name],
-    ["Dealership details", w.setup.steps.details, "details", w.setup.steps.details ? "Complete" : "Add contact info"],
+    ["Template chosen", w.setup.steps.template, "design", TEMPLATES.find((t) => t.v === w.template)!.name],
+    ["Dealership details", w.setup.steps.details, "contact", w.setup.steps.details ? "Complete" : "Add contact info"],
     ["Domain connected", w.setup.steps.domain, "domain", dstatus.label],
     ["Published", w.setup.steps.published, "publish", w.status === "PUBLISHED" ? "Live" : "Not yet"],
   ];
@@ -208,212 +210,163 @@ export function TemplatePanel({ w, reload }: { w: Web; reload: () => void }) {
   );
 }
 
-/* ─────────────────────────── Details ─────────────────────────── */
-export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
-  const [f, setF] = useState({
-    headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, primaryColor: w.primaryColor, headerStyle: w.headerStyle ?? "auto",
-    logoUrl: w.logoUrl ?? "", heroImageUrl: w.heroImageUrl ?? "",
-    aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
-    phone: w.phone ?? "", email: w.email ?? "", address: w.address ?? "", city: w.city ?? "", state: w.state ?? "", zip: w.zip ?? "",
-  });
-  const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
-  const [hours, setHours] = useState<{ day: string; open: string; close: string }[]>(
-    w.hours.length ? w.hours : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({ day, open: "9:00 AM", close: "7:00 PM" }))
-  );
-  const setHour = (i: number, k: "open" | "close", v: string) => setHours((p) => p.map((h, j) => j === i ? { ...h, [k]: v } : h));
-
-  // editable content lists (full add / edit / remove)
-  const [whyUs, setWhyUs] = useState<{ title: string; body: string }[]>(w.whyUs?.length ? w.whyUs : []);
-  const [staff, setStaff] = useState<{ name: string; role: string; photoUrl?: string }[]>(w.staff ?? []);
-  const [reviews, setReviews] = useState<{ name: string; rating: number; body: string }[]>(w.reviews ?? []);
-  const [sections, setSections] = useState<Record<string, boolean>>(w.sections ?? {});
-  const [socials, setSocials] = useState<Record<string, string>>(w.socials ?? {});
-  const toggleSection = (k: string) => setSections((p) => ({ ...p, [k]: p[k] === false }));
-  const setSocial = (k: string, v: string) => setSocials((p) => ({ ...p, [k]: v }));
-
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const save = async () => {
+/* ─────────────────────────── shared editor bits ─────────────────────────── */
+function L({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return <div className="space-y-1.5"><label className="text-[13px] font-medium text-n900">{label}{hint && <span className="ml-1.5 text-[11.5px] font-normal text-n400">{hint}</span>}</label>{children}</div>;
+}
+function useSave(reload: () => void) {
+  const [busy, setBusy] = useState(false); const [saved, setSaved] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const save = async (payload: Record<string, unknown>) => {
     setErr(null); setBusy(true);
-    try {
-      await apiFetch("/website", { method: "PATCH", body: JSON.stringify({
-        ...f, logoUrl: f.logoUrl, heroImageUrl: f.heroImageUrl, hours,
-        whyUs: whyUs.filter((x) => x.title.trim() || x.body.trim()),
-        staff: staff.filter((x) => x.name.trim()),
-        reviews: reviews.filter((x) => x.body.trim()),
-        sections, socials,
-      }) });
-      setSaved(true); setTimeout(() => setSaved(false), 2200); reload();
-    } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
+    try { await apiFetch("/website", { method: "PATCH", body: JSON.stringify(payload) }); setSaved(true); setTimeout(() => setSaved(false), 2000); reload(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
     finally { setBusy(false); }
   };
+  return { busy, saved, err, save };
+}
+function SaveBar({ busy, saved, err, onSave, label = "Save" }: { busy: boolean; saved: boolean; err: string | null; onSave: () => void; label?: string }) {
+  return (
+    <div className="flex items-center justify-end gap-3">
+      {err && <span className="text-[12.5px] font-medium text-err">{err}</span>}
+      {saved && <span className="text-[12.5px] font-medium text-ok">Saved</span>}
+      <button onClick={onSave} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{label}</button>
+    </div>
+  );
+}
 
-  const L = ({ label, children }: { label: string; children: React.ReactNode }) => <div className="space-y-1.5"><label className="text-[13px] font-medium text-n900">{label}</label>{children}</div>;
-
+/* ─────────────────────────── Branding ─────────────────────────── */
+export function BrandingPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [primaryColor, setColor] = useState(w.primaryColor);
+  const [headerStyle, setHeader] = useState(w.headerStyle ?? "auto");
+  const [logoUrl, setLogo] = useState(w.logoUrl ?? "");
+  const [heroImageUrl, setHero] = useState(w.heroImageUrl ?? "");
+  const s = useSave(reload);
   return (
     <div className="space-y-5">
       <Card className="p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-n900">Homepage</h3>
+        <h3 className="mb-4 text-[14px] font-semibold text-n900">Brand</h3>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <L label="Brand color"><div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={(e) => setColor(e.target.value)} className="h-10 w-12 shrink-0 rounded-md border border-n200" /><input value={primaryColor} onChange={(e) => setColor(e.target.value)} className={cn(field, "tnum")} /></div></L>
+          <L label="Navbar style"><div className="grid grid-cols-4 gap-1.5">{(["auto", "light", "dark", "accent"] as const).map((v) => <button key={v} type="button" onClick={() => setHeader(v)} className={cn("h-9 rounded-md border text-[12.5px] font-medium capitalize transition", headerStyle === v ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n50")}>{v === "accent" ? "Brand" : v}</button>)}</div></L>
+        </div>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <L label="Logo"><Uploader value={logoUrl} onChange={setLogo} label="logo" aspect="wide" /></L>
+          <L label="Hero background"><Uploader value={heroImageUrl} onChange={setHero} label="hero" aspect="wide" /></L>
+        </div>
+      </Card>
+      <SaveBar {...s} onSave={() => s.save({ primaryColor, headerStyle, logoUrl, heroImageUrl })} label="Save branding" />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Homepage ─────────────────────────── */
+export function HomepagePanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [f, setF] = useState({ headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel, aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "" });
+  const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const [whyUs, setWhyUs] = useState(w.whyUs ?? []);
+  const [reviews, setReviews] = useState(w.reviews ?? []);
+  const [sections, setSections] = useState<Record<string, boolean>>(w.sections ?? {});
+  const toggle = (k: string) => setSections((p) => ({ ...p, [k]: p[k] === false }));
+  const s = useSave(reload);
+  return (
+    <div className="space-y-5">
+      <Card className="p-5"><h3 className="mb-4 text-[14px] font-semibold text-n900">Hero &amp; content</h3>
         <div className="space-y-4">
           <L label="Headline"><input value={f.headline} onChange={(e) => set("headline", e.target.value)} className={field} /></L>
-          <L label="Short introduction"><textarea value={f.intro} onChange={(e) => set("intro", e.target.value)} rows={2} className={cn(field, "h-auto resize-none py-2")} /></L>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <L label="Button label"><input value={f.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} className={field} /></L>
-            <L label="Brand color"><div className="flex items-center gap-2"><input type="color" value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className="h-10 w-12 shrink-0 rounded-md border border-n200" /><input value={f.primaryColor} onChange={(e) => set("primaryColor", e.target.value)} className={cn(field, "tnum")} /></div></L>
-          </div>
-          <L label="Navbar style">
-            <div className="grid grid-cols-4 gap-1.5">
-              {([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"], ["accent", "Brand"]] as const).map(([v, lbl]) => (
-                <button key={v} type="button" onClick={() => set("headerStyle", v)} className={cn("h-9 rounded-md border text-[12.5px] font-medium transition", f.headerStyle === v ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n50")}>{lbl}</button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-[11.5px] text-n400"><span className="font-medium">Brand</span> paints the navbar in your brand color · <span className="font-medium">Auto</span> follows the template.</p>
-          </L>
+          <L label="Intro"><textarea value={f.intro} onChange={(e) => set("intro", e.target.value)} rows={2} className={textarea} /></L>
+          <L label="Button label"><input value={f.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} className={field} /></L>
+          <L label="About"><textarea value={f.aboutText} onChange={(e) => set("aboutText", e.target.value)} rows={3} className={textarea} /></L>
+          <div className="grid gap-4 sm:grid-cols-2"><L label="Financing blurb"><textarea value={f.financingText} onChange={(e) => set("financingText", e.target.value)} rows={2} className={textarea} /></L><L label="Trade-in blurb"><textarea value={f.tradeInText} onChange={(e) => set("tradeInText", e.target.value)} rows={2} className={textarea} /></L></div>
         </div>
       </Card>
-
-      <Card className="p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-n900">Branding assets</h3>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <L label="Logo"><Uploader value={f.logoUrl} onChange={(v) => set("logoUrl", v)} label="logo" aspect="wide" /></L>
-          <L label="Hero background (optional)"><Uploader value={f.heroImageUrl} onChange={(v) => set("heroImageUrl", v)} label="hero" aspect="wide" /></L>
-        </div>
+      <Card className="p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-[14px] font-semibold text-n900">Why choose us</h3>{whyUs.length < 6 && <button type="button" onClick={() => setWhyUs((p) => [...p, { title: "", body: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add</button>}</div>
+        <div className="space-y-3">{whyUs.map((row, i) => (<div key={i} className="rounded-lg border border-n200 p-3"><div className="mb-2 flex gap-2"><input value={row.title} placeholder="Title" onChange={(e) => setWhyUs((p) => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} className={cn(field, "flex-1")} /><button type="button" onClick={() => setWhyUs((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button></div><textarea value={row.body} placeholder="Description" rows={2} onChange={(e) => setWhyUs((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} /></div>))}</div>
       </Card>
-
-      <Card className="p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-n900">Page content</h3>
-        <div className="space-y-4">
-          <L label="About your dealership"><textarea value={f.aboutText} onChange={(e) => set("aboutText", e.target.value)} rows={3} placeholder="Tell buyers who you are…" className={textarea} /></L>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <L label="Financing blurb"><textarea value={f.financingText} onChange={(e) => set("financingText", e.target.value)} rows={2} placeholder="How financing works at your store…" className={textarea} /></L>
-            <L label="Trade-in blurb"><textarea value={f.tradeInText} onChange={(e) => set("tradeInText", e.target.value)} rows={2} placeholder="Your sell-us-your-car pitch…" className={textarea} /></L>
-          </div>
-        </div>
+      <Card className="p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-[14px] font-semibold text-n900">Reviews</h3><button type="button" onClick={() => setReviews((p) => [...p, { name: "", rating: 5, body: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add</button></div>
+        <div className="space-y-3">{reviews.map((row, i) => (<div key={i} className="rounded-lg border border-n200 p-3"><div className="mb-2 flex gap-2"><input value={row.name} placeholder="Customer" onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={cn(field, "flex-1")} /><select value={row.rating} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, rating: +e.target.value } : x))} className={cn(field, "w-20")}>{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n}★</option>)}</select><button type="button" onClick={() => setReviews((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button></div><textarea value={row.body} placeholder="What they said" rows={2} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} /></div>))}</div>
       </Card>
+      <Card className="p-5"><h3 className="mb-3 text-[14px] font-semibold text-n900">Homepage sections</h3><div className="grid gap-2 sm:grid-cols-2">{([["trustBar", "Trust bar"], ["shopByType", "Shop by type"], ["financing", "Financing band"], ["reviews", "Reviews"], ["whyUs", "Why choose us"], ["about", "About"]] as const).map(([k, label]) => { const on = sections[k] !== false; return <button key={k} type="button" onClick={() => toggle(k)} className="flex items-center justify-between rounded-lg border border-n200 px-3 py-2.5 text-left hover:bg-n50"><span className="text-[13px] font-medium text-n900">{label}</span><span className={cn("relative h-5 w-9 rounded-full transition", on ? "bg-brand" : "bg-n300")}><span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", on ? "left-4" : "left-0.5")} /></span></button>; })}</div></Card>
+      <SaveBar {...s} onSave={() => s.save({ ...f, whyUs: whyUs.filter((x) => x.title.trim() || x.body.trim()), reviews: reviews.filter((x) => x.body.trim()), sections })} label="Save homepage" />
+    </div>
+  );
+}
 
-      <Card className="p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-n900">Contact</h3>
+/* ─────────────────────────── Contact & team ─────────────────────────── */
+export function ContactPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [f, setF] = useState({ phone: w.phone ?? "", email: w.email ?? "", address: w.address ?? "", city: w.city ?? "", state: w.state ?? "", zip: w.zip ?? "" });
+  const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const [hours, setHours] = useState(w.hours.length ? w.hours : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => ({ day, open: "9:00 AM", close: "7:00 PM" })));
+  const setHour = (i: number, k: "open" | "close", v: string) => setHours((p) => p.map((h, j) => j === i ? { ...h, [k]: v } : h));
+  const [staff, setStaff] = useState(w.staff ?? []);
+  const [socials, setSocials] = useState<Record<string, string>>(w.socials ?? {});
+  const s = useSave(reload);
+  return (
+    <div className="space-y-5">
+      <Card className="p-5"><h3 className="mb-4 text-[14px] font-semibold text-n900">Contact</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <L label="Phone"><input value={f.phone} onChange={(e) => set("phone", e.target.value)} className={cn(field, "tnum")} /></L>
           <L label="Email"><input value={f.email} onChange={(e) => set("email", e.target.value)} className={field} /></L>
           <L label="Address"><input value={f.address} onChange={(e) => set("address", e.target.value)} className={field} /></L>
-          <div className="grid grid-cols-3 gap-2">
-            <L label="City"><input value={f.city} onChange={(e) => set("city", e.target.value)} className={field} /></L>
-            <L label="State"><input value={f.state} onChange={(e) => set("state", e.target.value)} className={field} /></L>
-            <L label="ZIP"><input value={f.zip} onChange={(e) => set("zip", e.target.value)} className={cn(field, "tnum")} /></L>
+          <div className="grid grid-cols-3 gap-2"><L label="City"><input value={f.city} onChange={(e) => set("city", e.target.value)} className={field} /></L><L label="State"><input value={f.state} onChange={(e) => set("state", e.target.value)} className={field} /></L><L label="ZIP"><input value={f.zip} onChange={(e) => set("zip", e.target.value)} className={cn(field, "tnum")} /></L></div>
+        </div>
+      </Card>
+      <Card className="p-5"><h3 className="mb-4 text-[14px] font-semibold text-n900">Business hours</h3><div className="space-y-2">{hours.map((h, i) => (<div key={h.day} className="grid grid-cols-[3rem_1fr_1fr] items-center gap-2"><span className="text-[13px] font-medium text-n700">{h.day}</span><input value={h.open} onChange={(e) => setHour(i, "open", e.target.value)} className={field} /><input value={h.close} onChange={(e) => setHour(i, "close", e.target.value)} className={field} /></div>))}</div></Card>
+      <Card className="p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-[14px] font-semibold text-n900">Team</h3><button type="button" onClick={() => setStaff((p) => [...p, { name: "", role: "", photoUrl: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add</button></div>
+        <div className="space-y-3">{staff.map((row, i) => (<div key={i} className="flex items-start gap-3 rounded-lg border border-n200 p-3"><Uploader value={row.photoUrl ?? ""} onChange={(v) => setStaff((p) => p.map((x, j) => j === i ? { ...x, photoUrl: v } : x))} label="photo" /><div className="flex-1 space-y-2"><input value={row.name} placeholder="Name" onChange={(e) => setStaff((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={field} /><input value={row.role} placeholder="Role" onChange={(e) => setStaff((p) => p.map((x, j) => j === i ? { ...x, role: e.target.value } : x))} className={field} /></div><button type="button" onClick={() => setStaff((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button></div>))}</div>
+      </Card>
+      <Card className="p-5"><h3 className="mb-4 text-[14px] font-semibold text-n900">Social links</h3><div className="grid gap-4 sm:grid-cols-2">{(["facebook", "instagram", "youtube", "twitter", "linkedin"] as const).map((k) => (<L key={k} label={k[0].toUpperCase() + k.slice(1)}><input value={socials[k] ?? ""} onChange={(e) => setSocials((p) => ({ ...p, [k]: e.target.value }))} placeholder="https://…" className={field} /></L>))}</div></Card>
+      <SaveBar {...s} onSave={() => s.save({ ...f, hours, staff: staff.filter((x) => x.name.trim()), socials })} label="Save contact" />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Pages (custom) ─────────────────────────── */
+const slugify = (x: string) => x.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+export function PagesPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [pages, setPages] = useState(w.pages ?? []);
+  const upd = (i: number, patch: Partial<(typeof pages)[number]>) => setPages((p) => p.map((x, j) => j === i ? { ...x, ...patch } : x));
+  const add = () => setPages((p) => [...p, { id: `p${p.length}-${Math.max(1, p.length + 1)}`, slug: "", title: "", body: "", inNav: true, showSidebar: false }]);
+  const s = useSave(reload);
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between"><div><h3 className="text-[15px] font-semibold text-n900">Custom pages</h3><p className="text-[12.5px] text-n500">Create pages (Service, Careers, Locations…), write in plain text, add to the nav.</p></div><button onClick={add} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-[12.5px] font-semibold text-white hover:bg-brand-hover"><Plus className="h-3.5 w-3.5" />New page</button></div>
+      {pages.length === 0 && <Card className="p-8 text-center text-[13px] text-n500">No custom pages yet. Create one — it gets its own URL and can appear in your navbar.</Card>}
+      {pages.map((pg, i) => (
+        <Card key={pg.id} className="p-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <L label="Title"><input value={pg.title} onChange={(e) => { const t = e.target.value; upd(i, { title: t, slug: pg.slug || slugify(t) }); }} placeholder="Service & Parts" className={field} /></L>
+            <L label="URL slug" hint={`/${pg.slug || "…"}`}><input value={pg.slug} onChange={(e) => upd(i, { slug: slugify(e.target.value) })} placeholder="service" className={cn(field, "tnum")} /></L>
           </div>
-        </div>
-      </Card>
+          <div className="mt-3"><L label="Content"><textarea value={pg.body} onChange={(e) => upd(i, { body: e.target.value })} rows={7} placeholder={"Write in plain English.\n\nBlank line = new paragraph.\n## Heading\n- bullet point"} className={cn(textarea, "font-mono text-[12.5px]")} /></L></div>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-[13px] text-n700"><input type="checkbox" checked={pg.inNav ?? false} onChange={(e) => upd(i, { inNav: e.target.checked })} />Show in navbar</label>
+            <label className="flex items-center gap-2 text-[13px] text-n700"><input type="checkbox" checked={pg.showSidebar ?? false} onChange={(e) => upd(i, { showSidebar: e.target.checked })} />Page sidebar</label>
+            <a href={`/site/${w.slug}/${pg.slug}`} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-brand">Preview ↗</a>
+            <button onClick={() => setPages((p) => p.filter((_, j) => j !== i))} className="ml-auto inline-flex items-center gap-1 text-[12.5px] font-medium text-err"><Trash2 className="h-3.5 w-3.5" />Delete</button>
+          </div>
+        </Card>
+      ))}
+      <SaveBar {...s} onSave={() => s.save({ pages: pages.filter((p) => p.slug.trim() && p.title.trim()) })} label="Save pages" />
+    </div>
+  );
+}
 
+/* ─────────────────────────── Vehicle page (VDP) ─────────────────────────── */
+export function VehiclePanel({ w, reload }: { w: Web; reload: () => void }) {
+  const [label, setLabel] = useState(w.vdpButtonLabel ?? "");
+  const [url, setUrl] = useState(w.vdpButtonUrl ?? "");
+  const s = useSave(reload);
+  return (
+    <div className="space-y-5">
       <Card className="p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-n900">Business hours</h3>
-        <div className="space-y-2">
-          {hours.map((h, i) => (
-            <div key={h.day} className="grid grid-cols-[3rem_1fr_1fr] items-center gap-2">
-              <span className="text-[13px] font-medium text-n700">{h.day}</span>
-              <input value={h.open} onChange={(e) => setHour(i, "open", e.target.value)} className={field} />
-              <input value={h.close} onChange={(e) => setHour(i, "close", e.target.value)} className={field} />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Why choose us — add/edit/remove */}
-      <Card className="p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[14px] font-semibold text-n900">Why choose us</h3>
-          {whyUs.length < 6 && <button type="button" onClick={() => setWhyUs((p) => [...p, { title: "", body: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add point</button>}
-        </div>
-        {whyUs.length === 0 && <p className="text-[12.5px] text-n400">Using default points. Add your own to override them.</p>}
-        <div className="space-y-3">
-          {whyUs.map((row, i) => (
-            <div key={i} className="rounded-lg border border-n200 p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <input value={row.title} placeholder="Title (e.g. Hand-picked inventory)" onChange={(e) => setWhyUs((p) => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} className={cn(field, "flex-1")} />
-                <button type="button" onClick={() => setWhyUs((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
-              </div>
-              <textarea value={row.body} placeholder="One or two sentences…" rows={2} onChange={(e) => setWhyUs((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Team — add/edit/remove with photo upload */}
-      <Card className="p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[14px] font-semibold text-n900">Meet the team</h3>
-          <button type="button" onClick={() => setStaff((p) => [...p, { name: "", role: "", photoUrl: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add person</button>
-        </div>
-        {staff.length === 0 && <p className="text-[12.5px] text-n400">No team members yet. Add people to show a “Meet the team” section on your About page.</p>}
-        <div className="space-y-3">
-          {staff.map((row, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-lg border border-n200 p-3">
-              <Uploader value={row.photoUrl ?? ""} onChange={(v) => setStaff((p) => p.map((x, j) => j === i ? { ...x, photoUrl: v } : x))} label="photo" />
-              <div className="flex-1 space-y-2">
-                <input value={row.name} placeholder="Name" onChange={(e) => setStaff((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={field} />
-                <input value={row.role} placeholder="Role (e.g. Finance Manager)" onChange={(e) => setStaff((p) => p.map((x, j) => j === i ? { ...x, role: e.target.value } : x))} className={field} />
-              </div>
-              <button type="button" onClick={() => setStaff((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Reviews — add/edit/remove */}
-      <Card className="p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[14px] font-semibold text-n900">Customer reviews</h3>
-          {reviews.length < 24 && <button type="button" onClick={() => setReviews((p) => [...p, { name: "", rating: 5, body: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add review</button>}
-        </div>
-        {reviews.length === 0 && <p className="text-[12.5px] text-n400">Showing sample reviews. Add real ones to replace them.</p>}
-        <div className="space-y-3">
-          {reviews.map((row, i) => (
-            <div key={i} className="rounded-lg border border-n200 p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <input value={row.name} placeholder="Customer name" onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={cn(field, "flex-1")} />
-                <select value={row.rating} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, rating: +e.target.value } : x))} className={cn(field, "w-24")}>{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} ★</option>)}</select>
-                <button type="button" onClick={() => setReviews((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
-              </div>
-              <textarea value={row.body} placeholder="What they said…" rows={2} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Homepage sections — show/hide */}
-      <Card className="p-5">
-        <h3 className="mb-1 text-[14px] font-semibold text-n900">Homepage sections</h3>
-        <p className="mb-3 text-[12px] text-n500">Turn sections on or off. Hero and featured inventory always show.</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {([["trustBar", "Trust bar"], ["shopByType", "Shop by type"], ["financing", "Financing band"], ["reviews", "Customer reviews"], ["whyUs", "Why choose us"], ["about", "About / welcome"]] as const).map(([k, label]) => {
-            const on = sections[k] !== false;
-            return (
-              <button key={k} type="button" onClick={() => toggleSection(k)} className="flex items-center justify-between rounded-lg border border-n200 px-3 py-2.5 text-left transition hover:bg-n50">
-                <span className="text-[13px] font-medium text-n900">{label}</span>
-                <span className={cn("relative h-5 w-9 rounded-full transition", on ? "bg-brand" : "bg-n300")}><span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", on ? "left-4" : "left-0.5")} /></span>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Social links */}
-      <Card className="p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-n900">Social links <span className="font-normal text-n400">· shown in the footer</span></h3>
+        <h3 className="mb-1 text-[14px] font-semibold text-n900">Vehicle detail page</h3>
+        <p className="mb-4 text-[12.5px] text-n500">Add a custom call-to-action button shown on every vehicle&apos;s page — link it anywhere (a form, a value-your-trade tool, a video).</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          {(["facebook", "instagram", "youtube", "twitter", "linkedin"] as const).map((k) => (
-            <L key={k} label={k[0].toUpperCase() + k.slice(1)}><input value={socials[k] ?? ""} onChange={(e) => setSocial(k, e.target.value)} placeholder="https://…" className={field} /></L>
-          ))}
+          <L label="Button label"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Value your trade" className={field} /></L>
+          <L label="Button link (URL)"><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className={field} /></L>
         </div>
       </Card>
-
-      <div className="flex items-center justify-end gap-3">
-        {err && <span className="text-[12.5px] font-medium text-err">{err}</span>}
-        {saved && <span className="text-[12.5px] font-medium text-ok">Saved</span>}
-        <button onClick={save} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Save details</button>
-      </div>
+      <SaveBar {...s} onSave={() => s.save({ vdpButtonLabel: label, vdpButtonUrl: url })} label="Save vehicle page" />
     </div>
   );
 }
