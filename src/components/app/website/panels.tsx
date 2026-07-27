@@ -4,13 +4,13 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Card } from "@/components/app/AppKit";
-import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw } from "lucide-react";
+import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
 export type Web = {
   id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM"; status: "DRAFT" | "PUBLISHED";
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; headline: string; intro: string; ctaLabel: string;
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
-  whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[];
+  whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[]; socials: Record<string, string>;
   domain: string | null; domainProvider: string | null;
@@ -198,6 +198,12 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
     w.hours.length ? w.hours : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({ day, open: "9:00 AM", close: "7:00 PM" }))
   );
   const setHour = (i: number, k: "open" | "close", v: string) => setHours((p) => p.map((h, j) => j === i ? { ...h, [k]: v } : h));
+
+  // editable content lists (full add / edit / remove)
+  const [whyUs, setWhyUs] = useState<{ title: string; body: string }[]>(w.whyUs?.length ? w.whyUs : []);
+  const [staff, setStaff] = useState<{ name: string; role: string; photoUrl?: string }[]>(w.staff ?? []);
+  const [reviews, setReviews] = useState<{ name: string; rating: number; body: string }[]>(w.reviews ?? []);
+
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -205,7 +211,12 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
   const save = async () => {
     setErr(null); setBusy(true);
     try {
-      await apiFetch("/website", { method: "PATCH", body: JSON.stringify({ ...f, logoUrl: f.logoUrl, heroImageUrl: f.heroImageUrl, hours }) });
+      await apiFetch("/website", { method: "PATCH", body: JSON.stringify({
+        ...f, logoUrl: f.logoUrl, heroImageUrl: f.heroImageUrl, hours,
+        whyUs: whyUs.filter((x) => x.title.trim() || x.body.trim()),
+        staff: staff.filter((x) => x.name.trim()),
+        reviews: reviews.filter((x) => x.body.trim()),
+      }) });
       setSaved(true); setTimeout(() => setSaved(false), 2200); reload();
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
     finally { setBusy(false); }
@@ -276,6 +287,68 @@ export function DetailsPanel({ w, reload }: { w: Web; reload: () => void }) {
               <span className="text-[13px] font-medium text-n700">{h.day}</span>
               <input value={h.open} onChange={(e) => setHour(i, "open", e.target.value)} className={field} />
               <input value={h.close} onChange={(e) => setHour(i, "close", e.target.value)} className={field} />
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Why choose us — add/edit/remove */}
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[14px] font-semibold text-n900">Why choose us</h3>
+          {whyUs.length < 6 && <button type="button" onClick={() => setWhyUs((p) => [...p, { title: "", body: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add point</button>}
+        </div>
+        {whyUs.length === 0 && <p className="text-[12.5px] text-n400">Using default points. Add your own to override them.</p>}
+        <div className="space-y-3">
+          {whyUs.map((row, i) => (
+            <div key={i} className="rounded-lg border border-n200 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <input value={row.title} placeholder="Title (e.g. Hand-picked inventory)" onChange={(e) => setWhyUs((p) => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} className={cn(field, "flex-1")} />
+                <button type="button" onClick={() => setWhyUs((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
+              </div>
+              <textarea value={row.body} placeholder="One or two sentences…" rows={2} onChange={(e) => setWhyUs((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} />
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Team — add/edit/remove with photo upload */}
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[14px] font-semibold text-n900">Meet the team</h3>
+          <button type="button" onClick={() => setStaff((p) => [...p, { name: "", role: "", photoUrl: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add person</button>
+        </div>
+        {staff.length === 0 && <p className="text-[12.5px] text-n400">No team members yet. Add people to show a “Meet the team” section on your About page.</p>}
+        <div className="space-y-3">
+          {staff.map((row, i) => (
+            <div key={i} className="flex items-start gap-3 rounded-lg border border-n200 p-3">
+              <Uploader value={row.photoUrl ?? ""} onChange={(v) => setStaff((p) => p.map((x, j) => j === i ? { ...x, photoUrl: v } : x))} label="photo" />
+              <div className="flex-1 space-y-2">
+                <input value={row.name} placeholder="Name" onChange={(e) => setStaff((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={field} />
+                <input value={row.role} placeholder="Role (e.g. Finance Manager)" onChange={(e) => setStaff((p) => p.map((x, j) => j === i ? { ...x, role: e.target.value } : x))} className={field} />
+              </div>
+              <button type="button" onClick={() => setStaff((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Reviews — add/edit/remove */}
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[14px] font-semibold text-n900">Customer reviews</h3>
+          {reviews.length < 24 && <button type="button" onClick={() => setReviews((p) => [...p, { name: "", rating: 5, body: "" }])} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add review</button>}
+        </div>
+        {reviews.length === 0 && <p className="text-[12.5px] text-n400">Showing sample reviews. Add real ones to replace them.</p>}
+        <div className="space-y-3">
+          {reviews.map((row, i) => (
+            <div key={i} className="rounded-lg border border-n200 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <input value={row.name} placeholder="Customer name" onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={cn(field, "flex-1")} />
+                <select value={row.rating} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, rating: +e.target.value } : x))} className={cn(field, "w-24")}>{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} ★</option>)}</select>
+                <button type="button" onClick={() => setReviews((p) => p.filter((_, j) => j !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-n400 hover:bg-err-soft hover:text-err"><Trash2 className="h-4 w-4" /></button>
+              </div>
+              <textarea value={row.body} placeholder="What they said…" rows={2} onChange={(e) => setReviews((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} className={textarea} />
             </div>
           ))}
         </div>

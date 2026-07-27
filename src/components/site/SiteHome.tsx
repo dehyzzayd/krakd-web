@@ -54,6 +54,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
   const bodies = [...new Set(vehicles.map((v) => v.body).filter(Boolean))];
   const featured = vehicles.slice(0, ui.card === "editorial" ? 6 : 8);
   const why = config.whyUs.length ? config.whyUs : DEFAULT_WHY;
+  const reviews = config.reviews.length ? config.reviews : REVIEWS;
   const whyIcons = [ShieldCheck, BadgeCheck, Wrench];
   const heroImg = config.heroImageUrl;
   const dark = ui.hero !== "light";
@@ -203,7 +204,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
             <p className="text-[14px] font-semibold text-[#0f172a]">Loved by our customers</p>
           </div>
           <div className="mt-6 grid gap-5 sm:grid-cols-3">
-            {REVIEWS.map((r) => (
+            {reviews.map((r) => (
               <div key={r.name} className={`border border-black/8 bg-white p-6 ${ui.cardRadius}`}>
                 <div className="flex" style={{ color: accent }}>{Array.from({ length: r.rating }).map((_, i) => <Star key={i} className="h-4 w-4" fill="currentColor" strokeWidth={0} />)}</div>
                 <p className="mt-3 text-[14px] leading-relaxed text-[#334155]">“{r.body}”</p>

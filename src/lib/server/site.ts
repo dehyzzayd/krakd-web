@@ -10,6 +10,7 @@ export type SiteConfig = {
   aboutText: string; financingText: string; tradeInText: string;
   whyUs: { title: string; body: string }[];
   staff: { name: string; role: string; photoUrl?: string }[];
+  reviews: { name: string; rating: number; body: string }[];
   phone: string | null; email: string | null;
   address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[];
@@ -50,6 +51,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
     whyUs: (Array.isArray(w.whyUs) ? w.whyUs : []) as SiteConfig["whyUs"],
     staff: (Array.isArray(w.staff) ? w.staff : []) as SiteConfig["staff"],
+    reviews: (Array.isArray(w.reviews) ? w.reviews : []) as SiteConfig["reviews"],
     phone: w.phone, email: w.email, address: w.address, city: w.city, state: w.state, zip: w.zip,
     hours: (Array.isArray(w.hours) ? w.hours : []) as SiteConfig["hours"],
     socials: (w.socials ?? {}) as Record<string, string>,

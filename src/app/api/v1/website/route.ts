@@ -39,8 +39,9 @@ const patchSchema = z.object({
   aboutText: z.string().max(2000).optional(),
   financingText: z.string().max(1000).optional(),
   tradeInText: z.string().max(1000).optional(),
-  whyUs: z.array(z.object({ title: z.string(), body: z.string() })).optional(),
-  staff: z.array(z.object({ name: z.string(), role: z.string(), photoUrl: z.string().optional() })).optional(),
+  whyUs: z.array(z.object({ title: z.string(), body: z.string() })).max(6).optional(),
+  staff: z.array(z.object({ name: z.string(), role: z.string(), photoUrl: z.string().max(ASSET_MAX).optional() })).max(24).optional(),
+  reviews: z.array(z.object({ name: z.string(), rating: z.number().int().min(1).max(5), body: z.string() })).max(24).optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
   address: z.string().optional(),
@@ -57,13 +58,14 @@ export const PATCH = route(async (req: NextRequest) => {
   await ensureWebsite(dealershipId);
   const parsed = patchSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
-  const { hours, socials, whyUs, staff, ...rest } = parsed.data;
+  const { hours, socials, whyUs, staff, reviews, ...rest } = parsed.data;
   const data: Prisma.WebsiteUpdateInput = {
     ...rest,
     ...(hours ? { hours: hours as unknown as Prisma.InputJsonValue } : {}),
     ...(socials ? { socials: socials as unknown as Prisma.InputJsonValue } : {}),
     ...(whyUs ? { whyUs: whyUs as unknown as Prisma.InputJsonValue } : {}),
     ...(staff ? { staff: staff as unknown as Prisma.InputJsonValue } : {}),
+    ...(reviews ? { reviews: reviews as unknown as Prisma.InputJsonValue } : {}),
   };
   const w = await prisma.website.update({ where: { dealershipId }, data });
   return json({ ...w, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });

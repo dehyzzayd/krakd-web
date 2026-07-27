@@ -28,7 +28,7 @@ export default function WebsitePreview() {
         logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor, headerStyle: (w.headerStyle as string) || "auto",
         headline: w.headline || "", intro: w.intro || "", ctaLabel: w.ctaLabel || "Browse inventory",
         aboutText: w.aboutText || "", financingText: w.financingText || "", tradeInText: w.tradeInText || "",
-        whyUs: w.whyUs || [], staff: w.staff || [],
+        whyUs: w.whyUs || [], staff: w.staff || [], reviews: w.reviews || [],
         phone: w.phone ?? null, email: w.email ?? null, address: w.address ?? null, city: w.city ?? null, state: w.state ?? null, zip: w.zip ?? null,
         hours: w.hours || [], socials: w.socials || {},
       });
