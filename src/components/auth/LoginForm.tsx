@@ -19,13 +19,15 @@ export function LoginForm() {
     try {
       const tokens = await authApi.login({ email, password });
       setSession(tokens);
-      // route by role, honoring an explicit ?next=
+      // route by role, honoring an explicit ?next= — but /admin is PLATFORM_ADMIN only
       let dest = "/dashboard";
       try {
         const me = await authApi.me();
+        const isAdmin = me.role === "PLATFORM_ADMIN";
         const next = new URLSearchParams(window.location.search).get("next");
-        if (next && next.startsWith("/")) dest = next;
-        else if (me.role === "PLATFORM_ADMIN") dest = "/admin";
+        if (next && next.startsWith("/admin")) dest = isAdmin ? next : "/dashboard";
+        else if (next && next.startsWith("/")) dest = next;
+        else dest = isAdmin ? "/admin" : "/dashboard";
       } catch { /* fall back to dashboard */ }
       router.push(dest);
     } catch (e) {
