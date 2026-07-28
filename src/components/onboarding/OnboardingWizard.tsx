@@ -294,15 +294,16 @@ function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, be
         })}
       </div>
 
-      {/* promo code */}
+      {/* access code — Krakd is invite-only */}
       <div className="mt-4">
-        <label htmlFor="promo" className="mb-2 block text-[13px] font-medium text-muted">Have a promo code?</label>
+        <label htmlFor="promo" className="mb-2 block text-[13px] font-medium text-muted">Access code</label>
         <div className="flex gap-2">
-          <input id="promo" value={promo} onChange={(e) => setPromo(e.target.value.toUpperCase())} placeholder="Enter code"
+          <input id="promo" value={promo} onChange={(e) => setPromo(e.target.value.toUpperCase())} placeholder="Enter your access code"
             className="h-12 flex-1 rounded-[12px] bg-[#f4f4f5] px-4 text-[15px] uppercase text-ink outline-none ring-1 ring-black/[0.04] transition placeholder:normal-case placeholder:text-muted focus:bg-white focus:ring-2 focus:ring-ink/25" />
           <button onClick={applyPromo} className="inline-flex h-12 items-center justify-center rounded-[12px] bg-[#f0f0f0] px-5 text-[14px] font-semibold text-ink transition hover:bg-[#e7e7e7]">Apply</button>
         </div>
-        {promoOk && <p className="mt-2 text-[13px] font-medium text-[#1e9e5a]">{beta ? "✓ BETAACCESS — free beta access, $0 due today." : "✓ Code applied — discount shown at checkout."}</p>}
+        {promoOk && <p className="mt-2 text-[13px] font-medium text-[#1e9e5a]">✓ Code entered — $0 due today. We&apos;ll confirm it in the next step.</p>}
+        <p className="mt-1.5 text-[12px] text-muted">Krakd is currently invite-only. You need an access code to continue.</p>
       </div>
 
       <Nav onBack={onBack} onNext={onNext} />
@@ -373,11 +374,11 @@ function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error
 
       <p className="mt-4 text-[12.5px] leading-snug text-muted">
         {beta
-          ? "BETAACCESS applied — $0 due today and full dashboard access. Card billing kicks in later."
-          : "Enter payment securely via Stripe on the next step. (Card payments are coming — use the BETAACCESS code to start free today.)"}
+          ? "Access code entered — $0 due today and full dashboard access. Card billing kicks in later. Your code is verified when you activate."
+          : "Krakd is invite-only. Enter your access code on the plan step to continue."}
       </p>
       {error && <p className="mt-3 text-[13px] font-medium text-[#dc2626]">{error}</p>}
-      <Nav onBack={onBack} onNext={onFinish} nextLabel={submitting ? "Creating account…" : beta ? "Activate free account →" : "Proceed to pay →"} />
+      <Nav onBack={onBack} onNext={onFinish} nextLabel={submitting ? "Creating account…" : "Activate account →"} />
     </div>
   );
 }
@@ -457,16 +458,17 @@ export function OnboardingWizard() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const applyPromo = () => {
-    const code = promo.trim().toUpperCase();
-    setBeta(code === "BETAACCESS");
+    // The real code is validated server-side — the client never knows its value.
+    const code = promo.trim();
+    setBeta(code.length > 0);
     setPromoOk(code.length > 0);
   };
 
   /** Final step: create the real dealership account, store the session, land on the dashboard. */
   const finish = async () => {
     setError(null);
-    if (!beta) {
-      setError("Add the BETAACCESS promo code to continue — card payments arrive with Stripe.");
+    if (!promo.trim()) {
+      setError("Enter your access code on the plan step to continue.");
       return;
     }
     const raw = typeof window !== "undefined" ? sessionStorage.getItem("krakd_signup") : null;
@@ -484,6 +486,7 @@ export function OnboardingWizard() {
         email: s.email,
         password: s.password,
         phone: form.phone || undefined,
+        accessCode: promo.trim(),
       });
       setSession(tokens);
       sessionStorage.removeItem("krakd_signup");

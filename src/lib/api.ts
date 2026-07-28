@@ -66,6 +66,7 @@ export const authApi = {
     email: string;
     password: string;
     phone?: string;
+    accessCode?: string;
   }) => apiFetch<Tokens>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
 
   login: (body: { email: string; password: string }) =>
