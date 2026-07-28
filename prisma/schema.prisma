@@ -543,6 +543,8 @@ enum WebsiteTemplate {
   CLASSIC        // corporate franchise, utility bar, blue/boxy
   SPORT          // charcoal performance/exotic, angular
   MINIMAL        // airy Scandinavian/EV, hairlines + whitespace
+  AURORA         // dark navy + vivid accent, lowercase display, circular badge (Northline Aurora)
+  QUIET          // warm off-white + teal, utility bar, calm/premium (Northline)
 }
 
 enum WebsiteStatus {

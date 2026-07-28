@@ -122,6 +122,32 @@ const MINIMAL: TplUI = {
   invCols: "sm:grid-cols-2 lg:grid-cols-3", inventoryFirst: false,
 };
 
+const AURORA: TplUI = {
+  name: "Aurora", header: "dark", hero: "bleed",
+  display: "tracking-tight",
+  h1: "text-[44px] leading-[0.98] sm:text-[68px] font-extrabold tracking-tight lowercase",
+  h2: "text-[30px] sm:text-[40px] font-extrabold tracking-tight",
+  eyebrow: "text-[12px] font-bold uppercase tracking-[0.14em]",
+  container: "max-w-[1240px]", band: "#161227",
+  card: "soft", cardRadius: "rounded-3xl", photo: "aspect-[16/11]",
+  btnRadius: "rounded-full", btnCase: "text-[13px] font-bold uppercase tracking-[0.06em]",
+  chip: "rounded-full", featuredCols: "sm:grid-cols-2 lg:grid-cols-3",
+  invCols: "sm:grid-cols-2 lg:grid-cols-3", inventoryFirst: false,
+};
+
+const QUIET: TplUI = {
+  name: "Quiet", header: "light", hero: "light",
+  display: "tracking-tight",
+  h1: "text-[40px] leading-[1.02] sm:text-[58px] font-extrabold tracking-tight",
+  h2: "text-[28px] sm:text-[38px] font-extrabold tracking-tight",
+  eyebrow: "text-[12px] font-bold uppercase tracking-[0.14em]",
+  container: "max-w-[1240px]", band: "#14171a",
+  card: "soft", cardRadius: "rounded-xl", photo: "aspect-[4/3]",
+  btnRadius: "rounded-md", btnCase: "text-[13px] font-bold uppercase tracking-[0.05em]",
+  chip: "rounded-full", featuredCols: "sm:grid-cols-2 lg:grid-cols-4",
+  invCols: "sm:grid-cols-2 lg:grid-cols-3", inventoryFirst: false,
+};
+
 export function siteTheme(t: Template): TplUI {
   switch (t) {
     case "INVENTORY_FIRST": return BOLD;
@@ -129,6 +155,8 @@ export function siteTheme(t: Template): TplUI {
     case "CLASSIC": return CLASSIC;
     case "SPORT": return SPORT;
     case "MINIMAL": return MINIMAL;
+    case "AURORA": return AURORA;
+    case "QUIET": return QUIET;
     default: return CLEAN;
   }
 }

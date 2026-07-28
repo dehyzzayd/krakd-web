@@ -7,7 +7,7 @@ import { Card } from "@/components/app/AppKit";
 import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
 export type Web = {
-  id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL"; status: "DRAFT" | "PUBLISHED";
+  id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET"; status: "DRAFT" | "PUBLISHED";
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; headline: string; intro: string; ctaLabel: string;
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
@@ -76,6 +76,8 @@ const TEMPLATES = [
   { v: "CLASSIC", n: "04", name: "Classic", desc: "Corporate franchise — utility bar, blue, boxy and trustworthy." },
   { v: "SPORT", n: "05", name: "Sport", desc: "Charcoal performance look — angular, bold, accent-lined." },
   { v: "MINIMAL", n: "06", name: "Minimal", desc: "Airy & Scandinavian — hairlines, whitespace, restrained." },
+  { v: "AURORA", n: "07", name: "Aurora", desc: "Dark navy + vivid accent, heavy lowercase display, circular badge." },
+  { v: "QUIET", n: "08", name: "Quiet", desc: "Warm off-white + teal, utility bar, calm and premium." },
 ] as const;
 
 /** Fills its card width with a scaled, live preview of one template's home. */
