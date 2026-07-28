@@ -1,26 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { apiFetch, getToken, clearSession } from "@/lib/api";
 import { LayoutDashboard, Users, Rocket, Megaphone, Globe, CreditCard, LifeBuoy, ShieldCheck, LogOut } from "lucide-react";
 
 const NAV = [
-  { href: "/admin", label: "Overview", Icon: LayoutDashboard, exact: true },
-  { href: "/admin/clients", label: "Clients", Icon: Users },
-  { href: "/admin/clients?queue=onboarding", label: "Onboarding", Icon: Rocket },
-  { href: "/admin/clients?queue=advertising", label: "Advertising", Icon: Megaphone },
-  { href: "/admin/clients?queue=domains", label: "Websites & domains", Icon: Globe },
-  { href: "/admin/clients?queue=billing", label: "Billing", Icon: CreditCard },
-  { href: "/admin/clients?queue=support", label: "Support", Icon: LifeBuoy },
-  { href: "/admin/team", label: "Team & access", Icon: ShieldCheck },
+  { href: "/admin", label: "Overview", Icon: LayoutDashboard, match: (p: string, q: string) => p === "/admin" },
+  { href: "/admin/clients", label: "Clients", Icon: Users, match: (p: string, q: string) => p.startsWith("/admin/clients") && !q },
+  { href: "/admin/clients?queue=onboarding", label: "Onboarding", Icon: Rocket, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "onboarding" },
+  { href: "/admin/clients?queue=advertising", label: "Advertising", Icon: Megaphone, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "advertising" },
+  { href: "/admin/clients?queue=domains", label: "Websites & domains", Icon: Globe, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "domains" },
+  { href: "/admin/clients?queue=billing", label: "Billing", Icon: CreditCard, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "billing" },
+  { href: "/admin/clients?queue=support", label: "Support", Icon: LifeBuoy, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "support" },
+  { href: "/admin/team", label: "Team & access", Icon: ShieldCheck, match: (p: string, q: string) => p.startsWith("/admin/team") },
 ];
+
+function AdminNav() {
+  const pathname = usePathname();
+  const q = useSearchParams().get("queue") ?? "";
+  return (
+    <nav className="flex-1 space-y-0.5">
+      {NAV.map((n) => {
+        const active = n.match(pathname, q);
+        return <Link key={n.label} href={n.href} className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition", active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white")}><n.Icon className="h-[17px] w-[17px]" />{n.label}</Link>;
+      })}
+    </nav>
+  );
+}
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [me, setMe] = useState<{ email: string; role: string } | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "denied">("loading");
 
@@ -55,12 +67,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <p className="text-[16px] font-bold tracking-tight text-white">Krakd<span className="text-brand">.</span></p>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40">Internal ops</p>
         </div>
-        <nav className="flex-1 space-y-0.5">
-          {NAV.map((n) => {
-            const active = n.exact ? pathname === n.href : pathname.startsWith(n.href.split("?")[0]) && n.href !== "/admin";
-            return <Link key={n.label} href={n.href} className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition", active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white")}><n.Icon className="h-[17px] w-[17px]" />{n.label}</Link>;
-          })}
-        </nav>
+        <Suspense fallback={<div className="flex-1" />}><AdminNav /></Suspense>
         <div className="border-t border-white/10 pt-3">
           <p className="truncate px-2 text-[12px] font-medium text-white/80">{me?.email}</p>
           <p className="px-2 text-[10.5px] text-white/40">Super Admin</p>

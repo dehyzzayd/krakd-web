@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useApi } from "@/lib/useApi";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError, setSession, snapshotSession } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { ChevronLeft, MessageSquare, Boxes, Megaphone, Globe, Users } from "lucide-react";
+import { ChevronLeft, MessageSquare, Boxes, Megaphone, Globe, Users, Eye } from "lucide-react";
 
 type Profile = {
   id: string; name: string; city: string | null; state: string | null; status: string; health: number; attention: string[]; owner: string; createdAt: string;
@@ -39,6 +39,18 @@ export default function ClientProfile() {
     catch (e) { alert(e instanceof ApiError ? e.message : "Failed"); } finally { setBusy(false); }
   };
 
+  const viewAsClient = async () => {
+    if (!confirm("Sign in as this client to see their dashboard exactly as they do?\n\nYour Krakd admin session is saved and restored when you exit. The client's password is never shown or changed.")) return;
+    setBusy(true);
+    try {
+      const t = await apiFetch<{ accessToken: string; refreshToken?: string }>(`/admin/clients/${id}/impersonate`, { method: "POST" });
+      const admin = snapshotSession();
+      if (admin) localStorage.setItem("krakd_impersonate_restore", JSON.stringify(admin));
+      setSession(t);
+      window.location.href = "/dashboard";
+    } catch (e) { alert(e instanceof ApiError ? e.message : "Could not open client view."); setBusy(false); }
+  };
+
   if (loading && !c) return <div className="p-12 text-center text-[13px] text-n400">Loading…</div>;
   if (!c) return <div className="p-12 text-center"><p className="text-[14px] font-semibold text-n800">Client not found</p><Link href="/admin/clients" className="mt-2 inline-block text-[13px] font-semibold text-brand">← All clients</Link></div>;
 
@@ -59,6 +71,7 @@ export default function ClientProfile() {
           <p className="text-[12.5px] text-n500">{[c.city, c.state].filter(Boolean).join(", ") || "—"} · Owner: {c.owner} · Joined {new Date(c.createdAt).toLocaleDateString()}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button disabled={busy} onClick={viewAsClient} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-n900 px-4 text-[12.5px] font-semibold text-white hover:bg-n800 disabled:opacity-60"><Eye className="h-3.5 w-3.5" />View as client</button>
           {c.status === "SUSPENDED"
             ? <button disabled={busy} onClick={() => setStatus("ACTIVE")} className="h-9 rounded-lg bg-ok px-4 text-[12.5px] font-semibold text-white disabled:opacity-60">Reactivate</button>
             : <button disabled={busy} onClick={() => setStatus("SUSPENDED")} className="h-9 rounded-lg border border-n200 bg-white px-4 text-[12.5px] font-semibold text-err hover:bg-err-soft disabled:opacity-60">Suspend</button>}

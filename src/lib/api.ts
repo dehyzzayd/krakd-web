@@ -29,6 +29,14 @@ export function clearSession() {
   window.localStorage.removeItem(REFRESH_KEY);
 }
 
+/** Snapshot the current tokens (used to restore an admin session after impersonating a client). */
+export function snapshotSession(): { accessToken: string; refreshToken?: string } | null {
+  if (typeof window === "undefined") return null;
+  const accessToken = window.localStorage.getItem(TOKEN_KEY);
+  if (!accessToken) return null;
+  return { accessToken, refreshToken: window.localStorage.getItem(REFRESH_KEY) ?? undefined };
+}
+
 export async function apiFetch<T = unknown>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
