@@ -34,7 +34,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   if (state === "loading") return <div className="grid min-h-dvh place-items-center bg-n50 text-[13px] text-n400">Loading Krakd internal…</div>;
   if (state === "denied") return (
     <div className="grid min-h-dvh place-items-center bg-n50 p-6 text-center">
-      <div><ShieldCheck className="mx-auto h-8 w-8 text-n300" /><p className="mt-3 text-[15px] font-semibold text-n900">Krakd internal access only</p><p className="mt-1 text-[13px] text-n500">This account isn&apos;t a Krakd team member.</p><Link href="/dashboard" className="mt-4 inline-block text-[13px] font-semibold text-brand">Go to your dashboard →</Link></div>
+      <div>
+        <ShieldCheck className="mx-auto h-8 w-8 text-n300" />
+        <p className="mt-3 text-[15px] font-semibold text-n900">Krakd internal access only</p>
+        <p className="mt-1 text-[13px] text-n500">You&apos;re signed in as a dealer account, not a Krakd team member.</p>
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <button onClick={() => { clearSession(); router.replace("/login?next=/admin"); }} className="rounded-lg bg-n900 px-4 py-2 text-[13px] font-semibold text-white">Sign in as Krakd</button>
+          <Link href="/dashboard" className="text-[13px] font-semibold text-brand">Your dashboard →</Link>
+        </div>
+      </div>
     </div>
   );
 

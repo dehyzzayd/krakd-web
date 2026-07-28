@@ -19,7 +19,15 @@ export function LoginForm() {
     try {
       const tokens = await authApi.login({ email, password });
       setSession(tokens);
-      router.push("/dashboard");
+      // route by role, honoring an explicit ?next=
+      let dest = "/dashboard";
+      try {
+        const me = await authApi.me();
+        const next = new URLSearchParams(window.location.search).get("next");
+        if (next && next.startsWith("/")) dest = next;
+        else if (me.role === "PLATFORM_ADMIN") dest = "/admin";
+      } catch { /* fall back to dashboard */ }
+      router.push(dest);
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : "Could not sign in.");
     } finally {
