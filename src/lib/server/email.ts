@@ -2,10 +2,12 @@ import "server-only";
 import { Resend } from "resend";
 
 const key = process.env.RESEND_API_KEY;
-const from = process.env.EMAIL_FROM ?? "Krakd <onboarding@resend.dev>";
+// Default to the verified krakd.io sender so production emails reach any recipient.
+// Override per-env with EMAIL_FROM (must be an address on a Resend-verified domain).
+const from = process.env.EMAIL_FROM ?? "Krakd <hello@krakd.io>";
 const resend = key ? new Resend(key) : null;
 
-// While the Resend domain is unverified, route every email to the test inbox.
+// Testing safety net: if set, route EVERY email to this one inbox (never set in production).
 const override = process.env.EMAIL_TEST_OVERRIDE;
 
 async function send(to: string, subject: string, html: string) {
