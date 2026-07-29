@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 export type SiteConfig = {
   slug: string;
   dealershipName: string;
+  vertical: string;
   template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET";
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string;
   headline: string; intro: string; ctaLabel: string;
@@ -28,22 +29,26 @@ export type NavItem = { id: string; label: string; type: "home" | "inventory" | 
 export type SidebarBlock = { id: string; type: "contactForm" | "address" | "hours" | "phone" | "pages" | "text"; title?: string; body?: string };
 
 export type SiteVehicle = {
-  id: string; year: number; make: string; model: string; trim: string; body: string;
+  id: string; year: number | null; make: string; model: string; trim: string; body: string;
   price: number; mileage: number; color: string; drivetrain: string; fuel: string;
   transmission: string; vin: string; image: string | null; photos: string[]; photoCount: number;
+  title: string | null; subtitle: string | null; attributes: Record<string, unknown>;
 };
 
 function mapVehicle(v: {
-  id: string; year: number; make: string; model: string; trim: string | null; bodyType: string | null;
+  id: string; year: number | null; make: string | null; model: string | null; trim: string | null; bodyType: string | null;
   priceCents: number; mileage: number; exteriorColor: string | null; drivetrain: string | null;
-  fuel: string | null; transmission: string | null; vin: string; photoUrls: unknown;
+  fuel: string | null; transmission: string | null; vin: string | null; photoUrls: unknown;
+  title?: string | null; subtitle?: string | null; attributes?: unknown;
 }): SiteVehicle {
   const photos = Array.isArray(v.photoUrls) ? (v.photoUrls as string[]) : [];
   return {
-    id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim ?? "", body: v.bodyType ?? "",
+    id: v.id, year: v.year, make: v.make ?? "", model: v.model ?? "", trim: v.trim ?? "", body: v.bodyType ?? "",
     price: Math.round(v.priceCents / 100), mileage: v.mileage, color: v.exteriorColor ?? "",
     drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "", transmission: v.transmission ?? "",
-    vin: v.vin, image: photos[0] ?? null, photos, photoCount: photos.length,
+    vin: v.vin ?? "", image: photos[0] ?? null, photos, photoCount: photos.length,
+    title: v.title ?? null, subtitle: v.subtitle ?? null,
+    attributes: (v.attributes && typeof v.attributes === "object" ? v.attributes : {}) as Record<string, unknown>,
   };
 }
 
@@ -51,10 +56,11 @@ function mapVehicle(v: {
 export const getSite = cache(async (slug: string): Promise<SiteConfig | null> => {
   const w = await prisma.website.findUnique({ where: { slug } });
   if (!w || w.status !== "PUBLISHED") return null;
-  const dealer = await prisma.dealership.findUnique({ where: { id: w.dealershipId }, select: { name: true } });
+  const dealer = await prisma.dealership.findUnique({ where: { id: w.dealershipId }, select: { name: true, vertical: true } });
   return {
     slug: w.slug,
     dealershipName: dealer?.name ?? "Dealership",
+    vertical: dealer?.vertical ?? "AUTOMOTIVE",
     template: w.template,
     logoUrl: w.logoUrl, heroImageUrl: w.heroImageUrl, primaryColor: w.primaryColor, headerStyle: w.headerStyle,
     headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel,

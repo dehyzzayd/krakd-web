@@ -3,7 +3,7 @@ import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 export const metadata: Metadata = {
   title: "Get set up — Krakd",
-  description: "Set up your Krakd dealership workspace.",
+  description: "Set up your Krakd business workspace.",
 };
 
 export default function OnboardingPage() {

@@ -16,6 +16,7 @@ const schema = z.object({
   password: z.string().min(8),
   phone: z.string().optional(),
   accessCode: z.string().optional(),
+  vertical: z.enum(["AUTOMOTIVE", "REAL_ESTATE", "RESTAURANT", "SERVICES", "RETAIL", "GENERIC"]).optional(),
 });
 
 export const POST = route(async (req: NextRequest) => {
@@ -42,6 +43,7 @@ export const POST = route(async (req: NextRequest) => {
         name: dto.dealershipName,
         phone: dto.phone,
         email,
+        vertical: dto.vertical ?? "AUTOMOTIVE",
         subscription: { create: { priceCents: 14900, status: "ACTIVE" } },
         aiSettings: { create: {} },
       },
@@ -60,6 +62,7 @@ export const POST = route(async (req: NextRequest) => {
     email,
     customerId: `KRK-${user.id.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
     priceLabel: "$149.00/mo",
+    vertical: dto.vertical ?? "AUTOMOTIVE",
   });
   return json(tokens);
 });

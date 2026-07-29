@@ -8,6 +8,7 @@ import type { SiteConfig, SiteVehicle } from "@/lib/server/site";
 import { accentOf } from "@/lib/server/site";
 import { cn } from "@/lib/cn";
 import { VehicleCard } from "./VehicleCard";
+import { vertical as verticalDef } from "./verticals";
 
 const DEFAULT_WHY = [
   { title: "Hand-picked inventory", body: "Every vehicle is selected for quality and priced to the live market — never over sticker." },
@@ -32,27 +33,37 @@ function useHome(config: SiteConfig, vehicles: SiteVehicle[], preview?: boolean)
   return { accent, link, makes, bodies, why, reviews, show };
 }
 
-function SearchBar({ config, accent, variant, preview }: { config: SiteConfig; accent: string; variant: "soft" | "sharp"; preview?: boolean }) {
+function SearchBar({ config, vehicles, accent, variant, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; accent: string; variant: "soft" | "sharp"; preview?: boolean }) {
   const router = useRouter();
-  const [q, setQ] = useState({ make: "", model: "", body: "", maxPrice: "" });
-  const set = (k: keyof typeof q, v: string) => setQ((p) => ({ ...p, [k]: v }));
+  const def = verticalDef(config.vertical);
+  const checks = def.facets.filter((f) => f.kind === "check").slice(0, 2);
+  const maxFacet = def.facets.find((f) => f.kind === "max") as Extract<(typeof def.facets)[number], { kind: "max" }> | undefined;
+  const [q, setQ] = useState<Record<string, string>>({});
+  const set = (k: string, v: string) => setQ((p) => ({ ...p, [k]: v }));
   const go = () => { if (preview) return; const p = new URLSearchParams(); Object.entries(q).forEach(([k, v]) => v && p.set(k, v)); router.push(`/site/${config.slug}/inventory${p.toString() ? `?${p}` : ""}`); };
+  const optsFor = (f: (typeof checks)[number]) => [...new Set(vehicles.map((v) => f.value(v)).filter(Boolean))].sort();
   const sharp = variant === "sharp";
   const sel = cn("h-12 border border-black/12 bg-white px-3 text-[14px] text-[#0f172a] outline-none", sharp ? "rounded-none" : "rounded-xl");
   return (
     <div className={sharp ? "border border-white/15 bg-[#0a0a0a] p-2" : "rounded-3xl bg-white p-3 shadow-xl sm:p-4"}>
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
-        <select value={q.make} onChange={(e) => set("make", e.target.value)} className={sel}><option value="">Any make</option>{["Toyota", "Honda", "Ford", "Chevrolet", "Tesla", "Jeep", "BMW", "Ram", "Nissan", "GMC"].map((m) => <option key={m}>{m}</option>)}</select>
-        <input value={q.model} onChange={(e) => set("model", e.target.value)} placeholder="Model" className={sel} />
-        <select value={q.body} onChange={(e) => set("body", e.target.value)} className={sel}><option value="">Any type</option>{["Sedan", "SUV", "Truck", "Coupe", "Van", "Hatchback"].map((b) => <option key={b}>{b}</option>)}</select>
-        <select value={q.maxPrice} onChange={(e) => set("maxPrice", e.target.value)} className={sel}><option value="">Any price</option>{["15000", "20000", "30000", "45000", "60000"].map((p) => <option key={p} value={p}>Under ${(+p).toLocaleString()}</option>)}</select>
+        <input value={q.q ?? ""} onChange={(e) => set("q", e.target.value)} placeholder={def.searchPlaceholder.replace("Search ", "").replace("…", "")} className={sel} />
+        {checks.map((f) => (
+          <select key={f.key} value={q[f.key] ?? ""} onChange={(e) => set(f.key, e.target.value)} className={cn(sel, "capitalize")}>
+            <option value="">Any {f.label.toLowerCase()}</option>
+            {optsFor(f).map((o) => <option key={o}>{o}</option>)}
+          </select>
+        ))}
+        {maxFacet && (
+          <select value={q[maxFacet.key] ?? ""} onChange={(e) => set(maxFacet.key, e.target.value)} className={sel}><option value="">Any price</option>{maxFacet.steps.map((p) => <option key={p} value={p}>Under {maxFacet.fmt(p)}</option>)}</select>
+        )}
         <button onClick={go} className={cn("col-span-2 inline-flex h-12 items-center justify-center gap-2 font-semibold text-white lg:col-span-1", sharp ? "rounded-none font-display uppercase tracking-[0.08em]" : "rounded-xl text-[14px]")} style={{ background: accent }}><Search className="h-4 w-4" />Search</button>
       </div>
     </div>
   );
 }
 
-function Empty() { return <div className="rounded-2xl border border-dashed border-black/10 py-16 text-center text-[14px] text-[#64748b]">Fresh inventory is on the way. Check back soon.</div>; }
+function Empty() { return <div className="rounded-2xl border border-dashed border-black/10 py-16 text-center text-[14px] text-[#64748b]">Fresh listings are on the way. Check back soon.</div>; }
 
 /* ═══════════════════════ MODERN — bright, rounded, bento ═══════════════════════ */
 function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
@@ -89,7 +100,7 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
             </div>
           </div>
         </div>
-        <div className="relative z-10 mt-4"><SearchBar config={config} accent={accent} variant="soft" preview={preview} /></div>
+        <div className="relative z-10 mt-4"><SearchBar config={config} vehicles={vehicles} accent={accent} variant="soft" preview={preview} /></div>
       </section>
 
       {show("shopByType") && bodies.length > 0 && (
@@ -104,7 +115,7 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
 
       <section className={`mx-auto ${C} px-5 py-4`}>
         <div className="mb-7 flex items-end justify-between"><h2 className="text-[26px] font-bold tracking-tight text-[#0f172a]">Featured</h2><Link href={link(`/site/${config.slug}/inventory`)} className="inline-flex items-center gap-1 text-[13.5px] font-semibold" style={{ color: accent }}>View all<ChevronRight className="h-4 w-4" /></Link></div>
-        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
+        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
       </section>
 
       <section className={`mx-auto ${C} px-5 py-14`}>
@@ -161,12 +172,12 @@ function HomeBold({ config, vehicles, preview }: { config: SiteConfig; vehicles:
       </div>
 
       {/* search strip */}
-      <section className={`mx-auto ${C} px-5 py-8`}><SearchBar config={config} accent={accent} variant="sharp" preview={preview} /></section>
+      <section className={`mx-auto ${C} px-5 py-8`}><SearchBar config={config} vehicles={vehicles} accent={accent} variant="sharp" preview={preview} /></section>
 
       {/* inventory FIRST — dense */}
       <section className={`mx-auto ${C} px-5 pb-14`}>
         <div className="mb-6 flex items-end justify-between border-b-2 border-[#0a0a0a] pb-3"><h2 className="font-display text-[34px] font-bold uppercase tracking-tight text-[#0a0a0a]">Inventory</h2><Link href={link(`/site/${config.slug}/inventory`)} className="inline-flex items-center gap-1 font-display text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>View all<ArrowRight className="h-4 w-4" /></Link></div>
-        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
+        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
       </section>
 
       {show("trustBar") && <section className="w-full border-y border-white/10" style={{ background: "#0a0a0a" }}><div className={`mx-auto ${C} grid grid-cols-2 divide-x divide-white/10 lg:grid-cols-4`}>
@@ -230,7 +241,7 @@ function HomeLuxe({ config, vehicles, preview }: { config: SiteConfig; vehicles:
         </div>
         {featured.length === 0 ? <div className={`mx-auto ${C} px-6`}><Empty /></div> : (
           <div className="hscroll flex gap-6 overflow-x-auto px-6 pb-4" style={{ scrollSnapType: "x mandatory" }}>
-            {featured.map((v) => <div key={v.id} className="w-[320px] shrink-0 sm:w-[380px]" style={{ scrollSnapAlign: "start" }}><VehicleCard slug={config.slug} accent={accent} v={v} variant="editorial" preview={preview} /></div>)}
+            {featured.map((v) => <div key={v.id} className="w-[320px] shrink-0 sm:w-[380px]" style={{ scrollSnapAlign: "start" }}><VehicleCard vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="editorial" preview={preview} /></div>)}
           </div>
         )}
       </section>
@@ -321,7 +332,7 @@ function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicl
           <div className="flex flex-wrap gap-2">{["New", "Used", "Certified"].map((t) => <Link key={t} href={link(`/site/${config.slug}/inventory`)} className="rounded-md bg-white/10 px-4 py-1.5 text-[12.5px] font-bold uppercase tracking-wide text-white hover:bg-white/20">{t}</Link>)}</div>
           <h1 className="mt-4 max-w-[18ch] text-[34px] font-bold leading-[1.05] text-white sm:text-[48px]">{config.headline}</h1>
           {config.intro && <p className="mt-3 max-w-[52ch] text-[15px] text-white/80">{config.intro}</p>}
-          <div className="relative z-10 mt-6"><SearchBar config={config} accent={accent} variant="soft" preview={preview} /></div>
+          <div className="relative z-10 mt-6"><SearchBar config={config} vehicles={vehicles} accent={accent} variant="soft" preview={preview} /></div>
         </div>
       </section>
       {show("trustBar") && <section className="w-full border-b border-black/8 bg-white"><div className={`mx-auto ${C} grid grid-cols-2 gap-4 px-5 py-6 lg:grid-cols-4`}>
@@ -331,7 +342,7 @@ function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicl
       </div></section>}
       <section className={`mx-auto ${C} px-5 py-12`}>
         <div className="mb-6 flex items-end justify-between"><h2 className="text-[24px] font-bold tracking-tight text-[#0f172a]">Featured vehicles</h2><Link href={link(`/site/${config.slug}/inventory`)} className="text-[13.5px] font-bold uppercase tracking-wide" style={{ color: accent }}>View all →</Link></div>
-        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
+        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
       </section>
       {show("shopByType") && makes.length > 0 && <section className="w-full bg-[#f1f5f9] py-12"><div className={`mx-auto ${C} px-5`}><h2 className="mb-5 text-[22px] font-bold tracking-tight text-[#0f172a]">Shop by make</h2><div className="flex flex-wrap gap-2.5">{makes.map((m) => <Link key={m} href={link(`/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`)} className="rounded-md border border-black/12 bg-white px-4 py-2.5 text-[13.5px] font-semibold text-[#0f172a] hover:border-black/30">{m}</Link>)}</div></div></section>}
       {show("financing") && <section className={`mx-auto ${C} grid gap-4 px-5 py-12 md:grid-cols-2`}>
@@ -372,7 +383,7 @@ function HomeSport({ config, vehicles, preview }: { config: SiteConfig; vehicles
       </div></section>}
       <section className={`mx-auto ${C} px-5 py-14`}>
         <h2 className="mb-6 font-display text-[34px] font-bold uppercase italic tracking-tight text-[#141416]">The lineup</h2>
-        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
+        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
         <div className="mt-8"><Link href={link(`/site/${config.slug}/inventory`)} className="inline-block px-8 py-3.5 font-display text-[13px] font-semibold uppercase italic tracking-[0.1em] text-white" style={{ background: char }}>See all inventory</Link></div>
       </section>
       {show("shopByType") && makes.length > 0 && <section className="w-full py-14" style={{ background: char }}><div className={`mx-auto ${C} px-5`}><h2 className="mb-5 font-display text-[28px] font-bold uppercase italic tracking-tight text-white">By make</h2><div className="flex flex-wrap gap-2.5">{makes.map((m) => <Link key={m} href={link(`/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`)} className="border border-white/25 px-5 py-2.5 font-display text-[14px] font-semibold uppercase italic text-white transition hover:bg-white hover:text-[#141416]">{m}</Link>)}</div></div></section>}
@@ -403,7 +414,7 @@ function HomeMinimal({ config, vehicles, preview }: { config: SiteConfig; vehicl
       {heroImg && <section className={`mx-auto ${C} px-6`}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={heroImg} alt="" className="h-[280px] w-full object-cover sm:h-[440px]" /></section>}
       <section className={`mx-auto ${C} ${rule} mt-14 px-6 py-14`}>
         <div className="mb-8 flex items-baseline justify-between"><div className="flex items-baseline gap-4"><span className="text-[12px] tracking-[0.2em] text-[#999]">01</span><h2 className="text-[24px] font-medium tracking-tight text-[#111]">Selected inventory</h2></div><Link href={link(`/site/${config.slug}/inventory`)} className="text-[12px] uppercase tracking-[0.16em] hover:opacity-60" style={{ color: accent }}>All →</Link></div>
-        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
+        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
       </section>
       {show("shopByType") && makes.length > 0 && <section className={`mx-auto ${C} ${rule} px-6 py-14`}><div className="flex items-baseline gap-4"><span className="text-[12px] tracking-[0.2em] text-[#999]">02</span><h2 className="text-[24px] font-medium tracking-tight text-[#111]">Browse</h2></div><div className="mt-6 flex flex-wrap gap-x-6 gap-y-3">{makes.map((m) => <Link key={m} href={link(`/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`)} className="text-[15px] font-medium text-[#555] transition hover:text-[#111]">{m}</Link>)}</div></section>}
       {show("whyUs") && <section className={`mx-auto ${C} ${rule} px-6 py-14`}><div className="flex items-baseline gap-4"><span className="text-[12px] tracking-[0.2em] text-[#999]">03</span><h2 className="text-[24px] font-medium tracking-tight text-[#111]">Why {config.dealershipName}</h2></div><div className="mt-8 grid gap-10 sm:grid-cols-3">{why.slice(0, 3).map((wy, i) => <div key={i}><p className="text-[14px] font-semibold text-[#111]">{wy.title}</p><p className="mt-2 text-[13.5px] leading-relaxed text-[#666]">{wy.body}</p></div>)}</div></section>}
@@ -446,7 +457,7 @@ function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicle
             <div className="absolute right-4 top-4 grid h-28 w-28 place-items-center rounded-full text-center" style={{ background: accent, color: navy }}><div><p className="text-[26px] font-extrabold leading-none">{vehicles.length}</p><p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide">Cars ready</p></div></div>
           </div>
         </div>
-        <div className={`relative z-10 mx-auto ${C} px-5 pb-4`}><SearchBar config={config} accent={purple} variant="soft" preview={preview} /></div>
+        <div className={`relative z-10 mx-auto ${C} px-5 pb-4`}><SearchBar config={config} vehicles={vehicles} accent={purple} variant="soft" preview={preview} /></div>
       </section>
 
       {/* just arrived — light */}
@@ -454,7 +465,7 @@ function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicle
         <div className={`mx-auto ${C} px-5`}>
           <span className="inline-block rounded-full px-4 py-1.5 text-[12px] font-bold uppercase tracking-wide" style={{ background: accent, color: navy }}>Just arrived</span>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-3"><h2 className="text-[32px] font-extrabold tracking-tight text-[#161227] sm:text-[44px]">Fresh roads. Fresh choices.</h2><Link href={link(`/site/${config.slug}/inventory`)} className="text-[13px] font-bold uppercase tracking-wide" style={{ color: purple }}>View every vehicle →</Link></div>
-          {featured.length === 0 ? <div className="mt-8"><Empty /></div> : <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={purple} v={v} variant="soft" preview={preview} />)}</div>}
+          {featured.length === 0 ? <div className="mt-8"><Empty /></div> : <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={purple} v={v} variant="soft" preview={preview} />)}</div>}
           {show("shopByType") && <div className="mt-8 rounded-3xl p-8" style={{ background: navy }}>
             <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: accent }}>Shop by energy</p>
             <div className="mt-4 grid grid-cols-3 gap-4">{energy.map(([label, n]) => <Link key={label} href={link(`/site/${config.slug}/inventory`)} className="rounded-2xl bg-white/5 p-5 transition hover:bg-white/10"><p className="text-[26px] font-extrabold text-white">{label}</p><p className="mt-1 text-[15px] font-bold" style={{ color: accent }}>{n}</p></Link>)}</div>
@@ -495,7 +506,7 @@ function HomeQuiet({ config, vehicles, preview }: { config: SiteConfig; vehicles
             {config.heroImageUrl ? <img src={config.heroImageUrl} alt="" className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-black/5"><Car className="h-14 w-14 text-black/20" /></div>}
           </div>
         </div>
-        <div className={`mx-auto ${C} px-5 pb-8`}><SearchBar config={config} accent={accent} variant="soft" preview={preview} /></div>
+        <div className={`mx-auto ${C} px-5 pb-8`}><SearchBar config={config} vehicles={vehicles} accent={accent} variant="soft" preview={preview} /></div>
       </section>
 
       <section className={`mx-auto ${C} px-5 py-14`}>
@@ -503,7 +514,7 @@ function HomeQuiet({ config, vehicles, preview }: { config: SiteConfig; vehicles
           <div><p className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>Freshly inspected</p><h2 className="mt-1 text-[30px] font-extrabold tracking-tight sm:text-[38px]">New to {config.dealershipName}</h2></div>
           <Link href={link(`/site/${config.slug}/inventory`)} className="text-[13px] font-bold uppercase tracking-wide" style={{ color: accent }}>View all {vehicles.length} vehicles →</Link>
         </div>
-        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
+        {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
       </section>
 
       <section className="w-full py-16" style={{ background: ink }}>

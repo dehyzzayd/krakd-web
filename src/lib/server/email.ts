@@ -43,7 +43,7 @@ export async function sendLeadNotification(p: { to: string; dealershipName: stri
   const leadUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/dashboard/leads/${p.leadId}`;
   await send(
     p.to,
-    `🚗 New lead: ${p.leadName}${p.vehicle ? ` — ${p.vehicle}` : ""}`,
+    `🔔 New lead: ${p.leadName}${p.vehicle ? ` — ${p.vehicle}` : ""}`,
     shell(
       "You have a new lead.",
       `<p style="font-size:14px;line-height:1.6;color:#374151">A new lead just landed for <b>${p.dealershipName}</b>. Krakd AI is already following up.</p>
@@ -72,12 +72,24 @@ export async function sendPasswordResetEmail(p: { to: string; firstName: string;
   );
 }
 
+// Terminology per business vertical — keeps the welcome email speaking the owner's language.
+const VERTICAL_TERMS: Record<string, { biz: string; catalog: string }> = {
+  AUTOMOTIVE: { biz: "dealership", catalog: "inventory" },
+  REAL_ESTATE: { biz: "brokerage", catalog: "listings" },
+  RESTAURANT: { biz: "restaurant", catalog: "menu" },
+  SERVICES: { biz: "business", catalog: "services" },
+  RETAIL: { biz: "store", catalog: "catalog" },
+  GENERIC: { biz: "business", catalog: "catalog" },
+};
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 export async function sendWelcomeEmail(p: {
   to: string; firstName: string; lastName?: string; dealershipName: string;
-  customerId: string; email: string; priceLabel?: string; promo?: string;
+  customerId: string; email: string; priceLabel?: string; promo?: string; vertical?: string;
 }) {
   const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const dash = `${base}/dashboard`;
+  const t = VERTICAL_TERMS[p.vertical ?? "AUTOMOTIVE"] ?? VERTICAL_TERMS.AUTOMOTIVE;
   const nextBilling = new Date(Date.now() + 14 * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const ink = "#0a0a0a", accent = "#ff5a16", muted = "#8a8a8a", line = "#ececec";
 
@@ -104,8 +116,8 @@ export async function sendWelcomeEmail(p: {
     <!-- hero card -->
     <tr><td style="background:${ink};border-radius:20px;padding:28px 28px 26px">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${accent}">Welcome aboard</div>
-      <h1 style="margin:10px 0 6px;font-size:26px;line-height:1.1;letter-spacing:-0.02em;color:#fff">Your dealership is live, ${p.firstName}.</h1>
-      <p style="margin:0;font-size:14px;line-height:1.55;color:rgba(255,255,255,0.7)"><b style="color:#fff">${p.dealershipName}</b> is set up — inventory, CRM, marketing and Krakd AI, all on one screen.</p>
+      <h1 style="margin:10px 0 6px;font-size:26px;line-height:1.1;letter-spacing:-0.02em;color:#fff">Your ${t.biz} is live, ${p.firstName}.</h1>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:rgba(255,255,255,0.7)"><b style="color:#fff">${p.dealershipName}</b> is set up — ${t.catalog}, CRM, marketing and Krakd AI, all on one screen.</p>
       <a href="${dash}" style="display:inline-block;margin-top:20px;background:${accent};color:#3a1500;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px">Open your dashboard →</a>
     </td></tr>
 
@@ -116,7 +128,7 @@ export async function sendWelcomeEmail(p: {
       <div style="font-size:13px;font-weight:700;letter-spacing:0.02em;color:${ink}">Registration summary</div>
       <table width="100%" style="margin-top:12px">
         ${meta("Contact", `${p.firstName} ${p.lastName ?? ""}`.trim())}
-        ${meta("Dealership", p.dealershipName)}
+        ${meta(cap(t.biz), p.dealershipName)}
         ${meta("Customer ID", p.customerId)}
         ${meta("Email", p.email)}
         ${meta("Promo code", p.promo ?? "—")}
@@ -125,7 +137,7 @@ export async function sendWelcomeEmail(p: {
 
       <div style="margin:20px 0 8px;font-size:13px;font-weight:700;color:${ink}">Your plan</div>
       <table width="100%">
-        ${row("Krakd Platform + Krakd AI", "AI lead handling, CRM, inventory & reporting", p.priceLabel ?? "$149.00/mo")}
+        ${row("Krakd Platform + Krakd AI", `AI lead handling, CRM, ${t.catalog} & reporting`, p.priceLabel ?? "$149.00/mo")}
         ${row("Managed digital ads", "Optional — you fund the budget, Krakd takes 10%", "Pay as you go")}
       </table>
 
@@ -139,7 +151,7 @@ export async function sendWelcomeEmail(p: {
     </td></tr>
 
     <tr><td style="padding:20px 6px 0;text-align:center;font-size:12px;color:${muted}">
-      Krakd — the automotive operating platform.<br/>
+      Krakd — the operating system for local business.<br/>
       <span style="color:#b8b8b8">Privacy · Terms · Help center</span>
     </td></tr>
   </table>

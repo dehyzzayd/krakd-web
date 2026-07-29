@@ -6,10 +6,23 @@ import { authApi, setSession, ApiError } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
 import { Field } from "@/components/auth/AuthScaffold";
 import { VEHICLE_TYPES } from "./VehicleIcons";
+import { Car, Home, UtensilsCrossed, Scissors, ShoppingBag, LayoutGrid, type LucideIcon } from "lucide-react";
 
 /* ─────────────────────────────── data ─────────────────────────────── */
 
-const STEPS = ["Verify email", "Your store", "Location & contact", "Choose plan", "Review & pay"];
+const STEPS = ["Verify email", "Your business", "Location & contact", "Choose plan", "Review & pay"];
+
+/** The industry picked in step 2 sets Dealership.vertical and reskins the whole workspace. */
+type Industry = { id: string; label: string; Icon: LucideIcon; nameLabel: string; namePh: string; catalog: string; auto?: boolean };
+const INDUSTRIES: Industry[] = [
+  { id: "AUTOMOTIVE", label: "Automotive", Icon: Car, nameLabel: "Dealership name", namePh: "Downtown Auto", catalog: "inventory", auto: true },
+  { id: "REAL_ESTATE", label: "Real estate", Icon: Home, nameLabel: "Brokerage name", namePh: "Northpeak Realty", catalog: "listings" },
+  { id: "RESTAURANT", label: "Restaurant", Icon: UtensilsCrossed, nameLabel: "Restaurant name", namePh: "Blue Fig Kitchen", catalog: "menu" },
+  { id: "SERVICES", label: "Services", Icon: Scissors, nameLabel: "Business name", namePh: "Summit Detailing", catalog: "services" },
+  { id: "RETAIL", label: "Retail", Icon: ShoppingBag, nameLabel: "Store name", namePh: "Maple & Co.", catalog: "products" },
+  { id: "GENERIC", label: "Something else", Icon: LayoutGrid, nameLabel: "Business name", namePh: "Your business", catalog: "catalog" },
+];
+const industryOf = (id: string) => INDUSTRIES.find((x) => x.id === id) ?? INDUSTRIES[0];
 
 const PLANS = [
   { id: "starter", name: "Starter", price: 149, blurb: "Single lot. Inventory, syndication, CRM, one inbox, AI follow-up." },
@@ -20,6 +33,7 @@ const PLANS = [
 const US_STATES = "AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split(" ");
 
 type Form = {
+  vertical: string;
   dealership: string;
   types: string[];
   storeType: string;
@@ -32,7 +46,7 @@ type Form = {
 };
 
 const EMPTY: Form = {
-  dealership: "", types: [], storeType: "Independent lot",
+  vertical: "AUTOMOTIVE", dealership: "", types: [], storeType: "Independent lot",
   street: "", unit: "", city: "", state: "", zip: "", phone: "",
 };
 
@@ -66,7 +80,7 @@ function Rail({ step }: { step: number }) {
       </a>
       <div className="relative">
         <h2 className="max-w-[14ch] text-[40px] font-semibold leading-[1] tracking-[-0.03em] text-white xl:text-[46px]">
-          Set up your dealership.
+          Set up your business.
         </h2>
         <ol className="mt-10 space-y-1">
           {STEPS.map((label, i) => {
@@ -198,21 +212,27 @@ function VerifyStep({ digits, setDigits, onVerify, onResend, email, busy, error 
 }
 
 function StoreStep({ form, update, toggleType, onNext }: { form: Form; update: (k: keyof Form, v: string) => void; toggleType: (id: string) => void; onNext: () => void }) {
+  const meta = industryOf(form.vertical);
+  const storeTypes = meta.auto
+    ? ["Independent lot", "Small group (2–5)", "Dealer group", "Franchise"]
+    : ["Single location", "Multi-location", "Franchise"];
+  const pickIndustry = (id: string) => {
+    update("vertical", id);
+    update("storeType", industryOf(id).auto ? "Independent lot" : "Single location");
+  };
   return (
     <div>
-      <StepHeader n={2} title="Tell us about your store" sub="This tailors your workspace — inventory, roles, channels and pricing." />
+      <StepHeader n={2} title="Tell us about your business" sub={`This tailors your workspace — ${meta.catalog}, roles, channels and pricing.`} />
       <div className="space-y-6">
-        <Field id="dealership" label="Dealership name" placeholder="Downtown Auto" value={form.dealership} onChange={(v) => update("dealership", v)} />
-
         <div>
-          <p className="mb-2.5 text-[14px] font-medium text-ink">What do you sell?</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {VEHICLE_TYPES.map(({ id, label, Icon }) => {
-              const on = form.types.includes(id);
+          <p className="mb-2.5 text-[14px] font-medium text-ink">What kind of business?</p>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {INDUSTRIES.map(({ id, label, Icon }) => {
+              const on = form.vertical === id;
               return (
-                <button key={id} type="button" onClick={() => toggleType(id)}
-                  className={`flex flex-col items-start gap-3 rounded-xl border p-3.5 text-left transition ${on ? "border-ink bg-ink/[0.03] ring-1 ring-ink" : "border-[#e6e6e6] hover:border-[#c9c9c9]"}`}>
-                  <Icon className={`h-6 w-6 ${on ? "text-ink" : "text-[#9a9aa2]"}`} />
+                <button key={id} type="button" onClick={() => pickIndustry(id)}
+                  className={`flex items-center gap-2.5 rounded-xl border p-3 text-left transition ${on ? "border-ink bg-ink/[0.03] ring-1 ring-ink" : "border-[#e6e6e6] hover:border-[#c9c9c9]"}`}>
+                  <Icon className={`h-5 w-5 shrink-0 ${on ? "text-ink" : "text-[#9a9aa2]"}`} />
                   <span className={`text-[13.5px] font-medium leading-tight ${on ? "text-ink" : "text-body"}`}>{label}</span>
                 </button>
               );
@@ -220,11 +240,28 @@ function StoreStep({ form, update, toggleType, onNext }: { form: Form; update: (
           </div>
         </div>
 
-        <Select label="Store type" id="storeType" value={form.storeType} onChange={(v) => update("storeType", v)}>
-          <option>Independent lot</option>
-          <option>Small group (2–5)</option>
-          <option>Dealer group</option>
-          <option>Franchise</option>
+        <Field id="dealership" label={meta.nameLabel} placeholder={meta.namePh} value={form.dealership} onChange={(v) => update("dealership", v)} />
+
+        {meta.auto && (
+          <div>
+            <p className="mb-2.5 text-[14px] font-medium text-ink">What do you sell?</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {VEHICLE_TYPES.map(({ id, label, Icon }) => {
+                const on = form.types.includes(id);
+                return (
+                  <button key={id} type="button" onClick={() => toggleType(id)}
+                    className={`flex flex-col items-start gap-3 rounded-xl border p-3.5 text-left transition ${on ? "border-ink bg-ink/[0.03] ring-1 ring-ink" : "border-[#e6e6e6] hover:border-[#c9c9c9]"}`}>
+                    <Icon className={`h-6 w-6 ${on ? "text-ink" : "text-[#9a9aa2]"}`} />
+                    <span className={`text-[13.5px] font-medium leading-tight ${on ? "text-ink" : "text-body"}`}>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <Select label={meta.auto ? "Store type" : "Business type"} id="storeType" value={form.storeType} onChange={(v) => update("storeType", v)}>
+          {storeTypes.map((t) => <option key={t}>{t}</option>)}
         </Select>
       </div>
       {/* no Back — email is verified and locked once you continue */}
@@ -236,7 +273,7 @@ function StoreStep({ form, update, toggleType, onNext }: { form: Form; update: (
 function ContactStep({ form, update, onBack, onNext }: { form: Form; update: (k: keyof Form, v: string) => void; onBack: () => void; onNext: () => void }) {
   return (
     <div>
-      <StepHeader n={3} title="Location & contact" sub="Where your store lives and how buyers reach you." />
+      <StepHeader n={3} title="Location & contact" sub="Where your business is and how customers reach you." />
       <div className="space-y-4">
         <Field id="street" label="Street address" placeholder="1200 S Lamar Blvd" value={form.street} onChange={(v) => update("street", v)} autoComplete="address-line1" />
         <Field id="unit" label="Suite / unit (optional)" placeholder="Suite 4" value={form.unit} onChange={(v) => update("unit", v)} autoComplete="address-line2" />
@@ -317,6 +354,7 @@ function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error
 }) {
   const p = PLANS.find((x) => x.id === plan)!;
   const pr = priceFor(plan, cycle);
+  const meta = industryOf(form.vertical);
   const typeLabels = form.types.map((t) => VEHICLE_TYPES.find((v) => v.id === t)?.label).filter(Boolean).join(", ") || "—";
   const addr = [form.street, form.unit, [form.city, form.state].filter(Boolean).join(", "), form.zip].filter(Boolean).join(" · ") || "—";
 
@@ -360,13 +398,14 @@ function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error
       {/* info recap */}
       <div className="mt-4 rounded-[16px] bg-[#f7f7f8] p-5">
         <div className="flex items-center justify-between">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-muted">Your dealership</p>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-muted">Your business</p>
           <button onClick={onEdit} className="text-[13px] font-medium text-ink underline underline-offset-4 hover:text-ink/70">Edit</button>
         </div>
         <div className="mt-2 divide-y divide-[#ececec]">
           <Row k="Name" v={form.dealership || "—"} />
-          <Row k="Sells" v={typeLabels} />
-          <Row k="Store type" v={form.storeType} />
+          <Row k="Industry" v={meta.label} />
+          {meta.auto && <Row k="Sells" v={typeLabels} />}
+          <Row k={meta.auto ? "Store type" : "Business type"} v={form.storeType} />
           <Row k="Address" v={addr} />
           <Row k="Phone" v={form.phone ? `+1 ${form.phone}` : "—"} />
         </div>
@@ -389,7 +428,7 @@ function DoneStep({ onGo }: { onGo: () => void }) {
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-ink text-[26px] text-white">✓</span>
       <h1 className="mt-7 text-[32px] font-semibold tracking-[-0.02em] text-ink">You&apos;re all set.</h1>
       <p className="mx-auto mt-3 max-w-[38ch] text-[15px] leading-[1.55] text-muted">
-        Your dealership workspace is ready. Import your inventory, connect your channels, and let the AI start working your leads.
+        Your workspace is ready. Add your catalog, connect your channels, and let the AI start working your leads.
       </p>
       <button onClick={onGo} className="mt-8 inline-flex h-12 items-center justify-center rounded-[12px] bg-ink px-7 text-[15px] font-semibold text-white transition hover:bg-black">Go to dashboard</button>
     </div>
@@ -480,13 +519,14 @@ export function OnboardingWizard() {
     setSubmitting(true);
     try {
       const tokens = await authApi.register({
-        dealershipName: form.dealership || `${s.firstName}'s Dealership`,
+        dealershipName: form.dealership || `${s.firstName}'s Business`,
         firstName: s.firstName,
         lastName: s.lastName,
         email: s.email,
         password: s.password,
         phone: form.phone || undefined,
         accessCode: promo.trim(),
+        vertical: form.vertical,
       });
       setSession(tokens);
       sessionStorage.removeItem("krakd_signup");

@@ -26,7 +26,7 @@ export default function WebsitePreview() {
       const override = new URLSearchParams(window.location.search).get("template");
       const tpl = (["MODERN","INVENTORY_FIRST","PREMIUM","CLASSIC","SPORT","MINIMAL","AURORA","QUIET"].includes(override ?? "") ? override : (w.template as string)) as SiteConfig["template"];
       setConfig({
-        slug: w.slug, dealershipName: (w.dealershipName as string) || "Your dealership", template: tpl || "MODERN",
+        slug: w.slug, dealershipName: (w.dealershipName as string) || "Your dealership", vertical: (w.vertical as string) || "AUTOMOTIVE", template: tpl || "MODERN",
         logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor, headerStyle: (w.headerStyle as string) || "auto",
         headline: w.headline || "", intro: w.intro || "", ctaLabel: w.ctaLabel || "Browse inventory",
         aboutText: w.aboutText || "", financingText: w.financingText || "", tradeInText: w.tradeInText || "",
@@ -39,6 +39,7 @@ export default function WebsitePreview() {
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
         price: v.price, mileage: v.mileage, color: v.color ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
         transmission: "", vin: v.vin, image: v.image, photos: v.image ? [v.image] : [], photoCount: typeof v.photos === "number" ? v.photos : (v.image ? 1 : 0),
+        title: null, subtitle: null, attributes: {},
       })));
       setReady(true);
     }).catch(() => setReady(true));

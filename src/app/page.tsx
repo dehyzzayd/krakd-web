@@ -8,9 +8,9 @@ import { Logo } from "@/components/layout/Logo";
 const FEATURES = [
   {
     n: "01",
-    kicker: "Inventory",
-    title: "Every vehicle, priced and published in minutes.",
-    body: "Scan a VIN and the year, trim, options and market value decode themselves. One click pushes each unit to Facebook, Cars.com, AutoTrader and your own site — priced, photographed, live.",
+    kicker: "Catalog",
+    title: "Every listing, priced and published in minutes.",
+    body: "Add a vehicle, property, product or service and its details, media and market price come together in seconds. One click pushes each item to your channels and your own website — priced, photographed, live.",
     stat: "40+",
     statLabel: "channels, one click",
   },
@@ -18,7 +18,7 @@ const FEATURES = [
     n: "02",
     kicker: "CRM + AI",
     title: "An AI employee working every lead, day and night.",
-    body: "Krakd texts, emails, qualifies and books while your team sleeps — then hands off a warm buyer with the whole conversation attached. No lead goes cold, no follow-up forgotten.",
+    body: "Krakd texts, emails, qualifies and books while your team sleeps — then hands off a warm customer with the whole conversation attached. No lead goes cold, no follow-up forgotten.",
     stat: "12 min",
     statLabel: "average response",
   },
@@ -26,7 +26,7 @@ const FEATURES = [
     n: "03",
     kicker: "Marketing",
     title: "Launch campaigns without an agency invoice.",
-    body: "Connect Facebook and Google once. Krakd writes the copy, builds the audiences, sets the budget and reports the real number that matters — cost per sold car, not per click.",
+    body: "Connect Facebook and Google once. Krakd writes the copy, builds the audiences, sets the budget and reports the real number that matters — cost per sale, not per click.",
     stat: "6.4×",
     statLabel: "return on ad spend",
   },
@@ -42,37 +42,37 @@ const FEATURES = [
 
 const BUILT_FOR = [
   {
-    kicker: "Single lot",
-    title: "Independent dealers",
-    line: "20 to 200 cars and a team that wears every hat. Everything you need to run the floor, none of the enterprise weight you don't.",
-    bullet: "Inventory · CRM · AI · Marketing · Inbox",
+    kicker: "Automotive",
+    title: "Car lots & dealer groups",
+    line: "Inventory, syndication, desking and AI follow-up tuned to the way cars actually sell — from a single independent lot to a multi-rooftop group.",
+    bullet: "Inventory · Syndication · Desking · AI",
   },
   {
-    kicker: "Small group",
-    title: "Two to five rooftops",
-    line: "Shared inventory, per-store teams and one book of customers across every location. Move a unit between lots without moving a spreadsheet.",
-    bullet: "Multi-store · Group CRM · Per-site roles",
+    kicker: "Real estate",
+    title: "Brokerages & agents",
+    line: "Listings, buyer and seller pipelines, showings and automatic follow-up — your entire book of business on one calm screen.",
+    bullet: "Listings · Pipelines · Showings · CRM",
   },
   {
-    kicker: "Dealer group",
-    title: "Groups & franchises",
-    line: "Multiple brands under one operator. Separate storefronts, one customer database, group-level reporting and API access to tie in the rest of your stack.",
-    bullet: "Brand isolation · Reporting · API",
+    kicker: "And more",
+    title: "Services, retail & local",
+    line: "Restaurants, home services, studios and shops — a catalog, a customer database, marketing and an AI that never sleeps, all under one login.",
+    bullet: "Catalog · CRM · Marketing · Inbox",
   },
 ];
 
 const TIERS = [
-  { name: "Starter", price: "$149", pitch: "Single lot. Inventory, syndication, CRM, one inbox and AI follow-up." },
+  { name: "Starter", price: "$149", pitch: "Single location. Catalog, syndication, CRM, one inbox and AI follow-up." },
   { name: "Growth", price: "$349", pitch: "Everything in Starter + AI voice, marketing automation and full attribution.", featured: true },
-  { name: "Scale", price: "Custom", pitch: "Multi-store groups, API access, dedicated onboarding and support." },
+  { name: "Scale", price: "Custom", pitch: "Multi-location groups, API access, dedicated onboarding and support." },
 ];
 
 const FAQS = [
-  { q: "How fast can I be live?", a: "Import your inventory by CSV, DMS feed or VIN scan, connect your channels, and most dealers are publishing the same afternoon. No integrator, no four-week onboarding." },
+  { q: "How fast can I be live?", a: "Import your catalog by CSV, an industry feed or a quick scan, connect your channels, and most businesses are publishing the same afternoon. No integrator, no four-week onboarding." },
   { q: "Does the AI text customers without consent?", a: "Never. Consent is tracked per contact and channel, quiet hours are enforced by the customer's timezone, and every opt-out is honored automatically. Compliance is built into the data model, not bolted on." },
   { q: "Do I own my customer data?", a: "Yes. Every lead, deal and conversation builds a customer record that belongs to you — segment it, export the whole database as CSV, and take it with you whenever you want." },
-  { q: "What does it replace?", a: "Your DMS add-ons, CRM, syndication tool, marketing agency, call service and the pile of spreadsheets in between — one subscription instead of six invoices." },
-  { q: "Will it work with my current DMS?", a: "Krakd imports from FTP/SFTP, common DMS feeds, CSV and Excel, and exposes an open API. You can run it alongside what you have and switch on your own timeline." },
+  { q: "What does it replace?", a: "Your point solutions, CRM, syndication or listing tool, marketing agency, call service and the pile of spreadsheets in between — one subscription instead of six invoices." },
+  { q: "Will it work with my current tools?", a: "Krakd imports from FTP/SFTP, common industry feeds, CSV and Excel, and exposes an open API. You can run it alongside what you have and switch on your own timeline." },
 ];
 
 /* ───────────────────────────── primitives ───────────────────────────── */
@@ -115,13 +115,13 @@ export default function Home() {
         <section className="shell px-5 pt-14 pb-10 sm:px-8 lg:pt-20">
           <div className="max-w-[52rem]">
             <h1 className="fade-up d1 text-[42px] font-semibold leading-[0.98] tracking-[-0.035em] text-white sm:text-[58px] lg:text-[72px]">
-              Run the whole dealership from one calm screen.
+              Run your whole business from one calm screen.
             </h1>
             <p className="fade-up d3 mt-6 max-w-[54ch] text-[17px] leading-[1.6] text-white/85 sm:text-[18px]">
-              One platform replaces the six vendors independent dealers juggle —
-              inventory, CRM, marketing, communication and AI employees that
-              call, text and close. Import your stock, connect your channels, be
-              selling by this afternoon.
+              The operating system for local business. One platform replaces the
+              six vendors you juggle — catalog, CRM, marketing, communication and
+              AI employees that call, text and close. Add your listings, connect
+              your channels, be live by this afternoon.
             </p>
             <div className="fade-up d4 mt-8 flex flex-wrap items-center gap-3">
               <a href="/signup" className={BTN_GHOST}>Start free</a>
@@ -148,7 +148,7 @@ export default function Home() {
             <div className="grid grid-cols-2 divide-x divide-y divide-line lg:grid-cols-4 lg:divide-y-0">
               {[
                 { v: "6→1", l: "vendors replaced", note: "one login, one bill" },
-                { v: "40+", l: "channels · one click", note: "FB · Google · Cars.com", accent: true },
+                { v: "40+", l: "channels · one click", note: "FB · Google · your site", accent: true },
                 { v: "12 min", l: "avg AI lead response", note: "day or night" },
                 { v: "$0", l: "setup, no contract", note: "live in a weekend" },
               ].map((s) => (
@@ -171,21 +171,22 @@ export default function Home() {
               <div className="lg:col-span-5">
                 <Kicker>The platform</Kicker>
                 <h2 className="mt-5 text-[32px] font-semibold leading-[1.03] tracking-[-0.03em] text-ink lg:text-[46px]">
-                  Stop running the store from six browser tabs.
+                  Stop running your business from six browser tabs.
                 </h2>
               </div>
               <div className="lg:col-span-7">
                 <p className="text-[17px] leading-[1.65] text-ink-2">
-                  A typical independent dealer runs on a stack of vendors — a DMS,
-                  a CRM, a syndication tool, a marketing agency, a call service,
-                  and a spreadsheet holding it together. Each one charges. Each one
-                  owns a fragment of the customer. The owner stitches the fragments
-                  by hand, usually after close.
+                  A typical local business runs on a stack of vendors — a point
+                  solution for the catalog, a CRM, a syndication or listing tool,
+                  a marketing agency, a call service, and a spreadsheet holding it
+                  together. Each one charges. Each one owns a fragment of the
+                  customer. The owner stitches the fragments by hand, usually after
+                  close.
                 </p>
                 <p className="mt-5 text-[17px] leading-[1.65] text-ink-2">
                   Krakd replaces the stack. One subscription. One customer record.
-                  One screen your salespeople and your manager can both read — with
-                  AI quietly working the pipeline in the background.
+                  One screen your team and your manager can both read — with AI
+                  quietly working the pipeline in the background.
                 </p>
               </div>
             </div>
@@ -229,7 +230,7 @@ export default function Home() {
           <div className="mb-10 max-w-2xl">
             <Kicker>Built for</Kicker>
             <h2 className="mt-5 text-[30px] font-semibold leading-[1.05] tracking-[-0.03em] text-ink lg:text-[42px]">
-              Every kind of independent dealer.
+              Built for every local business.
             </h2>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
@@ -255,7 +256,7 @@ export default function Home() {
             </h2>
             <p className="mt-5 max-w-[58ch] text-[16px] leading-[1.6] text-body">
               Start free for fourteen days, cancel anytime. Pay for the tier that
-              matches your store — not the size of your lot.
+              matches your business — not the number of seats.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -339,7 +340,7 @@ export default function Home() {
                   Start free →
                 </a>
                 <p className="max-w-[28ch] text-[12px] font-semibold uppercase tracking-[0.1em] text-white/45 lg:text-right">
-                  Import your stock · Connect your channels · Sell tonight
+                  Add your catalog · Connect your channels · Go live today
                 </p>
               </div>
             </div>
@@ -352,7 +353,7 @@ export default function Home() {
         <div className="flex flex-col items-start justify-between gap-6 border-t border-[#dcdcdc] pt-8 sm:flex-row sm:items-center">
           <Logo />
           <p className="text-[13px] text-muted">
-            © {2026} Krakd — The Automotive Operating System.
+            © {2026} Krakd — The Operating System for local business.
           </p>
           <div className="flex gap-5 text-[13px] text-body">
             <a href="#privacy" className="hover:text-ink">Privacy</a>

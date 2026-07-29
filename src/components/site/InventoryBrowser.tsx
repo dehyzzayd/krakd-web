@@ -6,26 +6,22 @@ import type { SiteConfig, SiteVehicle } from "@/lib/server/site";
 import { accentOf } from "@/lib/server/site";
 import { VehicleCard } from "./VehicleCard";
 import { siteTheme } from "./theme";
+import { vertical as verticalDef } from "./verticals";
 
-type Facet = { value: string; count: number };
-const facetOf = (vehicles: SiteVehicle[], key: (v: SiteVehicle) => string): Facet[] => {
-  const m = new Map<string, number>();
-  for (const v of vehicles) { const k = key(v); if (k) m.set(k, (m.get(k) ?? 0) + 1); }
-  return [...m.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value));
-};
+type Opt = { value: string; count: number };
 
-function FacetGroup({ title, facets, selected, onToggle, accent }: { title: string; facets: Facet[]; selected: string[]; onToggle: (v: string) => void; accent: string }) {
-  if (facets.length === 0) return null;
+function CheckGroup({ title, opts, selected, onToggle, accent }: { title: string; opts: Opt[]; selected: string[]; onToggle: (v: string) => void; accent: string }) {
+  if (opts.length === 0) return null;
   return (
     <div className="border-t border-black/8 py-4">
       <p className="mb-2.5 text-[12px] font-bold uppercase tracking-wide text-[#0f172a]">{title}</p>
       <div className="space-y-1.5">
-        {facets.map((f) => {
+        {opts.map((f) => {
           const on = selected.includes(f.value);
           return (
             <button key={f.value} onClick={() => onToggle(f.value)} className="flex w-full items-center gap-2.5 text-left">
               <span className="grid h-4 w-4 shrink-0 place-items-center rounded border" style={{ borderColor: on ? accent : "#cbd5e1", background: on ? accent : "transparent" }}>{on && <span className="text-[10px] font-bold leading-none text-white">✓</span>}</span>
-              <span className="flex-1 text-[13px] text-[#334155]">{f.value}</span>
+              <span className="flex-1 text-[13px] capitalize text-[#334155]">{f.value}</span>
               <span className="text-[11.5px] text-[#94a3b8]">{f.count}</span>
             </button>
           );
@@ -38,68 +34,83 @@ function FacetGroup({ title, facets, selected, onToggle, accent }: { title: stri
 export function InventoryBrowser({ config, vehicles, initial }: { config: SiteConfig; vehicles: SiteVehicle[]; initial?: Record<string, string> }) {
   const accent = accentOf(config.primaryColor);
   const ui = siteTheme(config.template);
-  const [kw, setKw] = useState(initial?.model ?? "");
-  const [make, setMake] = useState<string[]>(initial?.make ? [initial.make] : []);
-  const [body, setBody] = useState<string[]>(initial?.body ? [initial.body] : []);
-  const [fuel, setFuel] = useState<string[]>([]);
-  const [drive, setDrive] = useState<string[]>([]);
-  const [maxPrice, setMaxPrice] = useState(initial?.maxPrice ?? "");
-  const [minYear, setMinYear] = useState(initial?.year ?? "");
-  const [sort, setSort] = useState("newest");
+  const def = verticalDef(config.vertical);
+
+  const [kw, setKw] = useState(initial?.q ?? initial?.model ?? "");
+  const [checks, setChecks] = useState<Record<string, string[]>>(() => {
+    const s: Record<string, string[]> = {};
+    for (const f of def.facets) if (f.kind === "check") s[f.key] = initial?.[f.key] ? [initial[f.key]] : [];
+    return s;
+  });
+  const [ranges, setRanges] = useState<Record<string, string>>(() => {
+    const s: Record<string, string> = {};
+    for (const f of def.facets) if (f.kind !== "check") s[f.key] = initial?.[f.key] ?? "";
+    return s;
+  });
+  const [sort, setSort] = useState(def.sorts[0]?.key ?? "newest");
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const tog = (set: React.Dispatch<React.SetStateAction<string[]>>) => (v: string) => set((p) => p.includes(v) ? p.filter((x) => x !== v) : [...p, v]);
+  const togCheck = (key: string, v: string) => setChecks((p) => ({ ...p, [key]: (p[key] ?? []).includes(v) ? p[key].filter((x) => x !== v) : [...(p[key] ?? []), v] }));
+  const setRange = (key: string, v: string) => setRanges((p) => ({ ...p, [key]: v }));
 
-  const makeF = useMemo(() => facetOf(vehicles, (v) => v.make), [vehicles]);
-  const bodyF = useMemo(() => facetOf(vehicles, (v) => v.body), [vehicles]);
-  const fuelF = useMemo(() => facetOf(vehicles, (v) => v.fuel), [vehicles]);
-  const driveF = useMemo(() => facetOf(vehicles, (v) => v.drivetrain), [vehicles]);
+  const checkOpts = useMemo(() => {
+    const out: Record<string, Opt[]> = {};
+    for (const f of def.facets) if (f.kind === "check") {
+      const m = new Map<string, number>();
+      for (const v of vehicles) { const k = f.value(v); if (k) m.set(k, (m.get(k) ?? 0) + 1); }
+      out[f.key] = [...m.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value));
+    }
+    return out;
+  }, [vehicles, def]);
 
   const results = useMemo(() => {
-    let r = vehicles.filter((v) =>
-      (make.length === 0 || make.includes(v.make)) &&
-      (body.length === 0 || body.includes(v.body)) &&
-      (fuel.length === 0 || fuel.includes(v.fuel)) &&
-      (drive.length === 0 || drive.includes(v.drivetrain)) &&
-      (!maxPrice || v.price <= +maxPrice) &&
-      (!minYear || v.year >= +minYear) &&
-      (!kw || `${v.year} ${v.make} ${v.model} ${v.trim}`.toLowerCase().includes(kw.toLowerCase()))
-    );
+    let r = vehicles.filter((v) => {
+      for (const f of def.facets) {
+        if (f.kind === "check") { const s = checks[f.key] ?? []; if (s.length && !s.includes(f.value(v))) return false; }
+        else if (f.kind === "max") { const m = ranges[f.key]; if (m && f.value(v) > +m) return false; }
+        else if (f.kind === "min") { const m = ranges[f.key]; if (m && f.value(v) < +m) return false; }
+      }
+      if (kw) return `${def.titleOf(v)} ${def.subtitleOf(v)} ${v.make} ${v.model} ${v.trim}`.toLowerCase().includes(kw.toLowerCase());
+      return true;
+    });
     if (sort === "price_low") r = [...r].sort((a, b) => a.price - b.price);
     else if (sort === "price_high") r = [...r].sort((a, b) => b.price - a.price);
     else if (sort === "miles_low") r = [...r].sort((a, b) => a.mileage - b.mileage);
-    else if (sort === "year_new") r = [...r].sort((a, b) => b.year - a.year);
     return r;
-  }, [vehicles, make, body, fuel, drive, maxPrice, minYear, kw, sort]);
+  }, [vehicles, checks, ranges, kw, sort, def]);
 
-  const active = make.length + body.length + fuel.length + drive.length + (maxPrice ? 1 : 0) + (minYear ? 1 : 0) + (kw ? 1 : 0);
-  const clear = () => { setKw(""); setMake([]); setBody([]); setFuel([]); setDrive([]); setMaxPrice(""); setMinYear(""); };
-  const years = [...new Set(vehicles.map((v) => v.year))].sort((a, b) => b - a);
+  const active = Object.values(checks).reduce((n, a) => n + a.length, 0) + Object.values(ranges).filter(Boolean).length + (kw ? 1 : 0);
+  const clear = () => { setKw(""); setChecks((p) => Object.fromEntries(Object.keys(p).map((k) => [k, []]))); setRanges((p) => Object.fromEntries(Object.keys(p).map((k) => [k, ""]))); };
   const sel = "h-10 w-full rounded-lg border border-black/12 bg-white px-3 text-[13px] outline-none focus:border-black/30";
 
   const rail = (
     <div>
-      <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder="Search make, model, trim…" className={sel} />
+      <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder={def.searchPlaceholder} className={sel} />
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <select value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className={sel}><option value="">Max price</option>{["15000", "20000", "30000", "45000", "60000", "80000"].map((p) => <option key={p} value={p}>${(+p / 1000)}k</option>)}</select>
-        <select value={minYear} onChange={(e) => setMinYear(e.target.value)} className={sel}><option value="">Min year</option>{years.map((y) => <option key={y}>{y}</option>)}</select>
+        {def.facets.filter((f) => f.kind !== "check").map((f) => (
+          <select key={f.key} value={ranges[f.key] ?? ""} onChange={(e) => setRange(f.key, e.target.value)} className={sel}>
+            <option value="">{f.label}</option>
+            {f.kind === "max"
+              ? f.steps.map((p) => <option key={p} value={p}>{f.fmt(p)}</option>)
+              : f.steps.map((p) => <option key={p} value={p}>{p}+</option>)}
+          </select>
+        ))}
       </div>
-      <FacetGroup title="Make" facets={makeF} selected={make} onToggle={tog(setMake)} accent={accent} />
-      <FacetGroup title="Body type" facets={bodyF} selected={body} onToggle={tog(setBody)} accent={accent} />
-      <FacetGroup title="Fuel" facets={fuelF} selected={fuel} onToggle={tog(setFuel)} accent={accent} />
-      <FacetGroup title="Drivetrain" facets={driveF} selected={drive} onToggle={tog(setDrive)} accent={accent} />
+      {def.facets.filter((f) => f.kind === "check").map((f) => (
+        <CheckGroup key={f.key} title={f.label} opts={checkOpts[f.key] ?? []} selected={checks[f.key] ?? []} onToggle={(v) => togCheck(f.key, v)} accent={accent} />
+      ))}
     </div>
   );
 
+  const plural = def.plural;
   return (
     <div className={`mx-auto ${ui.container} px-5 py-8`}>
       <div className="mb-6">
-        <p className={ui.eyebrow} style={{ color: accent }}>Inventory</p>
-        <h1 className={`mt-1 ${ui.display} ${ui.h2} text-[#0f172a]`}>All vehicles</h1>
+        <p className={ui.eyebrow} style={{ color: accent }}>{plural}</p>
+        <h1 className={`mt-1 ${ui.display} ${ui.h2} capitalize text-[#0f172a]`}>All {plural}</h1>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
-        {/* filter rail — desktop */}
         <aside className="hidden lg:block">
           <div className="lg:sticky lg:top-24">
             <div className="mb-2 flex items-center justify-between">
@@ -111,24 +122,22 @@ export function InventoryBrowser({ config, vehicles, initial }: { config: SiteCo
         </aside>
 
         <div>
-          {/* toolbar */}
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-black/12 px-3 py-2 text-[13px] font-semibold text-[#334155] lg:hidden"><SlidersHorizontal className="h-4 w-4" />Filters{active > 0 ? ` (${active})` : ""}</button>
-            <p className="text-[13.5px] text-[#64748b]"><span className="font-semibold text-[#0f172a]">{results.length}</span> of {vehicles.length} vehicles</p>
+            <p className="text-[13.5px] text-[#64748b]"><span className="font-semibold text-[#0f172a]">{results.length}</span> of {vehicles.length} {plural}</p>
             <select value={sort} onChange={(e) => setSort(e.target.value)} className="ml-auto h-10 rounded-lg border border-black/12 bg-white px-3 text-[13px] outline-none">
-              <option value="newest">Newest arrivals</option><option value="price_low">Price: low → high</option><option value="price_high">Price: high → low</option><option value="miles_low">Fewest miles</option><option value="year_new">Year: newest</option>
+              {def.sorts.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
           </div>
 
           {results.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-black/10 py-20 text-center text-[14px] text-[#64748b]">No vehicles match those filters. <button onClick={clear} className="font-semibold" style={{ color: accent }}>Clear filters</button></div>
+            <div className="rounded-2xl border border-dashed border-black/10 py-20 text-center text-[14px] text-[#64748b]">Nothing matches those filters. <button onClick={clear} className="font-semibold" style={{ color: accent }}>Clear filters</button></div>
           ) : (
-            <div className={`grid grid-cols-1 gap-5 ${ui.invCols}`}>{results.map((v) => <VehicleCard key={v.id} slug={config.slug} accent={accent} v={v} variant={ui.card} />)}</div>
+            <div className={`grid grid-cols-1 gap-5 ${ui.invCols}`}>{results.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant={ui.card} />)}</div>
           )}
         </div>
       </div>
 
-      {/* mobile filter drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setMobileOpen(false)}>
           <div className="absolute inset-0 bg-black/40" />

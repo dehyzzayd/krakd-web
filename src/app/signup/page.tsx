@@ -4,7 +4,7 @@ import { SignUpForm } from "@/components/auth/SignUpForm";
 
 export const metadata: Metadata = {
   title: "Sign up — Krakd",
-  description: "Create your Krakd account and run the whole dealership from one screen.",
+  description: "Create your Krakd account and run your whole business from one screen.",
 };
 
 export default function SignUpPage() {

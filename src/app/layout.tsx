@@ -9,14 +9,14 @@ const oswald = Oswald({ subsets: ["latin"], weight: ["400", "500", "600", "700"]
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["300", "400", "500", "600"], style: ["normal", "italic"], variable: "--font-serif" });
 
 export const metadata: Metadata = {
-  title: "Krakd — The Automotive Operating System",
+  title: "Krakd — The Operating System for local business",
   description:
-    "Inventory, CRM, AI sales employees, marketing, finance and analytics. One platform. One login. Built for independent dealers.",
+    "Catalog, CRM, AI sales employees, marketing, finance and analytics. One platform. One login. Built for automotive, real estate, services, retail and every local business.",
   metadataBase: new URL("https://krakd.io"),
   openGraph: {
-    title: "Krakd — The Automotive Operating System",
+    title: "Krakd — The Operating System for local business",
     description:
-      "One platform to run the entire dealership. AI built into every workflow.",
+      "One platform to run your entire business. AI built into every workflow.",
     type: "website",
   },
 };

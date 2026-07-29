@@ -11,7 +11,8 @@ export default async function InventoryPage({ params, searchParams }: { params: 
   if (!config) notFound();
   const vehicles = await getSiteVehicles(slug);
   const sp = await searchParams;
+  // pass every scalar query param through — the vertical's facet keys drive what the browser reads
   const initial: Record<string, string> = {};
-  for (const k of ["make", "model", "year", "body", "maxPrice"]) { const v = sp[k]; if (typeof v === "string") initial[k] = v; }
+  for (const [k, v] of Object.entries(sp)) if (typeof v === "string") initial[k] = v;
   return <InventoryBrowser config={config} vehicles={vehicles} initial={initial} />;
 }

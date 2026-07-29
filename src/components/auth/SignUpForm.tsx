@@ -34,7 +34,7 @@ export function SignUpForm() {
           <Field id="firstName" label="First name" placeholder="John" autoComplete="given-name" value={f.firstName} onChange={set("firstName")} />
           <Field id="lastName" label="Last name" placeholder="Francisco" autoComplete="family-name" value={f.lastName} onChange={set("lastName")} />
         </div>
-        <Field id="email" label="Email" type="email" placeholder="john@dealership.com" autoComplete="email" value={f.email} onChange={set("email")} />
+        <Field id="email" label="Email" type="email" placeholder="you@business.com" autoComplete="email" value={f.email} onChange={set("email")} />
         <Field id="password" label="Password" type="password" placeholder="Enter your password" autoComplete="new-password" hint="Must be at least 8 characters" value={f.password} onChange={set("password")} />
         {err && <p className="text-[13px] font-medium text-[#dc2626]">{err}</p>}
         <button type="submit" className={`${BTN_PRIMARY} mt-2 w-full`}>Create account</button>

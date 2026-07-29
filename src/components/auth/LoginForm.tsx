@@ -48,7 +48,7 @@ export function LoginForm() {
       <div className="my-7"><OrDivider /></div>
 
       <form className="space-y-5" onSubmit={submit}>
-        <Field id="email" label="Email" type="email" placeholder="john@dealership.com" autoComplete="email" value={email} onChange={setEmail} />
+        <Field id="email" label="Email" type="email" placeholder="you@business.com" autoComplete="email" value={email} onChange={setEmail} />
         <div>
           <div className="mb-2 flex items-center justify-between">
             <label htmlFor="password" className="text-[14px] font-medium text-ink">Password</label>

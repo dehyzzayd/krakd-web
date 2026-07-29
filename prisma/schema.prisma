@@ -30,11 +30,22 @@ enum InventoryType {
   GROUP
 }
 
+// The business vertical drives listing fields, filters, terminology and site templates.
+enum Vertical {
+  AUTOMOTIVE
+  REAL_ESTATE
+  RESTAURANT
+  SERVICES
+  RETAIL
+  GENERIC
+}
+
 model Dealership {
   id            String           @id @default(uuid()) @db.Uuid
   name          String
   legalName     String?
   inventoryType InventoryType    @default(INDEPENDENT)
+  vertical      Vertical         @default(AUTOMOTIVE)
   status        DealershipStatus @default(PENDING)
   timezone      String           @default("America/Chicago")
   phone         String?
@@ -187,11 +198,15 @@ model Vehicle {
   id            String        @id @default(uuid()) @db.Uuid
   dealershipId  String        @db.Uuid
   dealership    Dealership    @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
-  vin           String
-  stockNumber   String
-  year          Int
-  make          String
-  model         String
+  // generic listing fields (used by non-automotive verticals; auto still uses year/make/model)
+  title         String?       // e.g. real-estate headline / product name
+  subtitle      String?
+  attributes    Json          @default("{}") // vertical-specific: { beds, baths, sqft, propertyType } etc.
+  vin           String?
+  stockNumber   String?
+  year          Int?
+  make          String?
+  model         String?
   trim          String?
   bodyType      String?
   mileage       Int           @default(0)

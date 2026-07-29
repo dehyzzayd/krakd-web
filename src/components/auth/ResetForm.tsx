@@ -54,7 +54,7 @@ export function ResetForm() {
         </p>
       ) : (
         <form className="mt-8 space-y-5" onSubmit={requestReset}>
-          <Field id="email" label="Email" type="email" placeholder="john@dealership.com" autoComplete="email" value={email} onChange={setEmail} />
+          <Field id="email" label="Email" type="email" placeholder="you@business.com" autoComplete="email" value={email} onChange={setEmail} />
           {err && <p className="text-[13px] font-medium text-[#dc2626]">{err}</p>}
           <button type="submit" disabled={busy} className={`${BTN_PRIMARY} mt-2 w-full disabled:opacity-60`}>{busy ? "Sending…" : "Send reset link"}</button>
         </form>

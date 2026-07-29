@@ -15,7 +15,7 @@ export function estMonthly(priceCents: number, opts?: { apr?: number; term?: num
 /* ── condition/value badges a dealer would show ── */
 export function vehicleBadges(v: SiteVehicle): { label: string; tone: "value" | "info" | "hot" }[] {
   const out: { label: string; tone: "value" | "info" | "hot" }[] = [];
-  const age = new Date().getFullYear() - v.year;
+  const age = new Date().getFullYear() - (v.year ?? 0);
   if (v.mileage > 0 && v.mileage < 30000) out.push({ label: "Low miles", tone: "value" });
   if (age <= 2) out.push({ label: `${v.year}`, tone: "info" });
   if (v.fuel.toLowerCase().includes("electric")) out.push({ label: "Electric", tone: "hot" });
