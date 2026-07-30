@@ -43,7 +43,7 @@ export function Topbar({
       <div className="relative ml-auto hidden w-[280px] md:block">
         <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-n400" />
         <input
-          placeholder="Search inventory, leads…"
+          placeholder="Search leads, contacts…"
           className="h-9 w-full rounded-lg border border-n200 bg-white pl-9 pr-3 text-[13px] text-n800 outline-none transition placeholder:text-n400 focus:border-brand focus:ring-2 focus:ring-brand/15"
         />
       </div>

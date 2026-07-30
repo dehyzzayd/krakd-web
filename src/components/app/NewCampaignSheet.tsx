@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
 import { apiFetch, ApiError } from "@/lib/api";
+import { vertical as verticalDef } from "@/components/site/verticals";
 import { Check } from "lucide-react";
 
 const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -39,14 +40,16 @@ export function NewCampaignSheet({ open, onClose, onCreated }: { open: boolean; 
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const [vehicles, setVehicles] = useState<Veh[]>([]);
+  const [vertical, setVertical] = useState<string>("AUTOMOTIVE");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const def = verticalDef(vertical);
 
   useEffect(() => {
     if (!open) return;
     setErr(null);
-    apiFetch<{ items: Veh[] }>("/inventory").then((r) => setVehicles(r.items ?? [])).catch(() => setVehicles([]));
+    apiFetch<{ items: Veh[]; vertical?: string }>("/inventory").then((r) => { setVehicles(r.items ?? []); if (r.vertical) setVertical(r.vertical); }).catch(() => setVehicles([]));
   }, [open]);
 
   const togglePick = (id: string) => setPicked((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -80,7 +83,7 @@ export function NewCampaignSheet({ open, onClose, onCreated }: { open: boolean; 
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Launch a campaign" subtitle="Krakd manages the ads and reports cost per sold car."
+    <Sheet open={open} onClose={onClose} title="Launch a campaign" subtitle="Krakd manages the ads and reports cost per sale."
       footer={<>
         <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>
         <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Creating…" : "Create campaign"}</button>
@@ -123,9 +126,9 @@ export function NewCampaignSheet({ open, onClose, onCreated }: { open: boolean; 
         </div>
 
         <div className="border-t border-n200 pt-4">
-          <p className="mb-1 text-[13px] font-semibold text-n900">Promote inventory <span className="font-normal text-n400">{picked.size > 0 && `· ${picked.size} selected`}</span></p>
+          <p className="mb-1 text-[13px] font-semibold capitalize text-n900">Promote {def.plural} <span className="font-normal normal-case text-n400">{picked.size > 0 && `· ${picked.size} selected`}</span></p>
           {vehicles.length === 0
-            ? <p className="rounded-lg bg-n50 px-3 py-3 text-[12.5px] text-n500">No inventory yet. Add vehicles first, or launch a general awareness campaign.</p>
+            ? <p className="rounded-lg bg-n50 px-3 py-3 text-[12.5px] text-n500">No {def.plural} yet. Add {def.noun}s first, or launch a general awareness campaign.</p>
             : <div className="max-h-52 space-y-1.5 overflow-y-auto">
                 {vehicles.map((v) => {
                   const on = picked.has(v.id);

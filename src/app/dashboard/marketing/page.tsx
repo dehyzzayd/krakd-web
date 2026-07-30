@@ -8,8 +8,8 @@ import { Megaphone } from "lucide-react";
 export default function MarketingOverview() {
   const KPIS = [
     { label: "Ad spend · MTD", value: "$0" },
-    { label: "Units sold · attributed", value: "0" },
-    { label: "Cost per sold", value: "—" },
+    { label: "Closed · attributed", value: "0" },
+    { label: "Cost per acquisition", value: "—" },
     { label: "Marketing ROI", value: "—" },
   ];
 
@@ -17,7 +17,7 @@ export default function MarketingOverview() {
     <>
       <Topbar title="Digital Marketing" action={{ label: "New campaign", href: "/dashboard/marketing/campaigns" }} />
       <AppMain>
-        <p className="mb-5 text-[13.5px] text-n600">Connect your ad accounts and launch your first campaign — Krakd manages the ads and reports cost per <span className="font-semibold text-n900">sold car</span>, not per click.</p>
+        <p className="mb-5 text-[13.5px] text-n600">Connect your ad accounts and launch your first campaign — Krakd manages the ads and reports cost per <span className="font-semibold text-n900">sale</span>, not per click.</p>
 
         {/* connect your networks */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

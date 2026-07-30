@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const k = data?.kpis;
   const kpis = [
     { label: "Gross · MTD", value: k ? money(k.grossCents) : "—" },
-    { label: "Units sold · MTD", value: k ? String(k.unitsSold) : "—" },
+    { label: "Closed · MTD", value: k ? String(k.unitsSold) : "—" },
     { label: "Active leads", value: k ? String(k.activeLeads) : "—" },
     { label: "Appts today", value: k ? String(k.apptsToday) : "—" },
   ];
@@ -97,8 +97,8 @@ export default function DashboardPage() {
           <Card className="lg:col-span-2">
             <CardHead title="Gross revenue" right={<span className="tnum text-[12px] font-semibold text-n900">{k ? money(k.grossCents) : "—"}</span>} />
             {k && k.unitsSold > 0
-              ? <div className="p-4"><p className="tnum text-[30px] font-semibold text-n900">{money(k.grossCents)}</p><p className="mt-1 text-[12.5px] text-n500">{k.unitsSold} units sold this month</p></div>
-              : <Empty title="No sales logged yet" sub="Mark a vehicle sold and your gross will chart here." />}
+              ? <div className="p-4"><p className="tnum text-[30px] font-semibold text-n900">{money(k.grossCents)}</p><p className="mt-1 text-[12.5px] text-n500">{k.unitsSold} closed this month</p></div>
+              : <Empty title="No sales logged yet" sub={`Mark a ${def.noun} sold and your revenue will chart here.`} />}
           </Card>
 
           <Card>
@@ -120,7 +120,7 @@ export default function DashboardPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead><tr className="text-[11px] uppercase tracking-[0.04em] text-n500">
-                      <th className="px-4 py-2 font-medium">Customer</th><th className="px-3 py-2 font-medium">Source</th><th className="px-3 py-2 font-medium">Vehicle</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Owner</th><th className="px-4 py-2 text-right font-medium">Updated</th>
+                      <th className="px-4 py-2 font-medium">Customer</th><th className="px-3 py-2 font-medium">Source</th><th className="px-3 py-2 font-medium">Interested in</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Owner</th><th className="px-4 py-2 text-right font-medium">Updated</th>
                     </tr></thead>
                     <tbody>
                       {leads.map((l, i) => (

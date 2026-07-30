@@ -160,7 +160,7 @@ export function OverviewPanel({ w, reload, go }: { w: Web; reload: () => void; g
             {w.status === "PUBLISHED" && <a href={w.publicUrl} target="_blank" rel="noreferrer" className="shrink-0 text-brand"><ExternalLink className="h-4 w-4" /></a>}
           </div>
           <p className="mt-3 text-[12.5px] leading-relaxed text-n500">
-            {w.status === "PUBLISHED" ? "Your site is live. Inventory and leads sync automatically with Krakd." : "Finish setup, then publish to take your dealership site live in minutes."}
+            {w.status === "PUBLISHED" ? "Your site is live. Your catalog and leads sync automatically with Krakd." : "Finish setup, then publish to take your site live in minutes."}
           </p>
           <div className="mt-auto flex flex-wrap gap-2 pt-4">
             {w.status === "PUBLISHED" ? (

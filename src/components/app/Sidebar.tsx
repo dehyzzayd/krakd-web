@@ -66,7 +66,7 @@ export function Sidebar() {
   const labelFor = (e: Entry) => (e.type === "item" && e.href === "/dashboard/inventory" ? invLabel : e.label);
   // automotive-only CRM children (credit apps) are hidden for other verticals — keep it simple
   const AUTO_ONLY_CHILDREN = new Set(["/dashboard/crm/credit"]);
-  const dealerName = dealer ?? "Your dealership";
+  const dealerName = dealer ?? "Your business";
   const dealerInitials = dealerName.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const [open, setOpen] = useState<Record<string, boolean>>({
     crm: pathname.startsWith("/dashboard/leads") || pathname.startsWith("/dashboard/crm") || pathname.startsWith("/dashboard/inbox") || pathname.startsWith("/dashboard/appointments"),
