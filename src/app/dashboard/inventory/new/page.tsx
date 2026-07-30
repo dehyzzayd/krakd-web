@@ -1,5 +1,5 @@
-import { VehicleForm } from "@/components/app/VehicleForm";
+import { NewInventoryForm } from "@/components/app/NewInventoryForm";
 
-export default function NewVehiclePage() {
-  return <VehicleForm />;
+export default function NewListingPage() {
+  return <NewInventoryForm />;
 }

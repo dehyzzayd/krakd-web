@@ -369,7 +369,7 @@ export function VehiclePanel({ w, reload }: { w: Web; reload: () => void }) {
         <h3 className="mb-1 text-[14px] font-semibold text-n900">Vehicle detail page</h3>
         <p className="mb-4 text-[12.5px] text-n500">Add a custom call-to-action button shown on every vehicle&apos;s page — link it anywhere (a form, a value-your-trade tool, a video).</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <L label="Button label"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Value your trade" className={field} /></L>
+          <L label="Button label"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Learn more" className={field} /></L>
           <L label="Button link (URL)"><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className={field} /></L>
         </div>
       </Card>

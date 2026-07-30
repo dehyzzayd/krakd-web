@@ -10,27 +10,27 @@ import { cn } from "@/lib/cn";
 import { VehicleCard } from "./VehicleCard";
 import { vertical as verticalDef } from "./verticals";
 
-const DEFAULT_WHY = [
-  { title: "Hand-picked inventory", body: "Every vehicle is selected for quality and priced to the live market — never over sticker." },
-  { title: "Inspected & reconditioned", body: "A rigorous multi-point inspection and full reconditioning before any car hits the lot." },
-  { title: "Financing for everyone", body: "Get pre-qualified in minutes with lenders for every credit situation — all online." },
-];
 const REVIEWS = [
   { name: "Jordan M.", body: "Easiest car-buying experience I've had. No pressure, straight numbers, in and out in an hour.", rating: 5 },
   { name: "Alicia R.", body: "They got me financed when two other dealers couldn't. The team actually listened.", rating: 5 },
   { name: "Devon P.", body: "Truck was exactly as described and the price beat everything nearby. Would buy again.", rating: 5 },
 ];
 const BODY_ICONS: Record<string, typeof Car> = { Truck, SUV: Car, Sedan: Car, Coupe: Car, Van: Truck, Hatchback: Car };
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function useHome(config: SiteConfig, vehicles: SiteVehicle[], preview?: boolean) {
   const accent = accentOf(config.primaryColor);
+  const def = verticalDef(config.vertical);
+  const m = def.market;
   const link = (p: string) => (preview ? "#" : p);
-  const makes = [...new Set(vehicles.map((v) => v.make))].sort().slice(0, 24);
+  const makes = [...new Set(vehicles.map((v) => v.make).filter(Boolean))].sort().slice(0, 24);
   const bodies = [...new Set(vehicles.map((v) => v.body).filter(Boolean))];
-  const why = config.whyUs.length ? config.whyUs : DEFAULT_WHY;
+  const why = config.whyUs.length ? config.whyUs : m.defaultWhy;
   const reviews = config.reviews.length ? config.reviews : REVIEWS;
-  const show = (k: string) => config.sections?.[k] !== false;
-  return { accent, link, makes, bodies, why, reviews, show };
+  // financing marketing bands only render for verticals that use them (automotive); other verticals keep the Financing page
+  const show = (k: string) => (k === "financing" ? config.sections?.[k] !== false && m.showFinanceBands : config.sections?.[k] !== false);
+  const auto = (config.vertical ?? "AUTOMOTIVE") === "AUTOMOTIVE";
+  return { accent, def, m, auto, link, makes, bodies, why, reviews, show };
 }
 
 function SearchBar({ config, vehicles, accent, variant, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; accent: string; variant: "soft" | "sharp"; preview?: boolean }) {
@@ -67,7 +67,7 @@ function Empty() { return <div className="rounded-2xl border border-dashed borde
 
 /* ═══════════════════════ MODERN — bright, rounded, bento ═══════════════════════ */
 function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, bodies, why, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, m, link, bodies, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 8);
   const C = "max-w-[1200px]";
   const heroImg = config.heroImageUrl;
@@ -84,7 +84,7 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
             </div>
             <div className="relative z-10 mt-8 flex flex-wrap gap-3">
               <Link href={link(`/site/${config.slug}/inventory`)} className="rounded-full bg-white px-6 py-3 text-[14px] font-semibold" style={{ color: accent }}>{config.ctaLabel}</Link>
-              <Link href={link(`/site/${config.slug}/financing`)} className="rounded-full border border-white/50 px-6 py-3 text-[14px] font-semibold text-white hover:bg-white/10">Get pre-qualified</Link>
+              <Link href={link(`/site/${config.slug}/${m.heroSecondary.to}`)} className="rounded-full border border-white/50 px-6 py-3 text-[14px] font-semibold text-white hover:bg-white/10">{m.heroSecondary.label}</Link>
             </div>
           </div>
           <div className="grid gap-4">
@@ -95,8 +95,8 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
                 : <div className="grid h-[180px] place-items-center bg-[#eef3f8]"><Car className="h-10 w-10 text-[#94a3b8]" /></div>}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-[24px] bg-[#0f172a] p-5 text-white"><p className="text-[34px] font-extrabold leading-none">{vehicles.length}</p><p className="mt-1 text-[12px] text-white/60">in stock</p></div>
-              <Link href={link(`/site/${config.slug}/financing`)} className="flex flex-col justify-between rounded-[24px] border border-black/8 bg-white p-5 transition hover:shadow-md"><span className="text-[13px] font-semibold text-[#0f172a]">Financing</span><span className="mt-6 inline-flex items-center gap-1 text-[12.5px] font-semibold" style={{ color: accent }}>Apply<ArrowUpRight className="h-4 w-4" /></span></Link>
+              <div className="rounded-[24px] bg-[#0f172a] p-5 text-white"><p className="text-[34px] font-extrabold leading-none">{vehicles.length}</p><p className="mt-1 text-[12px] text-white/60">{def.dash.units} live</p></div>
+              <Link href={link(`/site/${config.slug}/${m.heroSecondary.to}`)} className="flex flex-col justify-between rounded-[24px] border border-black/8 bg-white p-5 transition hover:shadow-md"><span className="text-[13px] font-semibold text-[#0f172a]">{m.financeNav}</span><span className="mt-6 inline-flex items-center gap-1 text-[12.5px] font-semibold" style={{ color: accent }}>Apply<ArrowUpRight className="h-4 w-4" /></span></Link>
             </div>
           </div>
         </div>
@@ -120,8 +120,8 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
 
       <section className={`mx-auto ${C} px-5 py-14`}>
         <div className="grid gap-4 sm:grid-cols-3">
-          {[["Browse", "Filter our live inventory and find your match."], ["Get pre-qualified", "Apply online in minutes — all credit welcome."], ["Drive home", "Pick it up, or we deliver. Simple."]].map(([t, b], i) => (
-            <div key={t} className="rounded-[24px] border border-black/8 bg-white p-7"><span className="grid h-10 w-10 place-items-center rounded-full text-[15px] font-bold text-white" style={{ background: accent }}>{i + 1}</span><p className="mt-4 text-[16px] font-semibold text-[#0f172a]">{t}</p><p className="mt-1 text-[13.5px] text-[#475569]">{b}</p></div>
+          {m.steps.map((st, i) => (
+            <div key={st.t} className="rounded-[24px] border border-black/8 bg-white p-7"><span className="grid h-10 w-10 place-items-center rounded-full text-[15px] font-bold text-white" style={{ background: accent }}>{i + 1}</span><p className="mt-4 text-[16px] font-semibold text-[#0f172a]">{st.t}</p><p className="mt-1 text-[13.5px] text-[#475569]">{st.b}</p></div>
           ))}
         </div>
       </section>
@@ -144,11 +144,14 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
 
 /* ═══════════════════════ BOLD — black, industrial, ticker ═══════════════════════ */
 function HomeBold({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, m, auto, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 8);
   const C = "max-w-[1320px]";
   const heroImg = config.heroImageUrl;
-  const ticker = ["In stock now", "All-credit financing", "Trade-ins welcome", "Multi-point inspected", "Drive home today"];
+  const ticker = m.ticker;
+  const trust: [string, string][] = auto
+    ? [[`${vehicles.length}`, "In stock"], ["All", "Credit levels"], ["100%", "Inspected"], ["Fast", "Approvals"]]
+    : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
   return (
     <>
       <section className="relative w-full overflow-hidden" style={{ background: "#0a0a0a" }}>
@@ -159,7 +162,7 @@ function HomeBold({ config, vehicles, preview }: { config: SiteConfig; vehicles:
           {config.intro && <p className="mt-5 max-w-[52ch] text-[16px] text-white/85 sm:text-[18px]">{config.intro}</p>}
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={link(`/site/${config.slug}/inventory`)} className="bg-white px-8 py-4 font-display text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>{config.ctaLabel}</Link>
-            <Link href={link(`/site/${config.slug}/financing`)} className="border border-white/50 px-8 py-4 font-display text-[13px] font-semibold uppercase tracking-[0.08em] text-white hover:bg-white/10">Get approved</Link>
+            <Link href={link(`/site/${config.slug}/${m.heroSecondary.to}`)} className="border border-white/50 px-8 py-4 font-display text-[13px] font-semibold uppercase tracking-[0.08em] text-white hover:bg-white/10">{auto ? "Get approved" : m.financeBtn}</Link>
           </div>
         </div>
       </section>
@@ -176,12 +179,12 @@ function HomeBold({ config, vehicles, preview }: { config: SiteConfig; vehicles:
 
       {/* inventory FIRST — dense */}
       <section className={`mx-auto ${C} px-5 pb-14`}>
-        <div className="mb-6 flex items-end justify-between border-b-2 border-[#0a0a0a] pb-3"><h2 className="font-display text-[34px] font-bold uppercase tracking-tight text-[#0a0a0a]">Inventory</h2><Link href={link(`/site/${config.slug}/inventory`)} className="inline-flex items-center gap-1 font-display text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>View all<ArrowRight className="h-4 w-4" /></Link></div>
+        <div className="mb-6 flex items-end justify-between border-b-2 border-[#0a0a0a] pb-3"><h2 className="font-display text-[34px] font-bold uppercase tracking-tight text-[#0a0a0a]">{cap(def.plural)}</h2><Link href={link(`/site/${config.slug}/inventory`)} className="inline-flex items-center gap-1 font-display text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>View all<ArrowRight className="h-4 w-4" /></Link></div>
         {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
       </section>
 
       {show("trustBar") && <section className="w-full border-y border-white/10" style={{ background: "#0a0a0a" }}><div className={`mx-auto ${C} grid grid-cols-2 divide-x divide-white/10 lg:grid-cols-4`}>
-        {[[`${vehicles.length}`, "In stock"], ["All", "Credit levels"], ["100%", "Inspected"], ["Fast", "Approvals"]].map(([big, small]) => (
+        {trust.map(([big, small]) => (
           <div key={small} className="px-5 py-10"><p className="font-display text-[40px] font-bold uppercase leading-none text-white">{big}</p><p className="mt-2 font-display text-[12px] uppercase tracking-[0.18em] text-white/50">{small}</p></div>
         ))}
       </div></section>}
@@ -209,7 +212,7 @@ function LuxeIndex({ n, label, accent }: { n: string; label: string; accent: str
   return <div className="mb-6 flex items-center gap-4"><span className="font-display text-[13px] tracking-[0.3em]" style={{ color: accent }}>{n}</span><span className="h-px flex-1" style={{ background: "#00000022" }} /><span className="font-display text-[12px] uppercase tracking-[0.3em] text-[#191713]/70">{label}</span></div>;
 }
 function HomeLuxe({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, link, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 8);
   const C = "max-w-[1240px]";
   const heroImg = config.heroImageUrl;
@@ -230,7 +233,7 @@ function HomeLuxe({ config, vehicles, preview }: { config: SiteConfig; vehicles:
       {/* statement */}
       <section className={`mx-auto ${C} px-6 py-28`}>
         <LuxeIndex n="01" label="The Collection" accent={accent} />
-        <p className="max-w-[24ch] font-serif text-[34px] font-light leading-[1.25] sm:text-[52px]">{config.aboutText ? config.aboutText.split(". ")[0] + "." : `A considered selection of exceptional vehicles.`}</p>
+        <p className="max-w-[24ch] font-serif text-[34px] font-light leading-[1.25] sm:text-[52px]">{config.aboutText ? config.aboutText.split(". ")[0] + "." : `A considered selection of exceptional ${def.plural}.`}</p>
       </section>
 
       {/* horizontal-scroll collection */}
@@ -309,39 +312,51 @@ function Reviews({ config, accent, reviews, variant }: { config: SiteConfig; acc
   );
 }
 function AboutSplit({ config, accent, vehicles }: { config: SiteConfig; accent: string; vehicles: SiteVehicle[] }) {
-  const makes = [...new Set(vehicles.map((v) => v.make))];
+  const def = verticalDef(config.vertical);
+  const auto = (config.vertical ?? "AUTOMOTIVE") === "AUTOMOTIVE";
+  const makes = [...new Set(vehicles.map((v) => v.make).filter(Boolean))];
+  const fallbackAbout = auto
+    ? `At ${config.dealershipName}, we make buying your next vehicle simple and honest.`
+    : `At ${config.dealershipName}, we make finding your next ${def.noun} simple and personal.`;
+  const stats: [string, string][] = auto
+    ? [[`${vehicles.length}`, "In stock"], [`${makes.length}`, "Brands"], ["100%", "Inspected"], ["5★", "Rated"]]
+    : [[`${vehicles.length}`, `Live ${def.plural}`], ...def.market.stats];
   return (
     <section className="mx-auto max-w-[1200px] px-5 py-16"><div className="grid items-center gap-10 lg:grid-cols-2">
-      <div><p className="text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: accent }}>Who we are</p><h2 className="mt-1 text-[26px] font-bold tracking-tight text-[#0f172a]">Welcome to {config.dealershipName}</h2><p className="mt-4 text-[14.5px] leading-relaxed text-[#475569]">{config.aboutText || `At ${config.dealershipName}, we make buying your next vehicle simple and honest.`}</p><Link href={`/site/${config.slug}/about`} className="mt-6 inline-flex items-center gap-1 text-[13.5px] font-semibold" style={{ color: accent }}>More about us<ChevronRight className="h-4 w-4" /></Link></div>
-      <div className="grid grid-cols-2 gap-4">{[[`${vehicles.length}`, "In stock"], [`${makes.length}`, "Brands"], ["100%", "Inspected"], ["5★", "Rated"]].map(([b, s]) => <div key={s} className="rounded-[24px] border border-black/8 bg-white p-6 text-center"><p className="text-[34px] font-bold" style={{ color: accent }}>{b}</p><p className="mt-1 text-[12.5px] font-medium text-[#64748b]">{s}</p></div>)}</div>
+      <div><p className="text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: accent }}>Who we are</p><h2 className="mt-1 text-[26px] font-bold tracking-tight text-[#0f172a]">Welcome to {config.dealershipName}</h2><p className="mt-4 text-[14.5px] leading-relaxed text-[#475569]">{config.aboutText || fallbackAbout}</p><Link href={`/site/${config.slug}/about`} className="mt-6 inline-flex items-center gap-1 text-[13.5px] font-semibold" style={{ color: accent }}>More about us<ChevronRight className="h-4 w-4" /></Link></div>
+      <div className="grid grid-cols-2 gap-4">{stats.map(([b, s]) => <div key={s} className="rounded-[24px] border border-black/8 bg-white p-6 text-center"><p className="text-[34px] font-bold" style={{ color: accent }}>{b}</p><p className="mt-1 text-[12.5px] font-medium text-[#64748b]">{s}</p></div>)}</div>
     </div></section>
   );
 }
 
 /* ═══════════════════════ CLASSIC — corporate franchise, blue, boxy ═══════════════════════ */
 function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, m, auto, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 8);
   const C = "max-w-[1280px]"; const navy = "#10233f";
   const heroImg = config.heroImageUrl;
+  const chips = auto ? ["New", "Used", "Certified"] : ["For sale", "New listings", "Featured"];
+  const trust: [string, string][] = auto
+    ? [[`${vehicles.length}`, "Vehicles in stock"], ["All credit", "Financing"], ["Inspected", "Every vehicle"], ["Trade-ins", "Top dollar"]]
+    : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
   return (
     <>
       <section className="relative w-full overflow-hidden" style={{ background: navy }}>
         {heroImg && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={heroImg} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" /><div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(16,35,63,0.95), rgba(16,35,63,0.6))" }} /></>}
         <div className={`relative mx-auto ${C} px-5 py-16`}>
-          <div className="flex flex-wrap gap-2">{["New", "Used", "Certified"].map((t) => <Link key={t} href={link(`/site/${config.slug}/inventory`)} className="rounded-md bg-white/10 px-4 py-1.5 text-[12.5px] font-bold uppercase tracking-wide text-white hover:bg-white/20">{t}</Link>)}</div>
+          <div className="flex flex-wrap gap-2">{chips.map((t) => <Link key={t} href={link(`/site/${config.slug}/inventory`)} className="rounded-md bg-white/10 px-4 py-1.5 text-[12.5px] font-bold uppercase tracking-wide text-white hover:bg-white/20">{t}</Link>)}</div>
           <h1 className="mt-4 max-w-[18ch] text-[34px] font-bold leading-[1.05] text-white sm:text-[48px]">{config.headline}</h1>
           {config.intro && <p className="mt-3 max-w-[52ch] text-[15px] text-white/80">{config.intro}</p>}
           <div className="relative z-10 mt-6"><SearchBar config={config} vehicles={vehicles} accent={accent} variant="soft" preview={preview} /></div>
         </div>
       </section>
       {show("trustBar") && <section className="w-full border-b border-black/8 bg-white"><div className={`mx-auto ${C} grid grid-cols-2 gap-4 px-5 py-6 lg:grid-cols-4`}>
-        {[[`${vehicles.length}`, "Vehicles in stock"], ["All credit", "Financing"], ["Inspected", "Every vehicle"], ["Trade-ins", "Top dollar"]].map(([b, s]) => (
+        {trust.map(([b, s]) => (
           <div key={s} className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-white" style={{ background: accent }}><BadgeCheck className="h-5 w-5" /></span><div><p className="text-[15px] font-bold text-[#0f172a]">{b}</p><p className="text-[11.5px] text-[#64748b]">{s}</p></div></div>
         ))}
       </div></section>}
       <section className={`mx-auto ${C} px-5 py-12`}>
-        <div className="mb-6 flex items-end justify-between"><h2 className="text-[24px] font-bold tracking-tight text-[#0f172a]">Featured vehicles</h2><Link href={link(`/site/${config.slug}/inventory`)} className="text-[13.5px] font-bold uppercase tracking-wide" style={{ color: accent }}>View all →</Link></div>
+        <div className="mb-6 flex items-end justify-between"><h2 className="text-[24px] font-bold tracking-tight text-[#0f172a]">{auto ? "Featured vehicles" : `Featured ${def.plural}`}</h2><Link href={link(`/site/${config.slug}/inventory`)} className="text-[13.5px] font-bold uppercase tracking-wide" style={{ color: accent }}>View all →</Link></div>
         {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="soft" preview={preview} />)}</div>}
       </section>
       {show("shopByType") && makes.length > 0 && <section className="w-full bg-[#f1f5f9] py-12"><div className={`mx-auto ${C} px-5`}><h2 className="mb-5 text-[22px] font-bold tracking-tight text-[#0f172a]">Shop by make</h2><div className="flex flex-wrap gap-2.5">{makes.map((m) => <Link key={m} href={link(`/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`)} className="rounded-md border border-black/12 bg-white px-4 py-2.5 text-[13.5px] font-semibold text-[#0f172a] hover:border-black/30">{m}</Link>)}</div></div></section>}
@@ -359,10 +374,13 @@ function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicl
 
 /* ═══════════════════════ SPORT — charcoal, angular, italic ═══════════════════════ */
 function HomeSport({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, makes, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, m, auto, link, makes, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 6);
   const C = "max-w-[1320px]"; const char = "#141416";
   const heroImg = config.heroImageUrl;
+  const trust: [string, string][] = auto
+    ? [[`${vehicles.length}`, "In the lineup"], ["Certified", "Inspection"], ["All credit", "Financing"], ["Trade", "Welcome"]]
+    : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
   return (
     <>
       <section className="relative w-full overflow-hidden" style={{ background: char }}>
@@ -379,12 +397,12 @@ function HomeSport({ config, vehicles, preview }: { config: SiteConfig; vehicles
         </div>
       </section>
       {show("trustBar") && <section className="w-full" style={{ background: accent }}><div className={`mx-auto ${C} grid grid-cols-2 gap-6 px-5 py-6 text-white lg:grid-cols-4`}>
-        {[[`${vehicles.length}`, "In the lineup"], ["Certified", "Inspection"], ["All credit", "Financing"], ["Trade", "Welcome"]].map(([b, s]) => <div key={s}><p className="font-display text-[26px] font-bold uppercase italic leading-none">{b}</p><p className="mt-1 font-display text-[11px] uppercase tracking-[0.16em] text-white/70">{s}</p></div>)}
+        {trust.map(([b, s]) => <div key={s}><p className="font-display text-[26px] font-bold uppercase italic leading-none">{b}</p><p className="mt-1 font-display text-[11px] uppercase tracking-[0.16em] text-white/70">{s}</p></div>)}
       </div></section>}
       <section className={`mx-auto ${C} px-5 py-14`}>
-        <h2 className="mb-6 font-display text-[34px] font-bold uppercase italic tracking-tight text-[#141416]">The lineup</h2>
+        <h2 className="mb-6 font-display text-[34px] font-bold uppercase italic tracking-tight text-[#141416]">{auto ? "The lineup" : cap(def.plural)}</h2>
         {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
-        <div className="mt-8"><Link href={link(`/site/${config.slug}/inventory`)} className="inline-block px-8 py-3.5 font-display text-[13px] font-semibold uppercase italic tracking-[0.1em] text-white" style={{ background: char }}>See all inventory</Link></div>
+        <div className="mt-8"><Link href={link(`/site/${config.slug}/inventory`)} className="inline-block px-8 py-3.5 font-display text-[13px] font-semibold uppercase italic tracking-[0.1em] text-white" style={{ background: char }}>See all {def.plural}</Link></div>
       </section>
       {show("shopByType") && makes.length > 0 && <section className="w-full py-14" style={{ background: char }}><div className={`mx-auto ${C} px-5`}><h2 className="mb-5 font-display text-[28px] font-bold uppercase italic tracking-tight text-white">By make</h2><div className="flex flex-wrap gap-2.5">{makes.map((m) => <Link key={m} href={link(`/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`)} className="border border-white/25 px-5 py-2.5 font-display text-[14px] font-semibold uppercase italic text-white transition hover:bg-white hover:text-[#141416]">{m}</Link>)}</div></div></section>}
       {show("financing") && <section className="w-full" style={{ background: `linear-gradient(75deg, ${char} 40%, ${accent})` }}><div className={`mx-auto ${C} px-5 py-16`}><h2 className="max-w-[16ch] font-display text-[38px] font-bold uppercase italic tracking-tight text-white sm:text-[52px]">{config.financingText ? "Financing, handled." : "Own it. Today."}</h2><Link href={link(`/site/${config.slug}/financing`)} className="mt-6 inline-block bg-white px-9 py-4 font-display text-[13px] font-semibold uppercase italic tracking-[0.1em] text-[#141416]">Get approved</Link></div></section>}
@@ -395,7 +413,7 @@ function HomeSport({ config, vehicles, preview }: { config: SiteConfig; vehicles
 
 /* ═══════════════════════ MINIMAL — airy, hairlines, whitespace ═══════════════════════ */
 function HomeMinimal({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, auto, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 6);
   const C = "max-w-[1160px]";
   const heroImg = config.heroImageUrl;
@@ -413,7 +431,7 @@ function HomeMinimal({ config, vehicles, preview }: { config: SiteConfig; vehicl
       </section>
       {heroImg && <section className={`mx-auto ${C} px-6`}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={heroImg} alt="" className="h-[280px] w-full object-cover sm:h-[440px]" /></section>}
       <section className={`mx-auto ${C} ${rule} mt-14 px-6 py-14`}>
-        <div className="mb-8 flex items-baseline justify-between"><div className="flex items-baseline gap-4"><span className="text-[12px] tracking-[0.2em] text-[#999]">01</span><h2 className="text-[24px] font-medium tracking-tight text-[#111]">Selected inventory</h2></div><Link href={link(`/site/${config.slug}/inventory`)} className="text-[12px] uppercase tracking-[0.16em] hover:opacity-60" style={{ color: accent }}>All →</Link></div>
+        <div className="mb-8 flex items-baseline justify-between"><div className="flex items-baseline gap-4"><span className="text-[12px] tracking-[0.2em] text-[#999]">01</span><h2 className="text-[24px] font-medium tracking-tight text-[#111]">{auto ? "Selected inventory" : `Selected ${def.plural}`}</h2></div><Link href={link(`/site/${config.slug}/inventory`)} className="text-[12px] uppercase tracking-[0.16em] hover:opacity-60" style={{ color: accent }}>All →</Link></div>
         {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} variant="sharp" preview={preview} />)}</div>}
       </section>
       {show("shopByType") && makes.length > 0 && <section className={`mx-auto ${C} ${rule} px-6 py-14`}><div className="flex items-baseline gap-4"><span className="text-[12px] tracking-[0.2em] text-[#999]">02</span><h2 className="text-[24px] font-medium tracking-tight text-[#111]">Browse</h2></div><div className="mt-6 flex flex-wrap gap-x-6 gap-y-3">{makes.map((m) => <Link key={m} href={link(`/site/${config.slug}/inventory?make=${encodeURIComponent(m)}`)} className="text-[15px] font-medium text-[#555] transition hover:text-[#111]">{m}</Link>)}</div></section>}
@@ -426,26 +444,35 @@ function HomeMinimal({ config, vehicles, preview }: { config: SiteConfig; vehicl
 
 /* ═══════════════════════ AURORA — dark navy, lowercase display, lime + purple ═══════════════════════ */
 function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, why, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, def, m, auto, link, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 6);
   const C = "max-w-[1240px]"; const purple = "#6d5ce7"; const navy = "#161227";
   const words = config.headline.trim().split(" ");
   const lead = words.slice(0, -1).join(" "); const last = words.slice(-1)[0] ?? "";
   const bodyCount = (b: string) => vehicles.filter((v) => v.body === b).length;
-  const cats: [string, number][] = [["SUV", bodyCount("SUV")], ["Sedan", bodyCount("Sedan")], ["Truck", bodyCount("Truck")], ["EV", vehicles.filter((v) => v.fuel.toLowerCase().includes("electric")).length], ["Under $35k", vehicles.filter((v) => v.price > 0 && v.price <= 35000).length], ["In stock", vehicles.length]];
-  const energy: [string, number][] = [["Electric", vehicles.filter((v) => v.fuel.toLowerCase().includes("electric")).length], ["Hybrid", vehicles.filter((v) => v.fuel.toLowerCase().includes("hybrid")).length], ["Gas", vehicles.filter((v) => !/electric|hybrid/i.test(v.fuel)).length]];
+  const attrCounts = (key: string): [string, number][] => {
+    const mp = new Map<string, number>();
+    for (const v of vehicles) { const k = String((v.attributes as Record<string, unknown> | undefined)?.[key] ?? ""); if (k) mp.set(k, (mp.get(k) ?? 0) + 1); }
+    return [...mp.entries()];
+  };
+  const cats: [string, number][] = auto
+    ? [["SUV", bodyCount("SUV")], ["Sedan", bodyCount("Sedan")], ["Truck", bodyCount("Truck")], ["EV", vehicles.filter((v) => v.fuel.toLowerCase().includes("electric")).length], ["Under $35k", vehicles.filter((v) => v.price > 0 && v.price <= 35000).length], ["In stock", vehicles.length]]
+    : attrCounts("propertyType");
+  const energy: [string, number][] = auto
+    ? [["Electric", vehicles.filter((v) => v.fuel.toLowerCase().includes("electric")).length], ["Hybrid", vehicles.filter((v) => v.fuel.toLowerCase().includes("hybrid")).length], ["Gas", vehicles.filter((v) => !/electric|hybrid/i.test(v.fuel)).length]]
+    : [];
   return (
     <div style={{ background: navy }}>
       {/* hero */}
       <section className="relative w-full overflow-hidden">
         <div className={`relative mx-auto grid ${C} items-center gap-8 px-5 py-16 lg:grid-cols-2`}>
           <div className="relative z-10">
-            <p className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>Curated cars · Clear numbers</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>{auto ? "Curated cars · Clear numbers" : `Curated ${def.plural} · Clear numbers`}</p>
             <h1 className="mt-4 text-[46px] font-extrabold lowercase leading-[0.98] tracking-tight text-white sm:text-[68px]">{lead} <span style={{ color: accent }}>{last}</span></h1>
             {config.intro && <p className="mt-4 max-w-[44ch] text-[15px] text-white/70">{config.intro}</p>}
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href={link(`/site/${config.slug}/inventory`)} className="rounded-full px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.06em]" style={{ background: accent, color: navy }}>{config.ctaLabel}</Link>
-              <Link href={link(`/site/${config.slug}/contact`)} className="rounded-full border border-white/25 px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.06em] text-white hover:bg-white/10">Value my car</Link>
+              <Link href={link(`/site/${config.slug}/${m.heroSecondary.to}`)} className="rounded-full border border-white/25 px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.06em] text-white hover:bg-white/10">{auto ? "Value my car" : m.heroSecondary.label}</Link>
             </div>
           </div>
           <div className="relative">
@@ -454,7 +481,7 @@ function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicle
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {config.heroImageUrl ? <img src={config.heroImageUrl} alt="" className="aspect-[16/12] w-full object-cover" /> : <div className="grid aspect-[16/12] place-items-center"><Car className="h-14 w-14 text-white/30" /></div>}
             </div>
-            <div className="absolute right-4 top-4 grid h-28 w-28 place-items-center rounded-full text-center" style={{ background: accent, color: navy }}><div><p className="text-[26px] font-extrabold leading-none">{vehicles.length}</p><p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide">Cars ready</p></div></div>
+            <div className="absolute right-4 top-4 grid h-28 w-28 place-items-center rounded-full text-center" style={{ background: accent, color: navy }}><div><p className="text-[26px] font-extrabold leading-none">{vehicles.length}</p><p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide">{auto ? "Cars ready" : `${def.dash.units} ready`}</p></div></div>
           </div>
         </div>
         <div className={`relative z-10 mx-auto ${C} px-5 pb-4`}><SearchBar config={config} vehicles={vehicles} accent={purple} variant="soft" preview={preview} /></div>
@@ -464,9 +491,9 @@ function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicle
       <section className="w-full bg-[#f3f3f7] py-16">
         <div className={`mx-auto ${C} px-5`}>
           <span className="inline-block rounded-full px-4 py-1.5 text-[12px] font-bold uppercase tracking-wide" style={{ background: accent, color: navy }}>Just arrived</span>
-          <div className="mt-4 flex flex-wrap items-end justify-between gap-3"><h2 className="text-[32px] font-extrabold tracking-tight text-[#161227] sm:text-[44px]">Fresh roads. Fresh choices.</h2><Link href={link(`/site/${config.slug}/inventory`)} className="text-[13px] font-bold uppercase tracking-wide" style={{ color: purple }}>View every vehicle →</Link></div>
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-3"><h2 className="text-[32px] font-extrabold tracking-tight text-[#161227] sm:text-[44px]">{auto ? "Fresh roads. Fresh choices." : "Fresh finds. Clear choices."}</h2><Link href={link(`/site/${config.slug}/inventory`)} className="text-[13px] font-bold uppercase tracking-wide" style={{ color: purple }}>{auto ? "View every vehicle" : `View all ${def.plural}`} →</Link></div>
           {featured.length === 0 ? <div className="mt-8"><Empty /></div> : <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={purple} v={v} variant="soft" preview={preview} />)}</div>}
-          {show("shopByType") && <div className="mt-8 rounded-3xl p-8" style={{ background: navy }}>
+          {show("shopByType") && energy.length > 0 && <div className="mt-8 rounded-3xl p-8" style={{ background: navy }}>
             <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: accent }}>Shop by energy</p>
             <div className="mt-4 grid grid-cols-3 gap-4">{energy.map(([label, n]) => <Link key={label} href={link(`/site/${config.slug}/inventory`)} className="rounded-2xl bg-white/5 p-5 transition hover:bg-white/10"><p className="text-[26px] font-extrabold text-white">{label}</p><p className="mt-1 text-[15px] font-bold" style={{ color: accent }}>{n}</p></Link>)}</div>
           </div>}
@@ -474,7 +501,7 @@ function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicle
       </section>
 
       {/* category band */}
-      {show("trustBar") && <section className="w-full py-8" style={{ background: purple }}><div className={`mx-auto ${C} grid grid-cols-3 gap-4 px-5 text-white sm:grid-cols-6`}>{cats.map(([label, n]) => <Link key={label} href={link(`/site/${config.slug}/inventory`)} className="text-center hover:opacity-80"><p className="text-[13px] font-bold uppercase tracking-wide">{label}</p><p className="text-[15px] font-extrabold">{n}</p></Link>)}</div></section>}
+      {show("trustBar") && cats.length > 0 && <section className="w-full py-8" style={{ background: purple }}><div className={`mx-auto ${C} grid grid-cols-3 gap-4 px-5 text-white sm:grid-cols-6`}>{cats.map(([label, n]) => <Link key={label} href={link(`/site/${config.slug}/inventory?propertyType=${encodeURIComponent(auto ? "" : label)}`)} className="text-center hover:opacity-80"><p className="text-[13px] font-bold uppercase tracking-wide capitalize">{label}</p><p className="text-[15px] font-extrabold">{n}</p></Link>)}</div></section>}
 
       {show("whyUs") && <section className={`mx-auto ${C} px-5 py-16`}><h2 className="text-[30px] font-extrabold tracking-tight text-white">Why {config.dealershipName}</h2><div className="mt-8 grid gap-6 sm:grid-cols-3">{why.slice(0, 3).map((wy, i) => <div key={i} className="rounded-3xl bg-white/5 p-6"><p className="text-[16.5px] font-bold text-white">{wy.title}</p><p className="mt-2 text-[13.5px] leading-relaxed text-white/60">{wy.body}</p></div>)}</div></section>}
       {show("reviews") && <section className="w-full py-16" style={{ background: navy }}><div className={`mx-auto ${C} px-5`}><div className="grid gap-5 sm:grid-cols-3">{reviews.map((r) => <div key={r.name} className="rounded-3xl bg-white/5 p-6"><div className="flex" style={{ color: accent }}>{Array.from({ length: r.rating }).map((_, i) => <Star key={i} className="h-4 w-4" fill="currentColor" strokeWidth={0} />)}</div><p className="mt-3 text-[14px] leading-relaxed text-white/85">“{r.body}”</p><p className="mt-3 text-[12.5px] font-bold text-white">{r.name}</p></div>)}</div></div></section>}
@@ -484,7 +511,7 @@ function HomeAurora({ config, vehicles, preview }: { config: SiteConfig; vehicle
 
 /* ═══════════════════════ QUIET — warm off-white, teal, calm/premium ═══════════════════════ */
 function HomeQuiet({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
-  const { accent, link, why, reviews, show } = useHome(config, vehicles, preview);
+  const { accent, m, auto, link, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 4);
   const C = "max-w-[1240px]"; const ink = "#14171a"; const cream = "#f5f3ee";
   return (
@@ -497,7 +524,7 @@ function HomeQuiet({ config, vehicles, preview }: { config: SiteConfig; vehicles
             {config.intro && <p className="mt-5 max-w-[46ch] text-[15.5px] leading-relaxed text-[#4a4f55]">{config.intro}</p>}
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href={link(`/site/${config.slug}/inventory`)} className="rounded-md px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.05em] text-white" style={{ background: ink }}>{config.ctaLabel} →</Link>
-              <Link href={link(`/site/${config.slug}/contact`)} className="rounded-md border border-black/20 px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.05em]">Value my trade</Link>
+              <Link href={link(`/site/${config.slug}/${m.heroSecondary.to}`)} className="rounded-md border border-black/20 px-7 py-3.5 text-[13px] font-bold uppercase tracking-[0.05em]">{auto ? "Value my trade" : m.heroSecondary.label}</Link>
             </div>
             <div className="mt-6 flex flex-wrap gap-6 text-[12.5px] font-bold text-[#4a4f55]"><span>✓ No-surprise pricing</span><span>✓ 7-day exchange</span></div>
           </div>

@@ -8,6 +8,10 @@ import { cn } from "@/lib/cn";
 import { Logo } from "@/components/layout/Logo";
 import { useSidebar } from "./SidebarContext";
 import { NETWORKS } from "@/lib/marketing";
+import { vertical as verticalDef } from "@/components/site/verticals";
+import { Settings as SettingsIcon } from "lucide-react";
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import {
   IconOverview, IconInventory, IconLeads, IconInbox, IconMarketing,
   IconReports, IconChevron, IconAI, IconWebsite,
@@ -41,6 +45,7 @@ const NAV: Entry[] = [
     ],
   },
   { type: "item", href: "/dashboard/reports", label: "Reports", Icon: IconReports },
+  { type: "item", href: "/dashboard/settings", label: "Settings", Icon: (p: { className?: string }) => <SettingsIcon className={p.className} /> },
 ];
 
 const MENU = [{ label: "Documentation", href: "/docs" }, { label: "Settings", href: "/dashboard/settings" }];
@@ -50,10 +55,17 @@ export function Sidebar() {
   const { collapsed } = useSidebar();
   const [menu, setMenu] = useState(false);
   const [dealer, setDealer] = useState<string | null>(null);
+  const [vertical, setVertical] = useState<string>("AUTOMOTIVE");
   useEffect(() => {
     if (!getToken()) return;
-    apiFetch<{ dealershipName: string }>("/overview").then((d) => setDealer(d.dealershipName)).catch(() => {});
+    apiFetch<{ dealershipName: string; vertical?: string }>("/overview").then((d) => { setDealer(d.dealershipName); if (d.vertical) setVertical(d.vertical); }).catch(() => {});
   }, []);
+  // the inventory nav item speaks the business's language ("Inventory" vs "Listings")
+  const invLabel = cap(verticalDef(vertical).plural);
+  const auto = vertical === "AUTOMOTIVE";
+  const labelFor = (e: Entry) => (e.type === "item" && e.href === "/dashboard/inventory" ? invLabel : e.label);
+  // automotive-only CRM children (credit apps) are hidden for other verticals — keep it simple
+  const AUTO_ONLY_CHILDREN = new Set(["/dashboard/crm/credit"]);
   const dealerName = dealer ?? "Your dealership";
   const dealerInitials = dealerName.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const [open, setOpen] = useState<Record<string, boolean>>({
@@ -74,9 +86,9 @@ export function Sidebar() {
           if (e.type === "item") {
             const active = pathname === e.href;
             return (
-              <Link key={e.href} href={e.href} title={collapsed ? e.label : undefined} className={cn("flex items-center rounded-lg text-[13.5px] font-medium transition", collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2", active ? "bg-white text-n900 sh-card" : "text-n600 hover:bg-n100 hover:text-n900")}>
+              <Link key={e.href} href={e.href} title={collapsed ? labelFor(e) : undefined} className={cn("flex items-center rounded-lg text-[13.5px] font-medium transition", collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2", active ? "bg-white text-n900 sh-card" : "text-n600 hover:bg-n100 hover:text-n900")}>
                 <e.Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand" : "text-n500")} />
-                {!collapsed && (<><span className="flex-1">{e.label}</span>{e.count != null && <span className={cn("tnum rounded-full px-1.5 py-0.5 text-[11px] font-semibold", active ? "bg-brand-soft text-brand" : "bg-n200 text-n600")}>{e.count}</span>}</>)}
+                {!collapsed && (<><span className="flex-1">{labelFor(e)}</span>{e.count != null && <span className={cn("tnum rounded-full px-1.5 py-0.5 text-[11px] font-semibold", active ? "bg-brand-soft text-brand" : "bg-n200 text-n600")}>{e.count}</span>}</>)}
               </Link>
             );
           }
@@ -92,7 +104,7 @@ export function Sidebar() {
               </button>
               {isOpen && (
                 <div className="mt-0.5 space-y-0.5 pl-4">
-                  {e.children.map((c) => {
+                  {e.children.filter((c) => auto || !AUTO_ONLY_CHILDREN.has(c.href)).map((c) => {
                     const active = pathname === c.href;
                     return (
                       <Link key={c.href} href={c.href} className={cn("flex items-center gap-2.5 rounded-lg py-1.5 pl-3 pr-2 text-[13px] font-medium transition", active ? "bg-white text-n900 sh-card" : "text-n600 hover:bg-n100 hover:text-n900")}>

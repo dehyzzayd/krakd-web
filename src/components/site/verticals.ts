@@ -16,10 +16,41 @@ type Facet =
   | { key: string; label: string; kind: "max"; steps: number[]; fmt: (n: number) => string; value: (l: ListingView) => number }
   | { key: string; label: string; kind: "min"; steps: number[]; value: (l: ListingView) => number };
 
+// Dashboard workspace config — the internal manager (list table + add/edit form).
+export type FormField = { key: string; label: string; type: "text" | "number" | "select"; options?: string[]; placeholder?: string; attr?: boolean; half?: boolean };
+export type DashConfig = {
+  units: string;                                   // countable: "vehicles" | "listings"
+  valueLabel: string;                              // KPI: "Retail value" | "Portfolio value"
+  daysLabel: string;                               // KPI: "Avg days on lot" | "Avg days listed"
+  showGross: boolean;                              // show the front-gross KPI (automotive only)
+  titleField: string;                              // add/edit form label for the title input
+  subtitleField: string;                           // add/edit form label for the subtitle input
+  statuses: { value: string; label: string }[];    // tabs + status buttons (excludes SOLD)
+  statusLabel: Record<string, string>;             // full status → label map
+  tableCols: { label: string; get: (l: ListingView) => string; align?: "right" }[];
+  formFields: FormField[];                          // vertical-specific inputs (non-automotive generic form)
+  emptyTitle: string;
+  emptyBody: string;
+};
+
+// Marketing copy for the public site templates — keeps CTAs, tickers and the finance page on-vertical.
+export type MarketConfig = {
+  financeNav: string;                              // nav/page label ("Financing")
+  financeBtn: string;                              // header button ("Get financing" / "Get pre-approved")
+  heroSecondary: { label: string; to: "financing" | "contact" }; // hero's secondary button
+  showFinanceBands: boolean;                       // render the finance marketing bands inside home templates
+  ticker: string[];                                // marquee strip (bold template)
+  defaultWhy: { title: string; body: string }[];   // used when the owner hasn't written their own
+  steps: { t: string; b: string }[];               // "how it works" (3)
+  stats: [string, string][];                       // stat strip pairs
+  financePage: { heading: string; sub: string; formHeading: string; perks: { t: string; b: string }[]; steps: string[] };
+};
+
 export type VerticalDef = {
   noun: string; plural: string;            // "vehicle"/"inventory", "property"/"listings"
   bookingLabel: string;                    // "Test drive" / "Viewing"
   searchPlaceholder: string;
+  market: MarketConfig;
   finance: { show: boolean; label: string; term: number; apr: number; downPct: number } | null;
   titleOf: (l: ListingView) => string;
   subtitleOf: (l: ListingView) => string;
@@ -28,6 +59,7 @@ export type VerticalDef = {
   badges: (l: ListingView) => string[];
   facets: Facet[];
   sorts: { key: string; label: string }[];
+  dash: DashConfig;
 };
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
@@ -35,6 +67,32 @@ const str = (v: unknown) => (v == null ? "" : String(v));
 
 const AUTOMOTIVE: VerticalDef = {
   noun: "vehicle", plural: "inventory", bookingLabel: "Test drive", searchPlaceholder: "Search make, model or keyword…",
+  market: {
+    financeNav: "Financing", financeBtn: "Get financing", heroSecondary: { label: "Get pre-qualified", to: "financing" },
+    showFinanceBands: true,
+    ticker: ["In stock now", "All-credit financing", "Trade-ins welcome", "Multi-point inspected", "Drive home today"],
+    defaultWhy: [
+      { title: "Hand-picked inventory", body: "Every vehicle is selected for quality and priced to the live market — never over sticker." },
+      { title: "Inspected & reconditioned", body: "A rigorous multi-point inspection and full reconditioning before any car hits the lot." },
+      { title: "Financing for everyone", body: "Get pre-qualified in minutes with lenders for every credit situation — all online." },
+    ],
+    steps: [
+      { t: "Browse", b: "Filter our live inventory and find your match." },
+      { t: "Get pre-qualified", b: "Apply online in minutes — all credit welcome." },
+      { t: "Drive home", b: "Pick it up, or we deliver. Simple." },
+    ],
+    stats: [["All credit", "Financing"], ["Inspected", "Every vehicle"], ["Trade-ins", "Top dollar"]],
+    financePage: {
+      heading: "Financing made simple.", sub: "Get pre-qualified in minutes — options for every credit situation, with no impact to your score.",
+      formHeading: "Get pre-qualified",
+      perks: [
+        { t: "All credit welcome", b: "Good, bad, or building — we work with lenders for every situation." },
+        { t: "Fast pre-approval", b: "Apply in minutes and get a real answer, often the same day." },
+        { t: "No obligation", b: "Getting pre-qualified won't affect your credit or commit you to anything." },
+      ],
+      steps: ["Submit the quick pre-qualification form.", "We match you with the right lender.", "Pick your vehicle and drive home."],
+    },
+  },
   finance: { show: true, label: "est.", term: 72, apr: 8.9, downPct: 0.1 },
   titleOf: (l) => [l.year, l.make, l.model].filter(Boolean).join(" ") || l.title || "Vehicle",
   subtitleOf: (l) => l.trim || l.body || "",
@@ -64,10 +122,52 @@ const AUTOMOTIVE: VerticalDef = {
     { key: "price", label: "Max price", kind: "max", steps: [15000, 20000, 30000, 45000, 60000, 80000], fmt: (n) => `$${(n / 1000)}k`, value: (l) => l.price },
   ],
   sorts: [{ key: "newest", label: "Newest" }, { key: "price_low", label: "Price: low → high" }, { key: "price_high", label: "Price: high → low" }, { key: "miles_low", label: "Fewest miles" }],
+  dash: {
+    units: "vehicles", valueLabel: "Retail value", daysLabel: "Avg days on lot", showGross: true,
+    titleField: "Title", subtitleField: "Trim",
+    statuses: [{ value: "AVAILABLE", label: "Available" }, { value: "RECON", label: "In recon" }, { value: "RESERVED", label: "Reserved" }, { value: "WHOLESALE", label: "Wholesale" }],
+    statusLabel: { AVAILABLE: "Available", RECON: "In recon", RESERVED: "Reserved", WHOLESALE: "Wholesale", SOLD: "Sold" },
+    tableCols: [
+      { label: "Miles", align: "right", get: (l) => (l.mileage ? `${Math.round(l.mileage / 1000)}k` : "—") },
+      { label: "Body", get: (l) => l.body || "—" },
+      { label: "Drivetrain", get: (l) => l.drivetrain || "—" },
+      { label: "Fuel", get: (l) => l.fuel || "—" },
+      { label: "Ext. color", get: (l) => l.color || "—" },
+    ],
+    formFields: [],
+    emptyTitle: "No inventory yet",
+    emptyBody: "Add or import your first vehicle — decode the VIN, price it, and push it live across every channel in one click.",
+  },
 };
 
 const REAL_ESTATE: VerticalDef = {
   noun: "property", plural: "listings", bookingLabel: "Viewing", searchPlaceholder: "Search address, neighborhood or keyword…",
+  market: {
+    financeNav: "Financing", financeBtn: "Get pre-approved", heroSecondary: { label: "Book a viewing", to: "contact" },
+    showFinanceBands: false,
+    ticker: ["New listings weekly", "Local market experts", "Private showings", "Sold with confidence", "Mortgage guidance"],
+    defaultWhy: [
+      { title: "Local market experts", body: "Decades of combined experience across the city's most sought-after neighborhoods and price points." },
+      { title: "White-glove representation", body: "From first showing to closing table, a dedicated agent guides every step — nothing is outsourced." },
+      { title: "Financing made easy", body: "Our mortgage partners pre-approve you in a single conversation, so you can make an offer with confidence." },
+    ],
+    steps: [
+      { t: "Browse", b: "Explore our current listings and save the ones you love." },
+      { t: "Book a showing", b: "Tour any property with a dedicated local agent." },
+      { t: "Make it home", b: "We guide you from offer to closing table." },
+    ],
+    stats: [["Pre-approval", "In a day"], ["Local", "Market experts"], ["Private", "Showings"]],
+    financePage: {
+      heading: "Financing made simple.", sub: "Get pre-approved in a single conversation — conventional, jumbo and first-time buyer programs available.",
+      formHeading: "Get pre-approved",
+      perks: [
+        { t: "One conversation", b: "Our mortgage partners pre-approve you fast, so you can make an offer with confidence." },
+        { t: "Fast turnaround", b: "Most buyers hear back the same day, so you can move quickly on the right home." },
+        { t: "Every program", b: "Conventional, jumbo, FHA and first-time buyer options — matched to your goals." },
+      ],
+      steps: ["Submit the quick pre-approval form.", "We connect you with a trusted lender.", "Make an offer with confidence."],
+    },
+  },
   finance: { show: true, label: "est. mortgage", term: 360, apr: 6.5, downPct: 0.2 },
   titleOf: (l) => l.title || [str(l.attributes?.beds) && `${str(l.attributes?.beds)} bed`, str(l.attributes?.propertyType)].filter(Boolean).join(" ") || "Property",
   subtitleOf: (l) => l.subtitle || str(l.attributes?.neighborhood) || str(l.attributes?.propertyType) || "",
@@ -97,6 +197,30 @@ const REAL_ESTATE: VerticalDef = {
     { key: "price", label: "Max price", kind: "max", steps: [300000, 500000, 750000, 1000000, 1500000, 2500000], fmt: (n) => `$${(n / 1000)}k`, value: (l) => l.price },
   ],
   sorts: [{ key: "newest", label: "Newest" }, { key: "price_low", label: "Price: low → high" }, { key: "price_high", label: "Price: high → low" }],
+  dash: {
+    units: "listings", valueLabel: "Portfolio value", daysLabel: "Avg days listed", showGross: false,
+    titleField: "Listing title", subtitleField: "Address / neighborhood",
+    statuses: [{ value: "AVAILABLE", label: "Active" }, { value: "RESERVED", label: "Under contract" }, { value: "RECON", label: "Coming soon" }],
+    statusLabel: { AVAILABLE: "Active", RESERVED: "Under contract", RECON: "Coming soon", WHOLESALE: "Off-market", SOLD: "Sold" },
+    tableCols: [
+      { label: "Beds", get: (l) => (l.attributes?.beds != null ? String(l.attributes.beds) : "—") },
+      { label: "Baths", get: (l) => (l.attributes?.baths != null ? String(l.attributes.baths) : "—") },
+      { label: "Sqft", align: "right", get: (l) => (l.attributes?.sqft != null ? Number(l.attributes.sqft).toLocaleString() : "—") },
+      { label: "Type", get: (l) => (l.attributes?.propertyType ? String(l.attributes.propertyType) : "—") },
+    ],
+    formFields: [
+      { key: "propertyType", label: "Property type", type: "select", options: ["House", "Condo", "Townhouse", "Multi-family", "Land"], attr: true, half: true },
+      { key: "beds", label: "Bedrooms", type: "number", attr: true, half: true, placeholder: "3" },
+      { key: "baths", label: "Bathrooms", type: "number", attr: true, half: true, placeholder: "2" },
+      { key: "sqft", label: "Interior sqft", type: "number", attr: true, half: true, placeholder: "1850" },
+      { key: "yearBuilt", label: "Year built", type: "number", attr: true, half: true, placeholder: "2019" },
+      { key: "lotSize", label: "Lot size", type: "text", attr: true, half: true, placeholder: "0.25 acre" },
+      { key: "parking", label: "Parking", type: "text", attr: true, half: true, placeholder: "2-car garage" },
+      { key: "neighborhood", label: "Neighborhood", type: "text", attr: true, half: true, placeholder: "Travis Heights" },
+    ],
+    emptyTitle: "No listings yet",
+    emptyBody: "Add your first property — set the address, beds, baths and price, and it goes live on your site in one click.",
+  },
 };
 
 export const VERTICALS: Record<string, VerticalDef> = { AUTOMOTIVE, REAL_ESTATE };

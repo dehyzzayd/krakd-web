@@ -56,6 +56,9 @@ model Dealership {
   state         String?
   postalCode    String?
   country       String           @default("US")
+  hours         Json             @default("[]") // global business hours: [{ day, open, close }]
+  brandColor    String?          // global brand accent (hex)
+  logoUrl       String?          @db.Text // global logo (data URL or external)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

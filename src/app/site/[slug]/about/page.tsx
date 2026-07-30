@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getSite, accentOf } from "@/lib/server/site";
 import { siteTheme } from "@/components/site/theme";
+import { vertical as verticalDef } from "@/components/site/verticals";
 import { ShieldCheck, BadgeCheck, Wrench } from "lucide-react";
 
 export const runtime = "nodejs";
@@ -13,19 +14,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return c ? { title: `About · ${c.dealershipName}` } : { title: "Site not found" };
 }
 
-const DEFAULT_WHY = [
-  { title: "Hand-picked inventory", body: "Every vehicle is selected for quality, then priced to the live market." },
-  { title: "Inspected & reconditioned", body: "Multi-point inspection before any car reaches our lot." },
-  { title: "Simple financing", body: "Get pre-qualified in minutes — options for every credit situation." },
-];
-
 export default async function AboutPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const config = await getSite(slug);
   if (!config) notFound();
   const accent = accentOf(config.primaryColor);
   const ui = siteTheme(config.template);
-  const why = config.whyUs.length ? config.whyUs : DEFAULT_WHY;
+  const def = verticalDef(config.vertical);
+  const isAuto = config.vertical === "AUTOMOTIVE" || !config.vertical;
+  const why = config.whyUs.length ? config.whyUs : def.market.defaultWhy;
+  const defaultAbout = isAuto
+    ? `${config.dealershipName} is a locally trusted dealership focused on honest pricing and a straightforward buying experience. We hand-pick our inventory, recondition every vehicle, and make financing easy — so you can drive home with confidence.`
+    : `${config.dealershipName} is a locally trusted ${def.noun === "property" ? "brokerage" : "business"} focused on honest guidance and a straightforward experience. We curate our ${def.plural}, know our market, and stay with you from first look to the finish line.`;
   const icons = [ShieldCheck, BadgeCheck, Wrench];
 
   return (
@@ -33,7 +33,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
       <section className="w-full bg-[#f8fafc]">
         <div className="mx-auto max-w-[1280px] px-5 py-16">
           <h1 className={`${ui.display} ${ui.h1} text-[#0f172a]`}>About {config.dealershipName}</h1>
-          <p className="mt-4 max-w-[70ch] text-[15px] leading-relaxed text-[#475569]">{config.aboutText || `${config.dealershipName} is a locally trusted dealership focused on honest pricing and a straightforward buying experience. We hand-pick our inventory, recondition every vehicle, and make financing easy — so you can drive home with confidence.`}</p>
+          <p className="mt-4 max-w-[70ch] text-[15px] leading-relaxed text-[#475569]">{config.aboutText || defaultAbout}</p>
         </div>
       </section>
 
@@ -75,9 +75,9 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
       <section className="mx-auto max-w-[1280px] px-5 py-14 text-center">
         <h2 className="text-[24px] font-bold tracking-tight">Come see us</h2>
-        <p className="mx-auto mt-2 max-w-[46ch] text-[14px] text-[#64748b]">Browse our inventory online or stop by — we&apos;re happy to help you find the right vehicle.</p>
+        <p className="mx-auto mt-2 max-w-[46ch] text-[14px] text-[#64748b]">Browse our {def.plural} online or stop by — we&apos;re happy to help you find the right {def.noun}.</p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
-          <Link href={`/site/${config.slug}/inventory`} className="rounded-lg px-6 py-3 text-[14px] font-semibold text-white" style={{ background: accent }}>View inventory</Link>
+          <Link href={`/site/${config.slug}/inventory`} className="rounded-lg px-6 py-3 text-[14px] font-semibold text-white" style={{ background: accent }}>View {def.plural}</Link>
           <Link href={`/site/${config.slug}/contact`} className="rounded-lg border border-black/12 px-6 py-3 text-[14px] font-semibold" style={{ color: accent }}>Contact us</Link>
         </div>
       </section>

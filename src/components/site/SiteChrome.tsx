@@ -21,9 +21,13 @@ import type { SiteConfig } from "@/lib/server/site";
 import { accentOf } from "@/lib/server/site";
 import { cn } from "@/lib/cn";
 import { siteTheme } from "./theme";
+import { vertical as verticalDef } from "./verticals";
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function navItems(config: SiteConfig): { href: string; label: string; external?: boolean }[] {
   const base = `/site/${config.slug}`;
+  const def = verticalDef(config.vertical);
   const builtin: Record<string, string> = { home: base, inventory: `${base}/inventory`, financing: `${base}/financing`, about: `${base}/about`, contact: `${base}/contact` };
   // curated menu wins
   if (config.nav && config.nav.length) {
@@ -36,8 +40,8 @@ function navItems(config: SiteConfig): { href: string; label: string; external?:
   // default: built-ins + any page flagged inNav
   const items = [
     { href: base, label: "Home" },
-    { href: `${base}/inventory`, label: "Inventory" },
-    { href: `${base}/financing`, label: "Financing" },
+    { href: `${base}/inventory`, label: cap(def.plural) },
+    { href: `${base}/financing`, label: def.market.financeNav },
     { href: `${base}/about`, label: "About" },
     { href: `${base}/contact`, label: "Contact" },
   ];
@@ -63,6 +67,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const items = navItems(config);
+  const financeBtn = verticalDef(config.vertical).market.financeBtn;
   const cityLine = [config.city, config.state].filter(Boolean).join(", ");
 
   const Logo = ({ className }: { className?: string }) => (
@@ -109,7 +114,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <div className={`mx-auto flex ${struct === "bold" ? "h-[76px]" : "h-16"} ${ui.container} items-center gap-4 px-5`}>
             <Logo />
             <nav className="ml-auto hidden items-center gap-7 lg:flex">{items.map((it) => navLink(it))}</nav>
-            <Link href={`/site/${config.slug}/financing`} className={cn("ml-auto hidden px-4 py-2 text-[13.5px] font-semibold lg:ml-4 lg:inline-block", struct === "bold" ? "font-display text-[12.5px] uppercase tracking-[0.08em]" : "rounded-lg")} style={{ background: btnBg, color: btnColor }}>Get financing</Link>
+            <Link href={`/site/${config.slug}/financing`} className={cn("ml-auto hidden px-4 py-2 text-[13.5px] font-semibold lg:ml-4 lg:inline-block", struct === "bold" ? "font-display text-[12.5px] uppercase tracking-[0.08em]" : "rounded-lg")} style={{ background: btnBg, color: btnColor }}>{financeBtn}</Link>
             <button onClick={() => setOpen((v) => !v)} className={cn("ml-auto grid h-10 w-10 place-items-center rounded-lg lg:hidden", dark ? "text-white" : "text-[#334155]")}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
           </div>
         )}
@@ -118,7 +123,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <div className={dark ? "lg:hidden" : "border-t border-black/8 bg-white lg:hidden"} style={dark ? { background: barBg ?? "#0a0a0a" } : undefined}>
             <div className={`mx-auto ${ui.container} px-5 py-2`}>
               {items.map((it) => <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className={cn("block py-2.5 text-[15px] font-medium", dark ? "text-white/85" : "text-[#334155]")}>{it.label}</Link>)}
-              <Link href={`/site/${config.slug}/financing`} onClick={() => setOpen(false)} className="mt-2 mb-3 block rounded-lg py-2.5 text-center text-[14px] font-semibold" style={{ background: btnBg, color: btnColor }}>Get financing</Link>
+              <Link href={`/site/${config.slug}/financing`} onClick={() => setOpen(false)} className="mt-2 mb-3 block rounded-lg py-2.5 text-center text-[14px] font-semibold" style={{ background: btnBg, color: btnColor }}>{financeBtn}</Link>
             </div>
           </div>
         )}
@@ -164,8 +169,8 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
           </div>
         </div>
         <div>
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-white/50">Ready to drive?</p>
-          <p className="mt-3 text-[13px] text-white/70">Browse our latest inventory and get pre-qualified in minutes.</p>
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-white/50">Ready to start?</p>
+          <p className="mt-3 text-[13px] text-white/70">Browse our latest {verticalDef(config.vertical).plural} and reach out — we'll take it from there.</p>
           <Link href={`/site/${config.slug}/inventory`} className="mt-3 inline-block rounded-lg px-4 py-2 text-[13px] font-semibold text-white" style={{ background: accent }}>View inventory</Link>
         </div>
       </div>

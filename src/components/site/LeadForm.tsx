@@ -10,7 +10,7 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
 }) {
   const [f, setF] = useState({
     firstName: "", lastName: "", phone: "", email: "",
-    message: vehicle ? `I'm interested in the ${vehicle.year} ${vehicle.make} ${vehicle.model}.` : financing ? "I'd like to get pre-qualified for financing." : "",
+    message: vehicle ? `I'm interested in ${vehicle.title || [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}.` : financing ? "I'd like to get pre-qualified." : "",
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
   const [busy, setBusy] = useState(false);

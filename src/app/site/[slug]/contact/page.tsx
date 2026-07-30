@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSite, accentOf } from "@/lib/server/site";
 import { siteTheme } from "@/components/site/theme";
+import { vertical as verticalDef } from "@/components/site/verticals";
 import { LeadForm } from "@/components/site/LeadForm";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 
@@ -25,7 +26,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
   return (
     <section className="mx-auto max-w-[1280px] px-5 py-14">
       <h1 className={`${ui.display} ${ui.h1} text-[#0f172a]`}>Contact {config.dealershipName}</h1>
-      <p className="mt-2 text-[14.5px] text-[#64748b]">Questions about a vehicle, a trade, or financing? Send us a message.</p>
+      <p className="mt-2 text-[14.5px] text-[#64748b]">Questions about a {verticalDef(config.vertical).noun} or anything else? Send us a message.</p>
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
         <div className="space-y-4">

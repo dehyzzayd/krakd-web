@@ -48,6 +48,13 @@ export function VehicleDetailView({ config, vehicle, similar = [] }: { config: S
             </div>
           )}
 
+          {typeof vehicle.attributes?.description === "string" && vehicle.attributes.description.trim() && (
+            <div className={`mt-6 border border-black/8 bg-white p-6 ${ui.cardRadius}`}>
+              <h2 className={`${ui.display} text-[18px] font-bold uppercase tracking-wide text-[#0f172a]`}>About this {def.noun}</h2>
+              <p className="mt-3 whitespace-pre-line text-[14.5px] leading-relaxed text-[#475569]">{String(vehicle.attributes.description)}</p>
+            </div>
+          )}
+
           <div className={`mt-6 border border-black/8 bg-white p-6 ${ui.cardRadius}`}>
             <h2 className={`${ui.display} text-[18px] font-bold uppercase tracking-wide text-[#0f172a]`}>Specifications</h2>
             <div className="mt-4 grid grid-cols-2 gap-x-8 sm:grid-cols-2">

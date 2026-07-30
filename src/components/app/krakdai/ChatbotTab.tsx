@@ -5,8 +5,11 @@ import { cn } from "@/lib/cn";
 import { AI_CONFIG } from "@/lib/krakdai";
 import { authApi } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { vertical as verticalDef } from "@/components/site/verticals";
 import { Section, Field, Row, Switch, LinkField, inputCls } from "./controls";
 import { MessageCircle, Link2, Phone, ScrollText, Check, RefreshCw, Loader2 } from "lucide-react";
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const TONES = ["Friendly & casual", "Warm & professional", "Concise & direct", "Enthusiastic"];
 const LANGS = ["English", "Spanish", "French", "Portuguese", "Arabic", "Vietnamese"];
@@ -19,6 +22,11 @@ type Settings = {
 
 export function ChatbotTab() {
   const { data } = useApi<Settings>("/ai/settings");
+  const { data: me } = useApi<{ vertical?: string }>("/auth/me");
+  const def = verticalDef(me?.vertical);
+  const auto = (me?.vertical ?? "AUTOMOTIVE") === "AUTOMOTIVE";
+  const bookLabel = def.bookingLabel;                        // "Test drive" | "Viewing"
+  const showCredit = auto;                                   // credit app / pre-approval is automotive-only
   const [tone, setTone] = useState(AI_CONFIG.persona);
   const [langs, setLangs] = useState<string[]>(["English", "Spanish"]);
   const [links, setLinks] = useState({ ...AI_CONFIG.links });
@@ -78,16 +86,18 @@ export function ChatbotTab() {
         {/* links */}
         <Section icon={Link2} title="Links the agent shares" desc="Real URLs the AI hands buyers — it never invents or edits a link.">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <LinkField label="Inventory page" value={links.inventory} onChange={(v) => setLink("inventory", v)} />
+            <LinkField label={`${cap(def.plural)} page`} value={links.inventory} onChange={(v) => setLink("inventory", v)} />
             <LinkField label="Book appointment" value={links.appointment} onChange={(v) => setLink("appointment", v)} />
             <div>
-              <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-n500">Test drive</span><Switch on={testDrive} onChange={setTestDrive} /></div>
+              <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-n500">{bookLabel}</span><Switch on={testDrive} onChange={setTestDrive} /></div>
               <input disabled={!testDrive} value={links.testDrive} onChange={(e) => setLink("testDrive", e.target.value)} className={cn(inputCls, !testDrive && "opacity-50")} />
             </div>
-            <div>
-              <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-n500">Credit application</span><Switch on={creditApp} onChange={setCreditApp} /></div>
-              <input disabled={!creditApp} value={links.creditApp} onChange={(e) => setLink("creditApp", e.target.value)} className={cn(inputCls, !creditApp && "opacity-50")} />
-            </div>
+            {showCredit && (
+              <div>
+                <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-n500">Credit application</span><Switch on={creditApp} onChange={setCreditApp} /></div>
+                <input disabled={!creditApp} value={links.creditApp} onChange={(e) => setLink("creditApp", e.target.value)} className={cn(inputCls, !creditApp && "opacity-50")} />
+              </div>
+            )}
           </div>
         </Section>
 
@@ -117,14 +127,16 @@ export function ChatbotTab() {
           <div className="rounded-2xl border border-n200 bg-white p-4 sh-card">
             <p className="text-[13px] font-semibold text-n900">Agent summary</p>
             <div className="mt-3 space-y-2 text-[12.5px]">
-              {[["Tone", tone], ["Languages", `${langs.length}`], ["Test drive", testDrive ? "On" : "Off"], ["Credit app", creditApp ? "On" : "Off"], ["Phone line", "Active"]].map(([k, v]) => (
+              {([["Tone", tone], ["Languages", `${langs.length}`], [bookLabel, testDrive ? "On" : "Off"], ...(showCredit ? [["Credit app", creditApp ? "On" : "Off"]] : []), ["Phone line", "Active"]] as [string, string][]).map(([k, v]) => (
                 <div key={k} className="flex justify-between"><span className="text-n500">{k}</span><span className="font-semibold text-n900">{v}</span></div>
               ))}
             </div>
           </div>
           <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4">
             <p className="text-[12px] font-semibold text-brand">What the agent does</p>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-n600">Responds in seconds, confirms the vehicle is still available, qualifies on financing &amp; trade-in, books the visit, and hands off to your team when it&apos;s time.</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-n600">{auto
+              ? "Responds in seconds, confirms the vehicle is still available, qualifies on financing & trade-in, books the visit, and hands off to your team when it's time."
+              : `Responds in seconds, confirms the ${def.noun} is still available, answers questions, books a ${bookLabel.toLowerCase()}, and hands off to your team when it's time.`}</p>
           </div>
           <button type="button" onClick={save} disabled={saving} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Save chatbot

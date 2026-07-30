@@ -16,6 +16,7 @@ async function load(dealershipId: string, id: string) {
   const photos = Array.isArray(v.photoUrls) ? (v.photoUrls as string[]) : [];
   return {
     id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim ?? "", body: v.bodyType ?? "",
+    title: v.title, subtitle: v.subtitle, attributes: (v.attributes && typeof v.attributes === "object" ? v.attributes : {}) as Record<string, unknown>,
     stock: v.stockNumber, vin: v.vin, price: Math.round(v.priceCents / 100), cost: Math.round(v.costCents / 100),
     mileage: v.mileage, status: v.status, color: v.exteriorColor ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
     engine: v.engine ?? "", transmission: v.transmission ?? "", interior: v.interiorColor ?? "",
@@ -38,6 +39,9 @@ const patchSchema = z.object({
   mileage: z.coerce.number().int().min(0).optional(),
   status: z.enum(["AVAILABLE", "RECON", "RESERVED", "WHOLESALE", "SOLD"]).optional(),
   exteriorColor: z.string().optional(),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  attributes: z.record(z.string(), z.unknown()).optional(),
   photoUrls: z.array(z.string().max(1_500_000)).max(24).optional(),
 });
 
@@ -49,11 +53,12 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   const owned = await prisma.vehicle.findFirst({ where: { id, dealershipId }, select: { id: true } });
   if (!owned) throw new HttpError(404, "Vehicle not found");
 
-  const { photoUrls, ...d } = parsed.data;
+  const { photoUrls, attributes, ...d } = parsed.data;
   await prisma.vehicle.update({
     where: { id },
     data: {
       ...d,
+      ...(attributes ? { attributes: attributes as Prisma.InputJsonValue } : {}),
       ...(photoUrls ? { photoUrls: photoUrls as unknown as Prisma.InputJsonValue } : {}),
       ...(d.status === "AVAILABLE" ? { listedAt: new Date() } : {}),
       ...(d.status === "SOLD" ? { soldAt: new Date() } : {}),
