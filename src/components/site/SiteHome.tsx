@@ -11,6 +11,7 @@ import { VehicleCard } from "./VehicleCard";
 import { vertical as verticalDef } from "./verticals";
 import { EditorialHome } from "./EditorialHome";
 import { BrokerageHome } from "./BrokerageHome";
+import { ContractorHome } from "./ContractorHome";
 
 const REVIEWS = [
   { name: "Jordan M.", body: "Easiest car-buying experience I've had. No pressure, straight numbers, in and out in an hour.", rating: 5 },
@@ -567,6 +568,8 @@ function HomeQuiet({ config, vehicles, preview }: { config: SiteConfig; vehicles
 }
 
 export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
+  // Some verticals are structurally their own thing — construction gets a bespoke site regardless of template.
+  if (config.vertical === "CONSTRUCTION") return <ContractorHome config={config} vehicles={vehicles} preview={preview} />;
   switch (config.template) {
     case "INVENTORY_FIRST": return <HomeBold config={config} vehicles={vehicles} preview={preview} />;
     case "PREMIUM": return <EditorialHome config={config} vehicles={vehicles} />;

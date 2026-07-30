@@ -72,19 +72,25 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const ctaHref = `/site/${config.slug}/${market.headerCtaTo}`;
   const cityLine = [config.city, config.state].filter(Boolean).join(", ");
 
-  // ─── Editorial (PREMIUM) — bespoke chrome: transparent over the hero on the home, solid on inner pages ───
-  if (config.template === "PREMIUM") {
+  // ─── Bespoke overlay chrome — transparent over the hero on the home, solid on inner pages.
+  //     Used by the Editorial (PREMIUM) template and the Construction vertical (contractor site). ───
+  const overlayChrome = config.template === "PREMIUM" || config.vertical === "CONSTRUCTION";
+  if (overlayChrome) {
+    const contractor = config.vertical === "CONSTRUCTION";
     const isHome = pathname === `/site/${config.slug}`;
-    const fg = isHome ? "#ffffff" : "#1a1714";
+    const solidBg = contractor ? "#17150f" : "#f3efe7";
+    const solidFg = contractor ? "#ffffff" : "#1a1714";
+    const fg = isHome ? "#ffffff" : solidFg;
+    const logoFont = contractor ? "var(--font-display), 'Oswald', sans-serif" : "var(--font-serif), Georgia, serif";
     const DISP = { fontFamily: "var(--font-display), 'Oswald', sans-serif", letterSpacing: "0.24em" } as const;
     return (
-      <header className={isHome ? "absolute inset-x-0 top-0 z-30" : "relative z-30 border-b border-black/12 bg-[#f3efe7]"}>
+      <header className={isHome ? "absolute inset-x-0 top-0 z-30" : "relative z-30 border-b border-black/12"} style={isHome ? undefined : { background: solidBg }}>
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-7 sm:px-10">
           <Link href={`/site/${config.slug}`} style={{ color: fg }}>
             {config.logoUrl
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={config.logoUrl} alt={config.dealershipName} className={cn("h-8 w-auto", isHome && "brightness-0 invert")} />
-              : <span className="text-[19px]" style={{ fontFamily: "var(--font-serif), Georgia, serif", color: fg }}>{config.dealershipName}</span>}
+              ? <img src={config.logoUrl} alt={config.dealershipName} className={cn("h-8 w-auto", (isHome || contractor) && "brightness-0 invert")} />
+              : <span className={contractor ? "text-[20px] font-bold uppercase tracking-wide" : "text-[19px]"} style={{ fontFamily: logoFont, color: fg }}>{config.dealershipName}</span>}
           </Link>
           <nav className="hidden items-center gap-9 md:flex">
             {items.filter((i) => i.label !== "Home").map((it) => <Link key={it.href} href={it.href} className="text-[11px] uppercase transition hover:opacity-70" style={{ ...DISP, color: fg }}>{it.label}</Link>)}
@@ -92,7 +98,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <Link href={ctaHref} className="hidden border px-5 py-2.5 text-[10.5px] uppercase transition hover:opacity-70 md:inline-block" style={{ ...DISP, color: fg, borderColor: isHome ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.22)" }}>{financeBtn}</Link>
           <button onClick={() => setOpen((v) => !v)} className="md:hidden" style={{ color: fg }}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
         </div>
-        {open && <div className="border-t border-black/10 bg-[#f3efe7] px-6 pb-3 md:hidden">{items.map((it) => <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className="block py-2.5 text-[13px] uppercase" style={{ ...DISP, color: "#1a1714" }}>{it.label}</Link>)}</div>}
+        {open && <div className="border-t border-black/10 px-6 pb-3 md:hidden" style={{ background: solidBg }}>{items.map((it) => <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className="block py-2.5 text-[13px] uppercase" style={{ ...DISP, color: solidFg }}>{it.label}</Link>)}</div>}
       </header>
     );
   }
@@ -166,13 +172,14 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
   const cityLine = [config.city, config.state, config.zip].filter(Boolean).join(", ");
   const mapQuery = encodeURIComponent([config.address, cityLine].filter(Boolean).join(", "));
 
-  // Editorial (PREMIUM) — quiet, dark, typographic footer to match the flagship home
-  if (config.template === "PREMIUM") {
+  // Dark typographic footer — matches the Editorial (PREMIUM) and Construction flagship homes
+  if (config.template === "PREMIUM" || config.vertical === "CONSTRUCTION") {
+    const contractor = config.vertical === "CONSTRUCTION";
     const DISP = { fontFamily: "var(--font-display), 'Oswald', sans-serif", letterSpacing: "0.24em" } as const;
     return (
-      <footer className="px-6 py-12 sm:px-10" style={{ background: "#1a1714", color: "rgba(243,239,231,0.6)" }}>
+      <footer className="px-6 py-12 sm:px-10" style={{ background: contractor ? "#17150f" : "#1a1714", color: "rgba(243,239,231,0.6)" }}>
         <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center" style={{ borderColor: "rgba(243,239,231,0.18)" }}>
-          <Link href={`/site/${config.slug}`} className="text-[19px]" style={{ fontFamily: "var(--font-serif), Georgia, serif", color: "#f3efe7" }}>{config.dealershipName}</Link>
+          <Link href={`/site/${config.slug}`} className={contractor ? "text-[20px] font-bold uppercase tracking-wide" : "text-[19px]"} style={{ fontFamily: contractor ? "var(--font-display), 'Oswald', sans-serif" : "var(--font-serif), Georgia, serif", color: "#f3efe7" }}>{config.dealershipName}</Link>
           <nav className="flex flex-wrap gap-x-8 gap-y-2">{items.filter((i) => i.label !== "Home").map((it) => <Link key={it.href} href={it.href} className="text-[11px] uppercase transition hover:text-[#f3efe7]" style={DISP}>{it.label}</Link>)}</nav>
           <span className="text-[11px] uppercase" style={DISP}>{[config.phone, cityLine].filter(Boolean).join("  ·  ")}</span>
         </div>

@@ -16,7 +16,7 @@ const schema = z.object({
   password: z.string().min(8),
   phone: z.string().optional(),
   accessCode: z.string().optional(),
-  vertical: z.enum(["AUTOMOTIVE", "REAL_ESTATE", "RESTAURANT", "SERVICES", "RETAIL", "MEDICAL", "GENERIC"]).optional(),
+  vertical: z.enum(["AUTOMOTIVE", "REAL_ESTATE", "RESTAURANT", "SERVICES", "RETAIL", "MEDICAL", "CONSTRUCTION", "GENERIC"]).optional(),
 });
 
 export const POST = route(async (req: NextRequest) => {

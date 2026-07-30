@@ -15,6 +15,6 @@ export default async function InventoryPage({ params, searchParams }: { params: 
   // pass every scalar query param through — the vertical's facet keys drive what the browser reads
   const initial: Record<string, string> = {};
   for (const [k, v] of Object.entries(sp)) if (typeof v === "string") initial[k] = v;
-  if (config.template === "CLASSIC") return <BrokerageInventory config={config} vehicles={vehicles} initial={initial} />;
+  if (config.template === "CLASSIC" || config.vertical === "CONSTRUCTION") return <BrokerageInventory config={config} vehicles={vehicles} initial={initial} />;
   return <InventoryBrowser config={config} vehicles={vehicles} initial={initial} />;
 }

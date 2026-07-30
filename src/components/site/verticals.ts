@@ -288,7 +288,76 @@ const MEDICAL: VerticalDef = {
   },
 };
 
-export const VERTICALS: Record<string, VerticalDef> = { AUTOMOTIVE, REAL_ESTATE, MEDICAL };
+const CONSTRUCTION: VerticalDef = {
+  noun: "project", plural: "projects", bookingLabel: "Consultation", searchPlaceholder: "Search projects…",
+  market: {
+    financeNav: null, headerCtaTo: "contact", financeBtn: "Request a quote", heroSecondary: { label: "Request a quote", to: "contact" },
+    showFinanceBands: false,
+    ticker: ["Licensed & insured", "On time, on budget", "Free estimates", "Custom builds", "Craftsmanship guaranteed"],
+    defaultWhy: [
+      { title: "Licensed & insured", body: "Fully licensed, bonded and insured — every job done to code, protected end to end." },
+      { title: "On time, on budget", body: "Clear scopes, honest estimates and a schedule we hold ourselves to. No surprises." },
+      { title: "Craftsmanship that lasts", body: "Skilled crews and materials we stand behind, on projects built to outlive the trend." },
+    ],
+    steps: [
+      { t: "Consult", b: "We walk the site, understand the goal, and scope the work." },
+      { t: "Estimate & design", b: "A clear, itemized quote and a plan you sign off on." },
+      { t: "Build", b: "One dedicated crew, tidy sites, and updates the whole way." },
+      { t: "Handover", b: "A final walkthrough and a build you're proud to show off." },
+    ],
+    stats: [["Licensed", "& insured"], ["On-time", "delivery"], ["Free", "estimates"]],
+    financePage: { heading: "", sub: "", formHeading: "", perks: [], steps: [] },
+  },
+  finance: null,
+  titleOf: (l) => l.title || "Project",
+  subtitleOf: (l) => l.subtitle || str(l.attributes?.serviceType) || str(l.attributes?.location) || "",
+  specs: (l) => [
+    l.attributes?.serviceType ? { label: "type", value: str(l.attributes.serviceType) } : null,
+    l.attributes?.sqft != null ? { label: "sqft", value: `${num(l.attributes.sqft).toLocaleString()} sqft` } : null,
+    l.attributes?.year != null ? { label: "year", value: str(l.attributes.year) } : null,
+  ].filter(Boolean) as Spec[],
+  detail: (l) => ([
+    ["Service", str(l.attributes?.serviceType) || "—"], ["Scope", str(l.attributes?.scope) || "—"],
+    ["Size", l.attributes?.sqft != null ? `${num(l.attributes.sqft).toLocaleString()} sqft` : "—"],
+    ["Budget", str(l.attributes?.budget) || "—"], ["Duration", str(l.attributes?.duration) || "—"],
+    ["Completed", str(l.attributes?.year) || "—"], ["Location", str(l.attributes?.location) || "—"],
+  ] as [string, string][]).map(([label, value]) => ({ label, value })),
+  badges: (l) => {
+    const out: string[] = [];
+    if (l.attributes?.featured) out.push("Featured");
+    if (str(l.attributes?.serviceType)) out.push(str(l.attributes?.serviceType));
+    return out.slice(0, 2);
+  },
+  facets: [
+    { key: "serviceType", label: "Service", kind: "check", value: (l) => str(l.attributes?.serviceType) },
+    { key: "price", label: "Max budget", kind: "max", steps: [50000, 150000, 350000, 750000, 1500000], fmt: (n) => `$${n / 1000}k`, value: (l) => l.price },
+  ],
+  sorts: [{ key: "newest", label: "Newest" }, { key: "price_high", label: "Largest first" }, { key: "price_low", label: "Smallest first" }],
+  dash: {
+    units: "projects", valueLabel: "Portfolio value", daysLabel: "Avg on site", showGross: false,
+    titleField: "Project name", subtitleField: "Client / location",
+    statuses: [{ value: "AVAILABLE", label: "Published" }, { value: "RECON", label: "In progress" }, { value: "RESERVED", label: "Scheduled" }],
+    statusLabel: { AVAILABLE: "Published", RECON: "In progress", RESERVED: "Scheduled", WHOLESALE: "Draft", SOLD: "Archived" },
+    tableCols: [
+      { label: "Service", get: (l) => (l.attributes?.serviceType ? str(l.attributes.serviceType) : "—") },
+      { label: "Size", align: "right", get: (l) => (l.attributes?.sqft != null ? Number(l.attributes.sqft).toLocaleString() : "—") },
+      { label: "Year", get: (l) => (l.attributes?.year != null ? str(l.attributes.year) : "—") },
+    ],
+    formFields: [
+      { key: "serviceType", label: "Service type", type: "select", options: ["Custom home", "Renovation", "Addition", "Kitchen", "Bathroom", "Commercial", "Outdoor"], attr: true, half: true },
+      { key: "location", label: "Location", type: "text", attr: true, half: true, placeholder: "West Lake Hills" },
+      { key: "sqft", label: "Size (sqft)", type: "number", attr: true, half: true, placeholder: "3200" },
+      { key: "budget", label: "Budget", type: "text", attr: true, half: true, placeholder: "$450k" },
+      { key: "duration", label: "Duration", type: "text", attr: true, half: true, placeholder: "7 months" },
+      { key: "year", label: "Year completed", type: "number", attr: true, half: true, placeholder: "2025" },
+      { key: "scope", label: "Scope", type: "text", attr: true, half: true, placeholder: "Full gut + addition" },
+    ],
+    emptyTitle: "No projects yet",
+    emptyBody: "Add your first project — photos, scope and location — to start building your portfolio.",
+  },
+};
+
+export const VERTICALS: Record<string, VerticalDef> = { AUTOMOTIVE, REAL_ESTATE, MEDICAL, CONSTRUCTION };
 export const vertical = (v?: string | null): VerticalDef => VERTICALS[v ?? "AUTOMOTIVE"] ?? AUTOMOTIVE;
 
 export function estMonthlyFor(def: VerticalDef, priceCents: number): number {

@@ -80,6 +80,7 @@ const VERTICAL_TERMS: Record<string, { biz: string; catalog: string }> = {
   SERVICES: { biz: "business", catalog: "services" },
   RETAIL: { biz: "store", catalog: "catalog" },
   MEDICAL: { biz: "practice", catalog: "services" },
+  CONSTRUCTION: { biz: "company", catalog: "projects" },
   GENERIC: { biz: "business", catalog: "catalog" },
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

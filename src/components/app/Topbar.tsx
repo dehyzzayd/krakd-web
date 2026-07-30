@@ -52,12 +52,17 @@ export function Topbar({
         <NotificationBell />
       </div>
 
-      {action && (
+      {action && (action.href ? (
+        <Link href={action.href} className="btn-brand inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold text-white transition">
+          <IconPlus className="h-[16px] w-[16px]" />
+          <span className="hidden sm:inline">{action.label}</span>
+        </Link>
+      ) : (
         <button onClick={action.onClick} className="btn-brand inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold transition">
           <IconPlus className="h-[16px] w-[16px]" />
           <span className="hidden sm:inline">{action.label}</span>
         </button>
-      )}
+      ))}
     </header>
   );
 }

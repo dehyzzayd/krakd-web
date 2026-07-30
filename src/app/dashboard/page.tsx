@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
+import { vertical as verticalDef } from "@/components/site/verticals";
 
 /* ── primitives ─────────────────────────────────────────────────────── */
 
@@ -32,6 +33,7 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
 
 type Overview = {
   dealershipName: string;
+  vertical?: string;
   kpis: { grossCents: number; unitsSold: number; activeLeads: number; apptsToday: number };
   recentLeads: { name: string; source: string; vehicle: string; status: string; tone: Tone; owner: string; time: string }[];
   inventory: { units: number; avgDays: number; aging: { label: string; n: number; tone: Tone }[] };
@@ -54,7 +56,8 @@ function Empty({ title, sub, cta }: { title: string; sub: string; cta?: ReactNod
 export default function DashboardPage() {
   const { data, loading } = useApi<Overview>("/overview");
 
-  const name = data?.dealershipName ?? "your dealership";
+  const name = data?.dealershipName ?? "your business";
+  const def = verticalDef(data?.vertical);
   const k = data?.kpis;
   const kpis = [
     { label: "Gross · MTD", value: k ? money(k.grossCents) : "—" },
@@ -68,7 +71,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Topbar title="Overview" action={{ label: "Add vehicle", href: "/dashboard/inventory/new" }} />
+      <Topbar title="Overview" action={{ label: `Add ${def.noun}`, href: "/dashboard/inventory/new" }} />
       <AppMain>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13.5px] text-n600">Here&apos;s how <span className="font-semibold text-n900">{name}</span> is doing today.</p>
@@ -137,9 +140,9 @@ export default function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHead title="Inventory aging" right={<span className="tnum text-[12px] text-n500">{invTotal} units · {inv?.avgDays ?? 0}d avg</span>} />
+            <CardHead title={`${def.plural.charAt(0).toUpperCase() + def.plural.slice(1)} aging`} right={<span className="tnum text-[12px] text-n500">{invTotal} {def.dash.units} · {inv?.avgDays ?? 0}d avg</span>} />
             {invTotal === 0
-              ? <Empty title="No inventory yet" sub="Add or import your first vehicle to start selling." cta={<a href="/dashboard/inventory/new" className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover">Add a vehicle</a>} />
+              ? <Empty title={`No ${def.plural} yet`} sub={`Add your first ${def.noun} to get started.`} cta={<a href="/dashboard/inventory/new" className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover">Add a {def.noun}</a>} />
               : (
                 <div className="p-4">
                   <div className="mb-4 flex h-2.5 overflow-hidden rounded-full bg-n100">

@@ -38,6 +38,7 @@ enum Vertical {
   SERVICES
   RETAIL
   MEDICAL
+  CONSTRUCTION
   GENERIC
 }
 
