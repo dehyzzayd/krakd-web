@@ -151,3 +151,67 @@
   }
   .fade-up { opacity: 1 !important; animation: none !important; transform: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   "Elite / legacy" dashboard theme — warm parchment neutrals · ink text · one
+   restrained navy · sharp corners · hairline rules · serif page titles · pure
+   white sidebar. Entirely token-driven and scoped to .app-scope, so the
+   marketing site and public dealer sites are untouched.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app-scope {
+  /* warm neutral scale (hue ~72–75), replacing the blue-grays */
+  --color-n50:  oklch(0.980 0.0035 75);
+  --color-n100: oklch(0.963 0.004 74);
+  --color-n200: oklch(0.912 0.004 74);
+  --color-n300: oklch(0.858 0.005 72);
+  --color-n400: oklch(0.700 0.008 66);
+  --color-n500: oklch(0.545 0.009 62);
+  --color-n600: oklch(0.448 0.009 60);
+  --color-n700: oklch(0.352 0.009 58);
+  --color-n800: oklch(0.262 0.008 58);
+  --color-n900: oklch(0.205 0.008 58);
+  --color-n950: oklch(0.150 0.006 58);
+
+  /* one deep, restrained navy — never bright */
+  --color-brand:       oklch(0.375 0.086 252);
+  --color-brand-hover: oklch(0.315 0.082 252);
+  --color-brand-soft:  oklch(0.948 0.020 252);
+
+  /* aged status colors */
+  --color-ok:   oklch(0.530 0.085 155); --color-ok-soft:   oklch(0.950 0.028 155);
+  --color-warn: oklch(0.630 0.100 70);  --color-warn-soft: oklch(0.952 0.040 74);
+  --color-err:  oklch(0.510 0.160 27);  --color-err-soft:  oklch(0.944 0.045 27);
+
+  /* sharp, near-square corners */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.20rem;
+  --radius-lg: 0.26rem;
+  --radius-xl: 0.32rem;
+  --radius-2xl: 0.40rem;
+  --radius-3xl: 0.55rem;
+
+  /* parchment canvas, warm ink text */
+  background: oklch(0.982 0.0035 75);
+  color: oklch(0.205 0.008 58);
+  letter-spacing: -0.006em;
+}
+
+/* hairline elevation instead of soft halos */
+.app-scope .sh-card   { box-shadow: 0 0 0 1px oklch(0.9 0.004 74 / 0.7), 0 1px 1px oklch(0.4 0.01 60 / 0.03); }
+.app-scope .sh-raised { box-shadow: 0 0 0 1px oklch(0.88 0.004 74 / 0.9), 0 10px 24px -14px oklch(0.3 0.02 60 / 0.28); }
+
+/* primary button → flat, deep navy (no gradient) */
+.app-scope .btn-brand { background-image: none; background-color: var(--color-brand); box-shadow: none; }
+.app-scope .btn-brand:hover:not(:disabled) { background-image: none; background-color: var(--color-brand-hover); }
+
+/* page titles in an editorial serif — the "legacy" register */
+.app-scope h1 {
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: -0.014em;
+}
+.app-scope ::selection { background: oklch(0.375 0.086 252 / 0.16); }
+
+/* sidebar → pure white against the parchment canvas */
+.app-scope aside { background: #ffffff; }
+/* ═══════════════════════ END LOCAL PREVIEW BLOCK ═══════════════════════ */
