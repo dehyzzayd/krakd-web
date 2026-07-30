@@ -10,7 +10,7 @@ import { Building2, MapPin, Clock, Palette, Loader2, Check, Upload } from "lucid
 const INDUSTRIES = [
   { id: "AUTOMOTIVE", label: "Automotive" }, { id: "REAL_ESTATE", label: "Real estate" },
   { id: "RESTAURANT", label: "Restaurant" }, { id: "SERVICES", label: "Services" },
-  { id: "RETAIL", label: "Retail" }, { id: "GENERIC", label: "Something else" },
+  { id: "RETAIL", label: "Retail" }, { id: "MEDICAL", label: "Medical / dental" }, { id: "GENERIC", label: "Something else" },
 ];
 const US_STATES = "AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split(" ");
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

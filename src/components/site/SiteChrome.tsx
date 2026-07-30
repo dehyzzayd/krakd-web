@@ -37,11 +37,11 @@ function navItems(config: SiteConfig): { href: string; label: string; external?:
       return { href: builtin[i.type] ?? base, label: i.label };
     });
   }
-  // default: built-ins + any page flagged inNav
+  // default: built-ins + any page flagged inNav (financing only when the vertical uses it)
   const items = [
     { href: base, label: "Home" },
     { href: `${base}/inventory`, label: cap(def.plural) },
-    { href: `${base}/financing`, label: def.market.financeNav },
+    ...(def.market.financeNav ? [{ href: `${base}/financing`, label: def.market.financeNav }] : []),
     { href: `${base}/about`, label: "About" },
     { href: `${base}/contact`, label: "Contact" },
   ];
@@ -67,8 +67,35 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const items = navItems(config);
-  const financeBtn = verticalDef(config.vertical).market.financeBtn;
+  const market = verticalDef(config.vertical).market;
+  const financeBtn = market.financeBtn;
+  const ctaHref = `/site/${config.slug}/${market.headerCtaTo}`;
   const cityLine = [config.city, config.state].filter(Boolean).join(", ");
+
+  // ─── Editorial (PREMIUM) — bespoke chrome: transparent over the hero on the home, solid on inner pages ───
+  if (config.template === "PREMIUM") {
+    const isHome = pathname === `/site/${config.slug}`;
+    const fg = isHome ? "#ffffff" : "#1a1714";
+    const DISP = { fontFamily: "var(--font-display), 'Oswald', sans-serif", letterSpacing: "0.24em" } as const;
+    return (
+      <header className={isHome ? "absolute inset-x-0 top-0 z-30" : "relative z-30 border-b border-black/12 bg-[#f3efe7]"}>
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-7 sm:px-10">
+          <Link href={`/site/${config.slug}`} style={{ color: fg }}>
+            {config.logoUrl
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={config.logoUrl} alt={config.dealershipName} className={cn("h-8 w-auto", isHome && "brightness-0 invert")} />
+              : <span className="text-[19px]" style={{ fontFamily: "var(--font-serif), Georgia, serif", color: fg }}>{config.dealershipName}</span>}
+          </Link>
+          <nav className="hidden items-center gap-9 md:flex">
+            {items.filter((i) => i.label !== "Home").map((it) => <Link key={it.href} href={it.href} className="text-[11px] uppercase transition hover:opacity-70" style={{ ...DISP, color: fg }}>{it.label}</Link>)}
+          </nav>
+          <Link href={ctaHref} className="hidden border px-5 py-2.5 text-[10.5px] uppercase transition hover:opacity-70 md:inline-block" style={{ ...DISP, color: fg, borderColor: isHome ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.22)" }}>{financeBtn}</Link>
+          <button onClick={() => setOpen((v) => !v)} className="md:hidden" style={{ color: fg }}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
+        </div>
+        {open && <div className="border-t border-black/10 bg-[#f3efe7] px-6 pb-3 md:hidden">{items.map((it) => <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className="block py-2.5 text-[13px] uppercase" style={{ ...DISP, color: "#1a1714" }}>{it.label}</Link>)}</div>}
+      </header>
+    );
+  }
 
   const Logo = ({ className }: { className?: string }) => (
     <Link href={`/site/${config.slug}`} className={cn("flex items-center", className)}>
@@ -114,7 +141,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <div className={`mx-auto flex ${struct === "bold" ? "h-[76px]" : "h-16"} ${ui.container} items-center gap-4 px-5`}>
             <Logo />
             <nav className="ml-auto hidden items-center gap-7 lg:flex">{items.map((it) => navLink(it))}</nav>
-            <Link href={`/site/${config.slug}/financing`} className={cn("ml-auto hidden px-4 py-2 text-[13.5px] font-semibold lg:ml-4 lg:inline-block", struct === "bold" ? "font-display text-[12.5px] uppercase tracking-[0.08em]" : "rounded-lg")} style={{ background: btnBg, color: btnColor }}>{financeBtn}</Link>
+            <Link href={ctaHref} className={cn("ml-auto hidden px-4 py-2 text-[13.5px] font-semibold lg:ml-4 lg:inline-block", struct === "bold" ? "font-display text-[12.5px] uppercase tracking-[0.08em]" : "rounded-lg")} style={{ background: btnBg, color: btnColor }}>{financeBtn}</Link>
             <button onClick={() => setOpen((v) => !v)} className={cn("ml-auto grid h-10 w-10 place-items-center rounded-lg lg:hidden", dark ? "text-white" : "text-[#334155]")}>{open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
           </div>
         )}
@@ -123,7 +150,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
           <div className={dark ? "lg:hidden" : "border-t border-black/8 bg-white lg:hidden"} style={dark ? { background: barBg ?? "#0a0a0a" } : undefined}>
             <div className={`mx-auto ${ui.container} px-5 py-2`}>
               {items.map((it) => <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className={cn("block py-2.5 text-[15px] font-medium", dark ? "text-white/85" : "text-[#334155]")}>{it.label}</Link>)}
-              <Link href={`/site/${config.slug}/financing`} onClick={() => setOpen(false)} className="mt-2 mb-3 block rounded-lg py-2.5 text-center text-[14px] font-semibold" style={{ background: btnBg, color: btnColor }}>{financeBtn}</Link>
+              <Link href={ctaHref} onClick={() => setOpen(false)} className="mt-2 mb-3 block rounded-lg py-2.5 text-center text-[14px] font-semibold" style={{ background: btnBg, color: btnColor }}>{financeBtn}</Link>
             </div>
           </div>
         )}
@@ -138,6 +165,20 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
   const items = navItems(config);
   const cityLine = [config.city, config.state, config.zip].filter(Boolean).join(", ");
   const mapQuery = encodeURIComponent([config.address, cityLine].filter(Boolean).join(", "));
+
+  // Editorial (PREMIUM) — quiet, dark, typographic footer to match the flagship home
+  if (config.template === "PREMIUM") {
+    const DISP = { fontFamily: "var(--font-display), 'Oswald', sans-serif", letterSpacing: "0.24em" } as const;
+    return (
+      <footer className="px-6 py-12 sm:px-10" style={{ background: "#1a1714", color: "rgba(243,239,231,0.6)" }}>
+        <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center" style={{ borderColor: "rgba(243,239,231,0.18)" }}>
+          <Link href={`/site/${config.slug}`} className="text-[19px]" style={{ fontFamily: "var(--font-serif), Georgia, serif", color: "#f3efe7" }}>{config.dealershipName}</Link>
+          <nav className="flex flex-wrap gap-x-8 gap-y-2">{items.filter((i) => i.label !== "Home").map((it) => <Link key={it.href} href={it.href} className="text-[11px] uppercase transition hover:text-[#f3efe7]" style={DISP}>{it.label}</Link>)}</nav>
+          <span className="text-[11px] uppercase" style={DISP}>{[config.phone, cityLine].filter(Boolean).join("  ·  ")}</span>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="w-full text-white" style={{ background: siteTheme(config.template).band }}>

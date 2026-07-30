@@ -6,7 +6,7 @@ import { authApi, setSession, ApiError } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
 import { Field } from "@/components/auth/AuthScaffold";
 import { VEHICLE_TYPES } from "./VehicleIcons";
-import { Car, Home, UtensilsCrossed, Scissors, ShoppingBag, LayoutGrid, type LucideIcon } from "lucide-react";
+import { Car, Home, UtensilsCrossed, Scissors, ShoppingBag, LayoutGrid, Stethoscope, type LucideIcon } from "lucide-react";
 
 /* ─────────────────────────────── data ─────────────────────────────── */
 
@@ -20,6 +20,7 @@ const INDUSTRIES: Industry[] = [
   { id: "RESTAURANT", label: "Restaurant", Icon: UtensilsCrossed, nameLabel: "Restaurant name", namePh: "Blue Fig Kitchen", catalog: "menu" },
   { id: "SERVICES", label: "Services", Icon: Scissors, nameLabel: "Business name", namePh: "Summit Detailing", catalog: "services" },
   { id: "RETAIL", label: "Retail", Icon: ShoppingBag, nameLabel: "Store name", namePh: "Maple & Co.", catalog: "products" },
+  { id: "MEDICAL", label: "Medical / dental", Icon: Stethoscope, nameLabel: "Practice name", namePh: "Cedar Dental", catalog: "services" },
   { id: "GENERIC", label: "Something else", Icon: LayoutGrid, nameLabel: "Business name", namePh: "Your business", catalog: "catalog" },
 ];
 const industryOf = (id: string) => INDUSTRIES.find((x) => x.id === id) ?? INDUSTRIES[0];

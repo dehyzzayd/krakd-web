@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSite, getSiteVehicle, getSiteVehicles } from "@/lib/server/site";
 import { VehicleDetailView } from "@/components/site/VehicleDetailView";
+import { BrokerageDetail } from "@/components/site/BrokerageDetail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,5 +20,6 @@ export default async function VehiclePage({ params }: { params: Promise<{ slug: 
   if (!vehicle) notFound();
   const all = await getSiteVehicles(slug);
   const similar = all.filter((v) => v.id !== vehicle.id && (v.body === vehicle.body || v.make === vehicle.make)).slice(0, 4);
+  if (config.template === "CLASSIC") return <BrokerageDetail config={config} vehicle={vehicle} similar={similar} />;
   return <VehicleDetailView config={config} vehicle={vehicle} similar={similar} />;
 }

@@ -37,6 +37,7 @@ enum Vertical {
   RESTAURANT
   SERVICES
   RETAIL
+  MEDICAL
   GENERIC
 }
 

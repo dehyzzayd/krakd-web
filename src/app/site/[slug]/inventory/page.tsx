@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSite, getSiteVehicles } from "@/lib/server/site";
 import { InventoryBrowser } from "@/components/site/InventoryBrowser";
+import { BrokerageInventory } from "@/components/site/BrokerageInventory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,5 +15,6 @@ export default async function InventoryPage({ params, searchParams }: { params: 
   // pass every scalar query param through — the vertical's facet keys drive what the browser reads
   const initial: Record<string, string> = {};
   for (const [k, v] of Object.entries(sp)) if (typeof v === "string") initial[k] = v;
+  if (config.template === "CLASSIC") return <BrokerageInventory config={config} vehicles={vehicles} initial={initial} />;
   return <InventoryBrowser config={config} vehicles={vehicles} initial={initial} />;
 }

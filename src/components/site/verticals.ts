@@ -35,9 +35,10 @@ export type DashConfig = {
 
 // Marketing copy for the public site templates — keeps CTAs, tickers and the finance page on-vertical.
 export type MarketConfig = {
-  financeNav: string;                              // nav/page label ("Financing")
-  financeBtn: string;                              // header button ("Get financing" / "Get pre-approved")
-  heroSecondary: { label: string; to: "financing" | "contact" }; // hero's secondary button
+  financeNav: string | null;                       // nav/page label ("Financing"), or null to hide finance entirely
+  headerCtaTo: "financing" | "contact" | "book";   // where the header button links
+  financeBtn: string;                              // header button ("Get financing" / "Reserve")
+  heroSecondary: { label: string; to: "financing" | "contact" | "book" }; // hero's secondary button
   showFinanceBands: boolean;                       // render the finance marketing bands inside home templates
   ticker: string[];                                // marquee strip (bold template)
   defaultWhy: { title: string; body: string }[];   // used when the owner hasn't written their own
@@ -68,7 +69,7 @@ const str = (v: unknown) => (v == null ? "" : String(v));
 const AUTOMOTIVE: VerticalDef = {
   noun: "vehicle", plural: "inventory", bookingLabel: "Test drive", searchPlaceholder: "Search make, model or keyword…",
   market: {
-    financeNav: "Financing", financeBtn: "Get financing", heroSecondary: { label: "Get pre-qualified", to: "financing" },
+    financeNav: "Financing", headerCtaTo: "financing", financeBtn: "Get financing", heroSecondary: { label: "Get pre-qualified", to: "financing" },
     showFinanceBands: true,
     ticker: ["In stock now", "All-credit financing", "Trade-ins welcome", "Multi-point inspected", "Drive home today"],
     defaultWhy: [
@@ -143,7 +144,7 @@ const AUTOMOTIVE: VerticalDef = {
 const REAL_ESTATE: VerticalDef = {
   noun: "property", plural: "listings", bookingLabel: "Viewing", searchPlaceholder: "Search address, neighborhood or keyword…",
   market: {
-    financeNav: "Financing", financeBtn: "Get pre-approved", heroSecondary: { label: "Book a viewing", to: "contact" },
+    financeNav: "Financing", headerCtaTo: "financing", financeBtn: "Get pre-approved", heroSecondary: { label: "Book a viewing", to: "book" },
     showFinanceBands: false,
     ticker: ["New listings weekly", "Local market experts", "Private showings", "Sold with confidence", "Mortgage guidance"],
     defaultWhy: [
@@ -223,7 +224,71 @@ const REAL_ESTATE: VerticalDef = {
   },
 };
 
-export const VERTICALS: Record<string, VerticalDef> = { AUTOMOTIVE, REAL_ESTATE };
+const MEDICAL: VerticalDef = {
+  noun: "service", plural: "services", bookingLabel: "Appointment", searchPlaceholder: "Search treatments or providers…",
+  market: {
+    financeNav: null, headerCtaTo: "book", financeBtn: "Book appointment", heroSecondary: { label: "Request appointment", to: "book" },
+    showFinanceBands: false,
+    ticker: ["Accepting new patients", "Most insurance accepted", "Same-day appointments", "Gentle, modern care", "Book online"],
+    defaultWhy: [
+      { title: "Experienced providers", body: "A credentialed team delivering attentive, up-to-date care for every patient." },
+      { title: "Most insurance accepted", body: "We work with major plans and offer clear self-pay options — no surprises." },
+      { title: "Comfortable, modern care", body: "A calm, modern practice built around your time and your comfort." },
+    ],
+    steps: [
+      { t: "Find your care", b: "Browse the services and providers we offer." },
+      { t: "Request an appointment", b: "Tell us what you need and your availability." },
+      { t: "We confirm & see you", b: "Our team confirms and takes it from there." },
+    ],
+    stats: [["New patients", "Welcome"], ["Most", "Insurance"], ["Same-day", "Availability"]],
+    financePage: { heading: "", sub: "", formHeading: "", perks: [], steps: [] },
+  },
+  finance: null,
+  titleOf: (l) => l.title || "Service",
+  subtitleOf: (l) => l.subtitle || str(l.attributes?.category) || "",
+  specs: (l) => [
+    l.attributes?.category ? { label: "category", value: str(l.attributes.category) } : null,
+    l.attributes?.provider ? { label: "provider", value: str(l.attributes.provider) } : null,
+    l.attributes?.duration ? { label: "duration", value: str(l.attributes.duration) } : null,
+  ].filter(Boolean) as Spec[],
+  detail: (l) => ([
+    ["Category", str(l.attributes?.category) || "—"], ["Provider", str(l.attributes?.provider) || "—"],
+    ["Duration", str(l.attributes?.duration) || "—"], ["Insurance", str(l.attributes?.insurance) || "—"],
+  ] as [string, string][]).map(([label, value]) => ({ label, value })),
+  badges: (l) => {
+    const out: string[] = [];
+    if (str(l.attributes?.insurance) === "Most plans") out.push("Insurance OK");
+    if (str(l.attributes?.category)) out.push(str(l.attributes?.category));
+    return out.slice(0, 2);
+  },
+  facets: [
+    { key: "category", label: "Category", kind: "check", value: (l) => str(l.attributes?.category) },
+    { key: "provider", label: "Provider", kind: "check", value: (l) => str(l.attributes?.provider) },
+    { key: "price", label: "Max price", kind: "max", steps: [100, 250, 500, 1000, 2500], fmt: (n) => `$${n}`, value: (l) => l.price },
+  ],
+  sorts: [{ key: "newest", label: "Newest" }, { key: "price_low", label: "Price: low → high" }, { key: "price_high", label: "Price: high → low" }],
+  dash: {
+    units: "services", valueLabel: "List value", daysLabel: "Avg days listed", showGross: false,
+    titleField: "Service name", subtitleField: "Short tagline",
+    statuses: [{ value: "AVAILABLE", label: "Offered" }, { value: "RESERVED", label: "Limited" }, { value: "RECON", label: "Coming soon" }],
+    statusLabel: { AVAILABLE: "Offered", RESERVED: "Limited", RECON: "Coming soon", WHOLESALE: "Retired", SOLD: "Discontinued" },
+    tableCols: [
+      { label: "Category", get: (l) => (l.attributes?.category ? str(l.attributes.category) : "—") },
+      { label: "Provider", get: (l) => (l.attributes?.provider ? str(l.attributes.provider) : "—") },
+      { label: "Duration", get: (l) => (l.attributes?.duration ? str(l.attributes.duration) : "—") },
+    ],
+    formFields: [
+      { key: "category", label: "Category", type: "select", options: ["Preventive", "Cosmetic", "Restorative", "Diagnostic", "Surgical", "Wellness"], attr: true, half: true },
+      { key: "provider", label: "Provider", type: "text", attr: true, half: true, placeholder: "Dr. Alvarez" },
+      { key: "duration", label: "Duration", type: "text", attr: true, half: true, placeholder: "45 min" },
+      { key: "insurance", label: "Insurance", type: "select", options: ["Most plans", "Select plans", "Self-pay"], attr: true, half: true },
+    ],
+    emptyTitle: "No services yet",
+    emptyBody: "Add your first service — name it, set the details, and it goes live on your site in one click.",
+  },
+};
+
+export const VERTICALS: Record<string, VerticalDef> = { AUTOMOTIVE, REAL_ESTATE, MEDICAL };
 export const vertical = (v?: string | null): VerticalDef => VERTICALS[v ?? "AUTOMOTIVE"] ?? AUTOMOTIVE;
 
 export function estMonthlyFor(def: VerticalDef, priceCents: number): number {

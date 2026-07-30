@@ -9,6 +9,8 @@ import { accentOf } from "@/lib/server/site";
 import { cn } from "@/lib/cn";
 import { VehicleCard } from "./VehicleCard";
 import { vertical as verticalDef } from "./verticals";
+import { EditorialHome } from "./EditorialHome";
+import { BrokerageHome } from "./BrokerageHome";
 
 const REVIEWS = [
   { name: "Jordan M.", body: "Easiest car-buying experience I've had. No pressure, straight numbers, in and out in an hour.", rating: 5 },
@@ -211,6 +213,7 @@ const INK = "#191713";
 function LuxeIndex({ n, label, accent }: { n: string; label: string; accent: string }) {
   return <div className="mb-6 flex items-center gap-4"><span className="font-display text-[13px] tracking-[0.3em]" style={{ color: accent }}>{n}</span><span className="h-px flex-1" style={{ background: "#00000022" }} /><span className="font-display text-[12px] uppercase tracking-[0.3em] text-[#191713]/70">{label}</span></div>;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function HomeLuxe({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
   const { accent, def, link, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 8);
@@ -330,12 +333,13 @@ function AboutSplit({ config, accent, vehicles }: { config: SiteConfig; accent: 
 }
 
 /* ═══════════════════════ CLASSIC — corporate franchise, blue, boxy ═══════════════════════ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
   const { accent, def, m, auto, link, makes, why, reviews, show } = useHome(config, vehicles, preview);
   const featured = vehicles.slice(0, 8);
   const C = "max-w-[1280px]"; const navy = "#10233f";
   const heroImg = config.heroImageUrl;
-  const chips = auto ? ["New", "Used", "Certified"] : ["For sale", "New listings", "Featured"];
+  const chips = auto ? ["New", "Used", "Certified"] : ["Browse all", "Newest", "Featured"];
   const trust: [string, string][] = auto
     ? [[`${vehicles.length}`, "Vehicles in stock"], ["All credit", "Financing"], ["Inspected", "Every vehicle"], ["Trade-ins", "Top dollar"]]
     : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
@@ -565,8 +569,8 @@ function HomeQuiet({ config, vehicles, preview }: { config: SiteConfig; vehicles
 export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
   switch (config.template) {
     case "INVENTORY_FIRST": return <HomeBold config={config} vehicles={vehicles} preview={preview} />;
-    case "PREMIUM": return <HomeLuxe config={config} vehicles={vehicles} preview={preview} />;
-    case "CLASSIC": return <HomeClassic config={config} vehicles={vehicles} preview={preview} />;
+    case "PREMIUM": return <EditorialHome config={config} vehicles={vehicles} />;
+    case "CLASSIC": return <BrokerageHome config={config} vehicles={vehicles} preview={preview} />;
     case "SPORT": return <HomeSport config={config} vehicles={vehicles} preview={preview} />;
     case "MINIMAL": return <HomeMinimal config={config} vehicles={vehicles} preview={preview} />;
     case "AURORA": return <HomeAurora config={config} vehicles={vehicles} preview={preview} />;

@@ -24,7 +24,7 @@ export const GET = route(async (req: NextRequest) => {
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
-  vertical: z.enum(["AUTOMOTIVE", "REAL_ESTATE", "RESTAURANT", "SERVICES", "RETAIL", "GENERIC"]).optional(),
+  vertical: z.enum(["AUTOMOTIVE", "REAL_ESTATE", "RESTAURANT", "SERVICES", "RETAIL", "MEDICAL", "GENERIC"]).optional(),
   phone: z.string().optional(),
   email: z.string().email().or(z.literal("")).optional(),
   addressLine1: z.string().optional(),

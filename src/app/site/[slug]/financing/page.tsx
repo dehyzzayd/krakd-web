@@ -21,9 +21,10 @@ export default async function FinancingPage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const config = await getSite(slug);
   if (!config) notFound();
+  const def = verticalDef(config.vertical);
+  if (!def.market.financeNav) notFound();       // verticals without financing have no such page
   const accent = accentOf(config.primaryColor);
   const ui = siteTheme(config.template);
-  const def = verticalDef(config.vertical);
   const fp = def.market.financePage;
   const isAuto = config.vertical === "AUTOMOTIVE" || !config.vertical;
 

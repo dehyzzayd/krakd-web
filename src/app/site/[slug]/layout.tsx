@@ -12,7 +12,7 @@ export default async function SiteLayout({ children, params }: { children: React
 
   const bg = config.template === "PREMIUM" ? "#f4f0e8" : config.template === "AURORA" ? "#161227" : config.template === "QUIET" ? "#f5f3ee" : "#ffffff";
   return (
-    <div className="min-h-screen overflow-x-clip text-[#0f172a]" style={{ background: bg, ["--accent" as string]: accentOf(config.primaryColor) }}>
+    <div className="relative min-h-screen overflow-x-clip text-[#0f172a]" style={{ background: bg, ["--accent" as string]: accentOf(config.primaryColor) }}>
       <SiteHeader config={config} />
       <main>{children}</main>
       <SiteFooter config={config} />
