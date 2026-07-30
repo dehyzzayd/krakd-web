@@ -60,7 +60,21 @@ export type VerticalDef = {
   badges: (l: ListingView) => string[];
   facets: Facet[];
   sorts: { key: string; label: string }[];
+  apptTypes: { value: string; label: string }[];   // AppointmentType enum → vertical-appropriate label
   dash: DashConfig;
+};
+
+// Fixed enum values (schema) → per-vertical labels, defined once and reused below.
+const APPT: Record<string, [string, string, string, string, string]> = {
+  //                    TEST_DRIVE      DELIVERY        PHONE            SERVICE         TRADE_APPRAISAL
+  AUTOMOTIVE:  ["Test drive", "Delivery", "Phone consult", "Service", "Trade appraisal"],
+  REAL_ESTATE: ["Showing", "Closing", "Phone consult", "Viewing", "Valuation"],
+  MEDICAL:     ["Consultation", "Follow-up", "Phone consult", "Appointment", "Procedure"],
+  CONSTRUCTION:["Consultation", "Walkthrough", "Phone consult", "Site visit", "Estimate"],
+};
+const apptTypesFor = (v: string) => {
+  const [td, dl, ph, sv, ta] = APPT[v] ?? APPT.AUTOMOTIVE;
+  return [{ value: "TEST_DRIVE", label: td }, { value: "SERVICE", label: sv }, { value: "PHONE", label: ph }, { value: "DELIVERY", label: dl }, { value: "TRADE_APPRAISAL", label: ta }];
 };
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
@@ -123,6 +137,7 @@ const AUTOMOTIVE: VerticalDef = {
     { key: "price", label: "Max price", kind: "max", steps: [15000, 20000, 30000, 45000, 60000, 80000], fmt: (n) => `$${(n / 1000)}k`, value: (l) => l.price },
   ],
   sorts: [{ key: "newest", label: "Newest" }, { key: "price_low", label: "Price: low → high" }, { key: "price_high", label: "Price: high → low" }, { key: "miles_low", label: "Fewest miles" }],
+  apptTypes: apptTypesFor("AUTOMOTIVE"),
   dash: {
     units: "vehicles", valueLabel: "Retail value", daysLabel: "Avg days on lot", showGross: true,
     titleField: "Title", subtitleField: "Trim",
@@ -198,6 +213,7 @@ const REAL_ESTATE: VerticalDef = {
     { key: "price", label: "Max price", kind: "max", steps: [300000, 500000, 750000, 1000000, 1500000, 2500000], fmt: (n) => `$${(n / 1000)}k`, value: (l) => l.price },
   ],
   sorts: [{ key: "newest", label: "Newest" }, { key: "price_low", label: "Price: low → high" }, { key: "price_high", label: "Price: high → low" }],
+  apptTypes: apptTypesFor("REAL_ESTATE"),
   dash: {
     units: "listings", valueLabel: "Portfolio value", daysLabel: "Avg days listed", showGross: false,
     titleField: "Listing title", subtitleField: "Address / neighborhood",
@@ -267,6 +283,7 @@ const MEDICAL: VerticalDef = {
     { key: "price", label: "Max price", kind: "max", steps: [100, 250, 500, 1000, 2500], fmt: (n) => `$${n}`, value: (l) => l.price },
   ],
   sorts: [{ key: "newest", label: "Newest" }, { key: "price_low", label: "Price: low → high" }, { key: "price_high", label: "Price: high → low" }],
+  apptTypes: apptTypesFor("MEDICAL"),
   dash: {
     units: "services", valueLabel: "List value", daysLabel: "Avg days listed", showGross: false,
     titleField: "Service name", subtitleField: "Short tagline",
@@ -333,6 +350,7 @@ const CONSTRUCTION: VerticalDef = {
     { key: "price", label: "Max budget", kind: "max", steps: [50000, 150000, 350000, 750000, 1500000], fmt: (n) => `$${n / 1000}k`, value: (l) => l.price },
   ],
   sorts: [{ key: "newest", label: "Newest" }, { key: "price_high", label: "Largest first" }, { key: "price_low", label: "Smallest first" }],
+  apptTypes: apptTypesFor("CONSTRUCTION"),
   dash: {
     units: "projects", valueLabel: "Portfolio value", daysLabel: "Avg on site", showGross: false,
     titleField: "Project name", subtitleField: "Client / location",

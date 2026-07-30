@@ -7,6 +7,7 @@ import { Topbar } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Sheet } from "@/components/app/Sheet";
+import { vertical as verticalDef } from "@/components/site/verticals";
 import { Phone, MessageSquare, Calendar, StickyNote, Pencil } from "lucide-react";
 
 type Activity = { id: string; type: string; content: string; actor: string; when: string };
@@ -20,7 +21,6 @@ const initials = (n: string) => n.split(/\s+/).filter(Boolean).map((p) => p[0]).
 const avatarBg = (n: string) => ["#2b6ba4", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][(n.charCodeAt(0) || 0) % 5];
 const TEMP: Record<string, string> = { HOT: "bg-err-soft text-err", WARM: "bg-warn-soft text-warn", COLD: "bg-brand-soft text-brand" };
 const STATUSES = [["NEW", "New"], ["CONTACTED", "Contacted"], ["QUALIFIED", "Qualified"], ["APPOINTMENT", "Appt set"], ["SOLD", "Sold"], ["LOST", "Lost"]] as const;
-const APPT_TYPES = [["TEST_DRIVE", "Test drive"], ["PHONE", "Phone consult"], ["DELIVERY", "Delivery"], ["TRADE_APPRAISAL", "Trade appraisal"], ["SERVICE", "Service"]] as const;
 const field = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 function CancelBtn({ onClose }: { onClose: () => void }) {
@@ -159,6 +159,8 @@ function MessageModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; o
 }
 
 function ApptModal({ id, onClose, onDone }: { id: string; onClose: () => void; onDone: () => void }) {
+  const { data: me } = useApi<{ vertical?: string }>("/auth/me");
+  const APPT_TYPES = verticalDef(me?.vertical).apptTypes;
   const [type, setType] = useState("TEST_DRIVE");
   const [date, setDate] = useState(""); const [time, setTime] = useState("10:00");
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
@@ -177,7 +179,7 @@ function ApptModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
     <Sheet open onClose={onClose} width="max-w-[440px]" title="Book an appointment" subtitle="Books it and advances the lead."
       footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Booking…" : "Book appointment"}</button></>}>
       <div className="space-y-3">
-        <div><span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-n500">Type</span><select value={type} onChange={(e) => setType(e.target.value)} className={field}>{APPT_TYPES.map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}</select></div>
+        <div><span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-n500">Type</span><select value={type} onChange={(e) => setType(e.target.value)} className={field}>{APPT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select></div>
         <div className="grid grid-cols-2 gap-3">
           <div><span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-n500">Date</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} /></div>
           <div><span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-n500">Time</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} /></div>

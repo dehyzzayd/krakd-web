@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import { AppointmentType, LeadStatus } from "@prisma/client";
+import { vertical as verticalDef } from "@/components/site/verticals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,13 +47,15 @@ export const POST = route(async (req: NextRequest) => {
 /* GET /api/v1/appointments → the current dealer's appointments (empty for new) */
 export const GET = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
+  const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { vertical: true } });
+  const apptMap = Object.fromEntries(verticalDef(dealer?.vertical).apptTypes.map((t) => [t.value, t.label]));
   const rows = await prisma.appointment.findMany({
     where: { dealershipId },
     orderBy: { scheduledStart: "asc" },
     take: 200,
     include: {
       lead: { select: { id: true, firstName: true, lastName: true } },
-      vehicle: { select: { year: true, make: true, model: true } },
+      vehicle: { select: { year: true, make: true, model: true, title: true } },
       assignedTo: { select: { firstName: true } },
     },
   });
@@ -61,8 +64,9 @@ export const GET = route(async (req: NextRequest) => {
     id: a.id,
     leadId: a.leadId,
     name: a.lead ? `${a.lead.firstName} ${a.lead.lastName ?? ""}`.trim() : "—",
-    vehicle: a.vehicle ? `${a.vehicle.year} ${a.vehicle.make} ${a.vehicle.model}` : "—",
-    type: TYPE_LABEL[a.type] ?? a.type,
+    vehicle: a.vehicle ? (a.vehicle.title || [a.vehicle.year, a.vehicle.make, a.vehicle.model].filter(Boolean).join(" ")) : "—",
+    type: apptMap[a.type] ?? TYPE_LABEL[a.type] ?? a.type,
+    typeKey: a.type,
     status: STATUS_LABEL[a.status] ?? a.status,
     statusKey: a.status.toLowerCase(),
     owner: a.createdByAi ? "Krakd AI" : a.assignedTo?.firstName ?? "—",

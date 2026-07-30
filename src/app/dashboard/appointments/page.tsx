@@ -8,14 +8,14 @@ import { cn } from "@/lib/cn";
 import { EditAppointmentSheet } from "@/components/app/EditAppointmentSheet";
 import { useApi } from "@/lib/useApi";
 
-type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; status: string; time: string; date: number; month: number; year: number; day: string; owner: string };
-type ApiAppt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; statusKey: string; owner: string; start: string };
+type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; typeKey: string; status: string; time: string; date: number; month: number; year: number; day: string; owner: string };
+type ApiAppt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; typeKey: string; statusKey: string; owner: string; start: string };
 
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
 const avatarBg = (n: string) => ["#2b6ba4", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][(n.charCodeAt(0) || 0) % 5];
 const ST_TONE: Record<string, Tone> = { confirmed: "ok", scheduled: "brand", completed: "neutral", no_show: "err", canceled: "neutral" };
 const ST_LABEL: Record<string, string> = { confirmed: "Confirmed", scheduled: "Scheduled", completed: "Completed", no_show: "No-show", canceled: "Canceled" };
-const TYPE_TONE: Record<string, string> = { "Test drive": "bg-brand", Delivery: "bg-ok", "Phone consultation": "bg-warn", Service: "bg-n500", "Trade appraisal": "bg-n500" };
+const TYPE_TONE: Record<string, string> = { TEST_DRIVE: "bg-brand", DELIVERY: "bg-ok", PHONE: "bg-warn", SERVICE: "bg-n500", TRADE_APPRAISAL: "bg-n500" };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -25,7 +25,7 @@ export default function CalendarPage() {
   const appts: Appt[] = useMemo(() => (data?.items ?? []).map((a) => {
     const st = new Date(a.start);
     return {
-      id: a.id, leadId: a.leadId, name: a.name, vehicle: a.vehicle, type: a.type, status: a.statusKey, owner: a.owner,
+      id: a.id, leadId: a.leadId, name: a.name, vehicle: a.vehicle, type: a.type, typeKey: a.typeKey, status: a.statusKey, owner: a.owner,
       time: st.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
       date: st.getDate(), month: st.getMonth(), year: st.getFullYear(),
       day: st.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -80,7 +80,7 @@ export default function CalendarPage() {
                     <div className="space-y-1">
                       {eventsOn(d).slice(0, 3).map((a) => (
                         <button key={a.id} onClick={() => setSel(a)} className="flex w-full items-center gap-1.5 rounded-md bg-n50 px-1.5 py-1 text-left text-[11px] transition hover:bg-n100">
-                          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", TYPE_TONE[a.type])} /><span className="tnum shrink-0 text-n500">{a.time.split(" ")[0]}</span><span className="truncate font-medium text-n700">{a.name}</span>
+                          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", TYPE_TONE[a.typeKey])} /><span className="tnum shrink-0 text-n500">{a.time.split(" ")[0]}</span><span className="truncate font-medium text-n700">{a.name}</span>
                         </button>
                       ))}
                       {eventsOn(d).length > 3 && <button onClick={() => { setView("day"); setDay(d); }} className="px-1.5 text-[11px] font-medium text-brand">+{eventsOn(d).length - 3} more</button>}
@@ -103,7 +103,7 @@ export default function CalendarPage() {
                 <div className="space-y-1.5">
                   {eventsOn(d).map((a) => (
                     <button key={a.id} onClick={() => setSel(a)} className="block w-full rounded-lg border border-[#e4e7ec] p-2 text-left transition hover:bg-n50">
-                      <p className="tnum text-[11px] font-semibold text-n800">{a.time}</p><p className="mt-0.5 truncate text-[11.5px] text-n700">{a.type} · {a.name}</p><span className={cn("mt-1 inline-block h-1.5 w-1.5 rounded-full", TYPE_TONE[a.type])} />
+                      <p className="tnum text-[11px] font-semibold text-n800">{a.time}</p><p className="mt-0.5 truncate text-[11.5px] text-n700">{a.type} · {a.name}</p><span className={cn("mt-1 inline-block h-1.5 w-1.5 rounded-full", TYPE_TONE[a.typeKey])} />
                     </button>
                   ))}
                   {eventsOn(d).length === 0 && <p className="py-2 text-center text-[11px] text-n300">—</p>}
@@ -138,7 +138,7 @@ export default function CalendarPage() {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setSel(null)}>
           <div className="w-full max-w-[420px] rounded-[16px] border border-[#e4e7ec] bg-white sh-raised" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-[#e4e7ec] px-5 py-3.5">
-              <div className="flex items-center gap-2"><span className={cn("h-2 w-2 rounded-full", TYPE_TONE[sel.type])} /><h3 className="text-[14px] font-semibold text-n900">{sel.type}</h3></div>
+              <div className="flex items-center gap-2"><span className={cn("h-2 w-2 rounded-full", TYPE_TONE[sel.typeKey])} /><h3 className="text-[14px] font-semibold text-n900">{sel.type}</h3></div>
               <button onClick={() => setSel(null)} className="grid h-7 w-7 place-items-center rounded-md text-[15px] text-n500 hover:bg-n100">✕</button>
             </div>
             <div className="space-y-4 p-5">

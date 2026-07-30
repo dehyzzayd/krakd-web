@@ -5,9 +5,9 @@ import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
 import { useApi } from "@/lib/useApi";
 import { apiFetch, ApiError } from "@/lib/api";
+import { vertical as verticalDef } from "@/components/site/verticals";
 
 const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
-const TYPES: [string, string][] = [["TEST_DRIVE", "Test drive"], ["DELIVERY", "Delivery"], ["PHONE", "Phone consultation"], ["SERVICE", "Service"], ["TRADE_APPRAISAL", "Trade appraisal"]];
 
 const today = () => { const d = new Date(); return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`; };
 
@@ -17,7 +17,9 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 
 export function EditAppointmentSheet({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: () => void }) {
   const { data } = useApi<{ items: { id: string; name: string }[] }>("/leads");
+  const { data: me } = useApi<{ vertical?: string }>("/auth/me");
   const leads = data?.items ?? [];
+  const TYPES = verticalDef(me?.vertical).apptTypes;
 
   const [type, setType] = useState("TEST_DRIVE");
   const [leadId, setLeadId] = useState("");
@@ -55,7 +57,7 @@ export function EditAppointmentSheet({ open, onClose, onCreated }: { open: boole
         <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Creating…" : "Create appointment"}</button>
       </>}>
       <div className="space-y-5">
-        <Labeled label="Appointment type"><select value={type} onChange={(e) => setType(e.target.value)} className={cn(fieldCls, "px-2.5")}>{TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Labeled>
+        <Labeled label="Appointment type"><select value={type} onChange={(e) => setType(e.target.value)} className={cn(fieldCls, "px-2.5")}>{TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select></Labeled>
         <Labeled label="Lead / customer">
           {leads.length === 0
             ? <p className="rounded-md border border-dashed border-n300 px-3 py-2.5 text-[12.5px] text-n500">No leads yet — add a lead first, then book.</p>
