@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { Sidebar } from "@/components/app/Sidebar";
 import { SidebarProvider } from "@/components/app/SidebarContext";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
+import { BrandTheme } from "@/components/app/BrandTheme";
 
 export const metadata: Metadata = {
   title: "Dashboard — Krakd",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={`${GeistSans.variable} ${GeistMono.variable} app-scope min-h-dvh`}>
+      <BrandTheme />
       <ImpersonationBanner />
       <SidebarProvider>
         <div className="flex min-h-dvh">

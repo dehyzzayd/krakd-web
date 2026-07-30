@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { HttpError } from "@/lib/server/http";
 import type { Principal } from "@/lib/server/auth";
-import type { Website } from "@prisma/client";
+import type { Prisma, Website } from "@prisma/client";
 
 /** URL-safe slug from a dealership name. */
 export function slugify(input: string): string {
@@ -25,7 +25,7 @@ export async function ensureWebsite(dealershipId: string): Promise<Website> {
 
   const dealer = await prisma.dealership.findUnique({
     where: { id: dealershipId },
-    select: { name: true, phone: true, email: true, addressLine1: true, city: true, state: true, postalCode: true },
+    select: { name: true, phone: true, email: true, addressLine1: true, city: true, state: true, postalCode: true, brandColor: true, logoUrl: true, hours: true },
   });
 
   // unique slug: base, then base-2, base-3, …
@@ -33,16 +33,23 @@ export async function ensureWebsite(dealershipId: string): Promise<Website> {
   let slug = base;
   for (let i = 2; await prisma.website.findUnique({ where: { slug } }); i++) slug = `${base}-${i}`;
 
+  const brand = dealer?.brandColor && /^#[0-9a-fA-F]{6}$/.test(dealer.brandColor) ? dealer.brandColor : null;
+  const dealerHours = Array.isArray(dealer?.hours) ? dealer.hours : [];
+
   return prisma.website.create({
     data: {
       dealershipId, slug,
-      headline: `Welcome to ${dealer?.name ?? "our dealership"}.`,
+      headline: `Welcome to ${dealer?.name ?? "our business"}.`,
       phone: dealer?.phone ?? null,
       email: dealer?.email ?? null,
       address: dealer?.addressLine1 ?? null,
       city: dealer?.city ?? null,
       state: dealer?.state ?? null,
       zip: dealer?.postalCode ?? null,
+      // start the new site on-brand, inheriting the global Settings brand
+      ...(brand ? { primaryColor: brand } : {}),
+      ...(dealer?.logoUrl ? { logoUrl: dealer.logoUrl } : {}),
+      ...(dealerHours.length ? { hours: dealerHours as unknown as Prisma.InputJsonValue } : {}),
     },
   });
 }

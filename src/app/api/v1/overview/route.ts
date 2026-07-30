@@ -31,7 +31,7 @@ export const GET = route(async (req: NextRequest) => {
   const endOfDay = new Date(startOfDay.getTime() + 86_400_000);
 
   const [dealer, sold, activeLeads, apptsToday, liveVehicles, recent] = await Promise.all([
-    prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, vertical: true } }),
+    prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, vertical: true, brandColor: true, logoUrl: true } }),
     prisma.vehicle.findMany({ where: { dealershipId, status: "SOLD" }, select: { priceCents: true, costCents: true } }),
     prisma.lead.count({ where: { dealershipId, status: { notIn: ["SOLD", "LOST"] } } }),
     prisma.appointment.count({ where: { dealershipId, scheduledStart: { gte: startOfDay, lt: endOfDay } } }),
@@ -58,6 +58,8 @@ export const GET = route(async (req: NextRequest) => {
   return json({
     dealershipName: dealer?.name ?? "Your dealership",
     vertical: dealer?.vertical ?? "AUTOMOTIVE",
+    brandColor: dealer?.brandColor ?? null,
+    logoUrl: dealer?.logoUrl ?? null,
     kpis: {
       grossCents,
       unitsSold: sold.length,
