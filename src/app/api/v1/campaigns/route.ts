@@ -33,6 +33,12 @@ const createSchema = z.object({
   gender: z.enum(["all", "male", "female"]).default("all"),
   smartTargeting: z.boolean().default(true),
   promotedVehicleIds: z.array(z.string()).default([]),
+  // ad creative snapshot
+  primaryText: z.string().max(2000).optional(),
+  headline: z.string().max(255).optional(),
+  description: z.string().max(255).optional(),
+  cta: z.string().max(40).optional(),
+  creativeImageUrl: z.string().max(1_500_000).nullable().optional(),
 });
 
 /* POST /api/v1/campaigns → create a DRAFT campaign; Krakd takes a flat 10% fee, 90% is media spend */
@@ -63,6 +69,11 @@ export const POST = route(async (req: NextRequest) => {
       gender: b.gender,
       smartTargeting: b.smartTargeting,
       promotedVehicleIds: b.promotedVehicleIds as unknown as Prisma.InputJsonValue,
+      primaryText: b.primaryText ?? null,
+      headline: b.headline ?? null,
+      description: b.description ?? null,
+      cta: b.cta ?? "LEARN_MORE",
+      creativeImageUrl: b.creativeImageUrl ?? null,
     },
   });
   return json(campaign, 201);

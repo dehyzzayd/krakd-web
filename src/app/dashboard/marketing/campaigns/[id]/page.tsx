@@ -7,6 +7,7 @@ import { Topbar, AppMain } from "@/components/app/Topbar";
 import { Card } from "@/components/app/AppKit";
 import { useApi } from "@/lib/useApi";
 import { apiFetch } from "@/lib/api";
+import { AdPreview } from "@/components/app/AdPreview";
 
 type Campaign = {
   id: string; name: string; channel: string; objective: string; status: string;
@@ -14,6 +15,7 @@ type Campaign = {
   impressions: number; clicks: number; leadCount: number;
   radiusMiles: number; ageMin: number; ageMax: number; gender: string; smartTargeting: boolean;
   frequency: string; promotedVehicleIds: string[];
+  primaryText: string | null; headline: string | null; description: string | null; cta: string | null; creativeImageUrl: string | null;
 };
 
 const CHANNEL_LABEL: Record<string, string> = { FACEBOOK: "Facebook", INSTAGRAM: "Instagram", GOOGLE: "Google" };
@@ -32,6 +34,7 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error, reload } = useApi<Campaign>(`/campaigns/${id}`);
+  const { data: ov } = useApi<{ dealershipName?: string }>("/overview");
   const [busy, setBusy] = useState(false);
 
   const patch = async (status: string) => {
@@ -73,6 +76,35 @@ export default function CampaignDetail() {
                 {c.status === "PAUSED" && <button disabled={busy} onClick={() => patch("ACTIVE")} className="h-9 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">Resume</button>}
                 {(c.status === "ACTIVE" || c.status === "PAUSED") && <button disabled={busy} onClick={() => patch("ENDED")} className="h-9 rounded-lg px-3 text-[12.5px] font-medium text-err hover:bg-err-soft disabled:opacity-60">End</button>}
               </div>
+            </div>
+
+            {/* ad creative */}
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,340px)_1fr]">
+              <div>
+                <p className="mb-2 text-[13px] font-semibold text-n900">Ad creative</p>
+                <div className="rounded-xl bg-n100/70 p-4">
+                  <AdPreview creative={{
+                    network: (c.channel as "FACEBOOK" | "INSTAGRAM" | "GOOGLE"),
+                    business: ov?.dealershipName ?? "Your dealership",
+                    image: c.creativeImageUrl,
+                    primaryText: c.primaryText ?? "",
+                    headline: c.headline ?? "",
+                    description: c.description ?? "",
+                    cta: c.cta ?? "LEARN_MORE",
+                  }} />
+                </div>
+              </div>
+              <Card className="p-5">
+                <p className="mb-3 text-[13px] font-semibold text-n900">Creative details</p>
+                <div className="space-y-3 text-[13px]">
+                  <div><p className="text-[11px] uppercase tracking-wide text-n500">Primary text</p><p className="mt-0.5 whitespace-pre-line text-n800">{c.primaryText || "—"}</p></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><p className="text-[11px] uppercase tracking-wide text-n500">Headline</p><p className="mt-0.5 font-medium text-n900">{c.headline || "—"}</p></div>
+                    <div><p className="text-[11px] uppercase tracking-wide text-n500">Call to action</p><p className="mt-0.5 font-medium text-n900">{c.cta ? c.cta.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (m) => m.toUpperCase()) : "—"}</p></div>
+                  </div>
+                  <div><p className="text-[11px] uppercase tracking-wide text-n500">Description</p><p className="mt-0.5 text-n800">{c.description || "—"}</p></div>
+                </div>
+              </Card>
             </div>
 
             {/* budget breakdown */}

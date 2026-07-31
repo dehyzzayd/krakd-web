@@ -19,6 +19,10 @@ export const GET = route(async (req: NextRequest, ctx: { params: Promise<{ id: s
 const patchSchema = z.object({
   name: z.string().trim().min(1).optional(),
   status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "PAUSED", "ENDED"]).optional(),
+  primaryText: z.string().max(2000).optional(),
+  headline: z.string().max(255).optional(),
+  description: z.string().max(255).optional(),
+  cta: z.string().max(40).optional(),
 });
 
 /* PATCH /api/v1/campaigns/[id] — rename, pause/resume, submit for review, end */
