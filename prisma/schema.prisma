@@ -73,6 +73,7 @@ model Dealership {
   activities    LeadActivity[]
   appointments  Appointment[]
   conversations AiConversation[]
+  quotes        Quote[]
   metrics       DailyMetric[]
   aiSettings    AiSettings?
   website       Website?
@@ -363,6 +364,7 @@ model Lead {
   activities    LeadActivity[]
   appointments  Appointment[]
   conversations AiConversation[]
+  quotes        Quote[]
 
   @@index([dealershipId, status])
   @@index([dealershipId, lastActivityAt])
@@ -634,4 +636,55 @@ model Website {
   updatedAt    DateTime        @updatedAt
 
   @@map("websites")
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model Quote {
+  id            String      @id @default(uuid()) @db.Uuid
+  dealershipId  String      @db.Uuid
+  dealership    Dealership  @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  leadId        String?     @db.Uuid
+  lead          Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  number        String                          // human quote no. e.g. Q-1001
+  clientName    String
+  clientEmail   String?
+  clientPhone   String?
+  projectTitle  String?
+  status        QuoteStatus @default(DRAFT)
+  notes         String?     @db.Text
+  taxRate       Float       @default(0)          // percent
+  subtotalCents Int         @default(0)
+  taxCents      Int         @default(0)
+  totalCents    Int         @default(0)
+  validUntil    DateTime?
+  publicToken   String      @unique              // unguessable id for the client-facing accept link
+  sentAt        DateTime?
+  respondedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  items         QuoteLineItem[]
+
+  @@index([dealershipId, status])
+  @@map("quotes")
+}
+
+model QuoteLineItem {
+  id          String @id @default(uuid()) @db.Uuid
+  quoteId     String @db.Uuid
+  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float  @default(1)
+  unitCents   Int    @default(0)
+  amountCents Int    @default(0)
+  sortOrder   Int    @default(0)
+
+  @@map("quote_line_items")
 }

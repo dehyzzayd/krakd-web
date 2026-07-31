@@ -9,7 +9,7 @@ import { Logo } from "@/components/layout/Logo";
 import { useSidebar } from "./SidebarContext";
 import { NETWORKS } from "@/lib/marketing";
 import { vertical as verticalDef } from "@/components/site/verticals";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Settings as SettingsIcon, FileText } from "lucide-react";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import {
@@ -66,6 +66,12 @@ export function Sidebar() {
   const labelFor = (e: Entry) => (e.type === "item" && e.href === "/dashboard/inventory" ? invLabel : e.label);
   // automotive-only CRM children (credit apps) are hidden for other verticals — keep it simple
   const AUTO_ONLY_CHILDREN = new Set(["/dashboard/crm/credit"]);
+  // construction gets a Quotes/estimates module, slotted after its Projects (inventory) item
+  const navList: Entry[] = vertical === "CONSTRUCTION"
+    ? NAV.flatMap((e) => (e.type === "item" && e.href === "/dashboard/inventory"
+        ? [e, { type: "item" as const, href: "/dashboard/quotes", label: "Quotes", Icon: (p: { className?: string }) => <FileText className={p.className} /> }]
+        : [e]))
+    : NAV;
   const dealerName = dealer ?? "Your business";
   const dealerInitials = dealerName.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const [open, setOpen] = useState<Record<string, boolean>>({
@@ -82,7 +88,7 @@ export function Sidebar() {
       </div>
 
       <nav className={cn("flex-1 space-y-0.5 overflow-y-auto py-3", collapsed ? "px-2" : "px-3")}>
-        {NAV.map((e) => {
+        {navList.map((e) => {
           if (e.type === "item") {
             const active = pathname === e.href;
             return (
