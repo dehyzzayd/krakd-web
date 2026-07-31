@@ -15,7 +15,7 @@ type Campaign = {
   impressions: number; clicks: number; leadCount: number;
   radiusMiles: number; ageMin: number; ageMax: number; gender: string; smartTargeting: boolean;
   frequency: string; promotedVehicleIds: string[];
-  primaryText: string | null; headline: string | null; description: string | null; cta: string | null; creativeImageUrl: string | null;
+  format: string | null; primaryText: string | null; headline: string | null; description: string | null; cta: string | null; creativeImageUrl: string | null; creativeImages: string[];
 };
 
 const CHANNEL_LABEL: Record<string, string> = { FACEBOOK: "Facebook", INSTAGRAM: "Instagram", GOOGLE: "Google" };
@@ -78,6 +78,29 @@ export default function CampaignDetail() {
               </div>
             </div>
 
+            {/* what happens next — the publish pipeline */}
+            {(c.status === "DRAFT" || c.status === "PENDING_REVIEW") && (
+              <div className="rounded-xl border border-n200 bg-n50/70 p-4">
+                <p className="text-[12.5px] font-semibold text-n900">{c.status === "DRAFT" ? "Ready to launch?" : "In review"}</p>
+                <div className="mt-3 flex items-center gap-1 text-[11.5px]">
+                  {[
+                    { k: "Draft", done: true },
+                    { k: "Krakd review", done: c.status !== "DRAFT" },
+                    { k: `Publish to ${CHANNEL_LABEL[c.channel] ?? c.channel}`, done: false },
+                    { k: "Live + reporting", done: false },
+                  ].map((st, i, arr) => (
+                    <span key={st.k} className="flex items-center gap-1">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${st.done ? "bg-ok-soft text-ok" : "bg-n100 text-n500"}`}>{st.k}</span>
+                      {i < arr.length - 1 && <span className="text-n300">→</span>}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-3 text-[12px] leading-relaxed text-n600">{c.status === "DRAFT"
+                  ? "Submitting sends the campaign to Krakd for a quick policy check. Once approved, it's published to your connected ad account automatically — spend, impressions and leads then sync back here."
+                  : "Krakd is checking the creative against ad policies. When it's approved we publish it to your connected account and it goes live — no further action needed."}</p>
+              </div>
+            )}
+
             {/* ad creative */}
             <div className="grid gap-3 lg:grid-cols-[minmax(0,340px)_1fr]">
               <div>
@@ -87,6 +110,8 @@ export default function CampaignDetail() {
                     network: (c.channel as "FACEBOOK" | "INSTAGRAM" | "GOOGLE"),
                     business: ov?.dealershipName ?? "Your dealership",
                     image: c.creativeImageUrl,
+                    images: Array.isArray(c.creativeImages) ? c.creativeImages : [],
+                    format: c.format ?? "SINGLE_IMAGE",
                     primaryText: c.primaryText ?? "",
                     headline: c.headline ?? "",
                     description: c.description ?? "",

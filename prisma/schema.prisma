@@ -297,12 +297,14 @@ model Campaign {
   gender         String            @default("all")
   smartTargeting Boolean           @default(true)
   promotedVehicleIds Json          @default("[]")
-  // ad creative snapshot — the copy + image that ships to the network
+  // ad creative snapshot — the copy + image(s) that ship to the network
+  format           String          @default("SINGLE_IMAGE") // SINGLE_IMAGE | CAROUSEL | SEARCH | VEHICLE
   primaryText      String?         @db.Text
   headline         String?
   description      String?
   cta              String          @default("LEARN_MORE")
   creativeImageUrl String?         @db.Text
+  creativeImages   Json            @default("[]") // carousel image URLs
   startDate      DateTime?
   endDate        DateTime?
   // rolled-up performance

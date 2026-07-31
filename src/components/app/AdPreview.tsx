@@ -16,7 +16,11 @@ export type AdCreative = {
   cta: string;
   price?: number | null;
   domain?: string;
+  format?: string;         // SINGLE_IMAGE | CAROUSEL | SEARCH | VEHICLE
+  images?: string[];       // carousel frames
 };
+
+const isCarousel = (c: AdCreative) => c.format === "CAROUSEL" && (c.images?.length ?? 0) > 1;
 
 export const CTA_LABEL: Record<string, string> = {
   LEARN_MORE: "Learn More", SHOP_NOW: "Shop Now", GET_OFFER: "Get Offer",
@@ -42,15 +46,32 @@ function FacebookAd(c: AdCreative) {
         <MoreHorizontal className="ml-auto h-5 w-5 text-n400" />
       </div>
       <p className="whitespace-pre-line px-3 py-2 text-[13px] leading-snug text-n800">{c.primaryText}</p>
-      {c.image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt="" className="aspect-[1.91/1] w-full object-cover" /> : <Ph className="aspect-[1.91/1] w-full" />}
-      <div className="flex items-center gap-3 bg-n50 px-3 py-2.5">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10.5px] uppercase tracking-wide text-n500">{cleanDomain(c.domain, c.business)}</p>
-          <p className="truncate text-[14px] font-bold text-n900">{c.headline || "Your headline"}</p>
-          {c.description && <p className="truncate text-[11.5px] text-n500">{c.description}</p>}
+      {isCarousel(c) ? (
+        <div className="flex snap-x gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
+          {c.images!.slice(0, 8).map((src, i) => (
+            <div key={i} className="w-[62%] shrink-0 snap-start overflow-hidden rounded-lg border border-n200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="" className="aspect-square w-full object-cover" />
+              <div className="flex items-center gap-2 bg-n50 px-2 py-1.5">
+                <p className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-n900">{c.headline || "Vehicle"}</p>
+                <span className="shrink-0 rounded bg-n200 px-2 py-0.5 text-[10.5px] font-semibold text-n700">{cta}</span>
+              </div>
+            </div>
+          ))}
         </div>
-        <button className="shrink-0 rounded-md bg-n200 px-3 py-1.5 text-[12px] font-semibold text-n800">{cta}</button>
-      </div>
+      ) : (
+        <>
+          {c.image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt="" className="aspect-[1.91/1] w-full object-cover" /> : <Ph className="aspect-[1.91/1] w-full" />}
+          <div className="flex items-center gap-3 bg-n50 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10.5px] uppercase tracking-wide text-n500">{cleanDomain(c.domain, c.business)}</p>
+              <p className="truncate text-[14px] font-bold text-n900">{c.headline || "Your headline"}</p>
+              {c.description && <p className="truncate text-[11.5px] text-n500">{c.description}</p>}
+            </div>
+            <button className="shrink-0 rounded-md bg-n200 px-3 py-1.5 text-[12px] font-semibold text-n800">{cta}</button>
+          </div>
+        </>
+      )}
       <div className="flex items-center justify-around border-t border-n100 py-1.5 text-n500">
         <span className="flex items-center gap-1.5 text-[12px] font-medium"><ThumbsUp className="h-4 w-4" />Like</span>
         <span className="flex items-center gap-1.5 text-[12px] font-medium"><MessageCircle className="h-4 w-4" />Comment</span>
@@ -70,7 +91,11 @@ function InstagramAd(c: AdCreative) {
         <div className="leading-tight"><p className="text-[13px] font-semibold text-n900">{user}</p><p className="text-[11px] text-n500">Sponsored</p></div>
         <MoreHorizontal className="ml-auto h-5 w-5 text-n400" />
       </div>
-      {c.image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt="" className="aspect-square w-full object-cover" /> : <Ph className="aspect-square w-full" />}
+      <div className="relative">
+        {c.image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt="" className="aspect-square w-full object-cover" /> : <Ph className="aspect-square w-full" />}
+        {isCarousel(c) && <span className="absolute right-2.5 top-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">1/{c.images!.length}</span>}
+      </div>
+      {isCarousel(c) && <div className="flex justify-center gap-1 py-2">{c.images!.slice(0, 6).map((_, i) => <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i === 0 ? "bg-[#385898]" : "bg-n300")} />)}</div>}
       <div className="flex items-center justify-between border-y border-n100 bg-n50 px-3 py-2 text-[13px] font-semibold text-[#385898]">{cta}<span className="text-n400">›</span></div>
       <div className="flex items-center gap-4 px-3 pt-2.5 text-n800"><Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="ml-auto h-5 w-5" /></div>
       <p className="px-3 pb-3 pt-2 text-[13px] leading-snug text-n800"><span className="font-semibold">{user}</span> {c.primaryText}</p>

@@ -34,11 +34,13 @@ const createSchema = z.object({
   smartTargeting: z.boolean().default(true),
   promotedVehicleIds: z.array(z.string()).default([]),
   // ad creative snapshot
+  format: z.enum(["SINGLE_IMAGE", "CAROUSEL", "SEARCH", "VEHICLE"]).default("SINGLE_IMAGE"),
   primaryText: z.string().max(2000).optional(),
   headline: z.string().max(255).optional(),
   description: z.string().max(255).optional(),
   cta: z.string().max(40).optional(),
   creativeImageUrl: z.string().max(1_500_000).nullable().optional(),
+  creativeImages: z.array(z.string().max(1_500_000)).max(20).default([]),
 });
 
 /* POST /api/v1/campaigns → create a DRAFT campaign; Krakd takes a flat 10% fee, 90% is media spend */
@@ -69,11 +71,13 @@ export const POST = route(async (req: NextRequest) => {
       gender: b.gender,
       smartTargeting: b.smartTargeting,
       promotedVehicleIds: b.promotedVehicleIds as unknown as Prisma.InputJsonValue,
+      format: b.format,
       primaryText: b.primaryText ?? null,
       headline: b.headline ?? null,
       description: b.description ?? null,
       cta: b.cta ?? "LEARN_MORE",
       creativeImageUrl: b.creativeImageUrl ?? null,
+      creativeImages: b.creativeImages as unknown as Prisma.InputJsonValue,
     },
   });
   return json(campaign, 201);
