@@ -143,7 +143,7 @@ export default function MarketingOverview() {
                   const n = netByChannel(c.channel); const s = STATUS[c.status] ?? STATUS.DRAFT;
                   return (
                     <tr key={c.id} onClick={() => router.push(`/dashboard/marketing/campaigns/${c.id}`)} className="cursor-pointer border-b border-n100 transition last:border-0 hover:bg-n50">
-                      <td className="px-4 py-3 font-medium text-n900">{c.name}</td>
+                      <td className="px-4 py-3 font-medium text-n900"><Link href={`/dashboard/marketing/campaigns/${c.id}`} onClick={(e) => e.stopPropagation()} className="rounded outline-none hover:text-brand focus-visible:ring-2 focus-visible:ring-brand/40">{c.name}</Link></td>
                       <td className="px-2"><span className="inline-flex items-center gap-1.5 text-n600">{n && /* eslint-disable-next-line @next/next/no-img-element */ <img src={n.logo} alt="" className="h-3.5 w-3.5" />}{n?.name ?? c.channel}</span></td>
                       <td className="tnum px-2 text-right text-n900">{money(c.spentCents)}</td>
                       <td className="tnum px-2 text-right text-n900">{c.leadCount}</td>

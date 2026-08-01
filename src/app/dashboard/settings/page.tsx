@@ -71,12 +71,15 @@ export default function SettingsPage() {
 
   const save = async () => {
     setSaving(true); setSaved(false); setErr(null);
+    const verticalChanged = data && data.vertical !== f.vertical;
     try {
       await apiFetch("/settings", { method: "PATCH", body: JSON.stringify({
         name: f.name, vertical: f.vertical, phone: f.phone || "", email: f.email || "",
         addressLine1: f.addressLine1 || "", addressLine2: f.addressLine2 || "", city: f.city || "", state: f.state || "", postalCode: f.postalCode || "",
         hours: f.hours, brandColor: f.brandColor || "", logoUrl: f.logoUrl || "",
       }) });
+      // switching industry reskins the whole workspace (sidebar, terminology) — reload so it takes effect everywhere
+      if (verticalChanged) { window.location.reload(); return; }
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save settings."); }
     finally { setSaving(false); }
@@ -104,7 +107,7 @@ export default function SettingsPage() {
               <L label="Phone"><input value={f.phone ?? ""} onChange={(e) => set("phone", e.target.value)} className={cn(input, "tnum")} placeholder="(512) 555-0100" /></L>
               <L label="Email"><input value={f.email ?? ""} onChange={(e) => set("email", e.target.value)} className={input} placeholder="hello@business.com" /></L>
             </div>
-            {industryChanged && <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-[12px] text-warn">Changing your industry reskins the whole workspace (listings, terminology, website). Save, then reload to see it.</p>}
+            {industryChanged && <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-[12px] text-warn">Changing your industry reskins the whole workspace (listings, terminology, website). The page will refresh when you save.</p>}
           </Section>
 
           <Section icon={MapPin} title="Location" desc="Where your business is — shown on your website and to customers.">

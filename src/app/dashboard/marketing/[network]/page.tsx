@@ -35,8 +35,8 @@ export default function NetworkPage() {
   const connected = !!data?.connections[n.id];
   const stat = data?.networks.find((x) => x.channel === n.channel);
   const list = (camps?.items ?? []).filter((c) => c.channel === n.channel);
-  const ctr = stat && stat.impressions > 0 ? (stat.clicks / stat.impressions) * 100 : 0;
-  const cpl = stat && stat.leads > 0 ? stat.spendCents / stat.leads : 0;
+  const ctr = stat && stat.impressions > 0 ? (stat.clicks / stat.impressions) * 100 : null;
+  const cpl = stat && stat.leads > 0 ? stat.spendCents / stat.leads : null;
 
   const toggle = async () => {
     setBusy(true);
@@ -46,8 +46,8 @@ export default function NetworkPage() {
 
   const METRICS: [string, string][] = [
     ["Spend", money(stat?.spendCents ?? 0)], ["Impressions", (stat?.impressions ?? 0).toLocaleString()],
-    ["Clicks", (stat?.clicks ?? 0).toLocaleString()], ["CTR", ctr ? `${ctr.toFixed(2)}%` : "—"],
-    ["Leads", `${stat?.leads ?? 0}`], ["Cost / lead", cpl ? money(cpl) : "—"],
+    ["Clicks", (stat?.clicks ?? 0).toLocaleString()], ["CTR", ctr === null ? "—" : `${ctr.toFixed(2)}%`],
+    ["Leads", `${stat?.leads ?? 0}`], ["Cost / lead", cpl === null ? "—" : money(cpl)],
   ];
 
   return (
@@ -101,7 +101,7 @@ export default function NetworkPage() {
                   const s = STATUS[c.status] ?? STATUS.DRAFT;
                   return (
                     <tr key={c.id} onClick={() => router.push(`/dashboard/marketing/campaigns/${c.id}`)} className="cursor-pointer border-b border-n100 transition last:border-0 hover:bg-n50">
-                      <td className="px-4 py-3 font-medium text-n900">{c.name}</td>
+                      <td className="px-4 py-3 font-medium text-n900"><Link href={`/dashboard/marketing/campaigns/${c.id}`} onClick={(e) => e.stopPropagation()} className="rounded outline-none hover:text-brand focus-visible:ring-2 focus-visible:ring-brand/40">{c.name}</Link></td>
                       <td className="tnum px-2 text-right text-n900">{money(c.spentCents)}</td>
                       <td className="tnum px-2 text-right text-n700">{c.clicks.toLocaleString()}</td>
                       <td className="tnum px-2 text-right text-n900">{c.leadCount}</td>

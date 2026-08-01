@@ -172,7 +172,7 @@ export default function CampaignDetail() {
                 </Card>
 
                 <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
-                  {[["CPM", money(an.metrics.cpmCents)], ["CTR", `${an.metrics.ctr.toFixed(2)}%`], ["CPC", money(an.metrics.cpcCents)], ["Cost / lead", money(an.metrics.cplCents)], ["Cost / sold", an.metrics.costPerSoldCents ? money(an.metrics.costPerSoldCents) : "—"], ["ROAS", an.metrics.roas ? `${an.metrics.roas.toFixed(1)}×` : "—"]].map(([l, v]) => (
+                  {[["CPM", money(an.metrics.cpmCents)], ["CTR", `${an.metrics.ctr.toFixed(2)}%`], ["CPC", c.clicks ? money(an.metrics.cpcCents) : "—"], ["Cost / lead", c.leadCount ? money(an.metrics.cplCents) : "—"], ["Cost / sold", an.metrics.costPerSoldCents ? money(an.metrics.costPerSoldCents) : "—"], ["ROAS", an.metrics.roas ? `${an.metrics.roas.toFixed(1)}×` : "—"]].map(([l, v]) => (
                     <Card key={l} className="p-3.5"><p className="text-[11px] font-medium uppercase tracking-[0.04em] text-n500">{l}</p><p className="tnum mt-1.5 text-[17px] font-semibold text-n900">{v}</p></Card>
                   ))}
                 </div>

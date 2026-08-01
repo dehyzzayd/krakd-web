@@ -105,7 +105,8 @@ export function SplitBar({ parts }: { parts: { label: string; value: number; col
         {parts.map((p) => p.value > 0 && <div key={p.label} style={{ width: `${(p.value / total) * 100}%`, background: p.color }} title={p.label} />)}
       </div>
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-        {parts.map((p) => <span key={p.label} className="flex items-center gap-1.5 text-[11.5px] text-n600"><span className="h-2 w-2 rounded-full" style={{ background: p.color }} />{p.label} <span className="tnum font-semibold text-n800">{Math.round((p.value / total) * 100)}%</span></span>)}
+        {parts.filter((p) => p.value > 0).map((p) => <span key={p.label} className="flex items-center gap-1.5 text-[11.5px] text-n600"><span className="h-2 w-2 rounded-full" style={{ background: p.color }} />{p.label} <span className="tnum font-semibold text-n800">{Math.round((p.value / total) * 100)}%</span></span>)}
+        {parts.every((p) => p.value === 0) && <span className="text-[11.5px] text-n400">No spend yet</span>}
       </div>
     </div>
   );

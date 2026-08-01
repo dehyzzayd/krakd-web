@@ -45,7 +45,7 @@ export default function CalendarPage() {
 
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [day, setDay] = useState(() => new Date().getDate());
-  const [apptEdit, setApptEdit] = useState<{ appt: null } | null>(null);
+  const [apptEdit, setApptEdit] = useState<{ id: string | null } | null>(null);
   const [sel, setSel] = useState<Appt | null>(null);
   const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   const weekStart = day - new Date(anchor.y, anchor.m, day).getDay();
@@ -64,7 +64,7 @@ export default function CalendarPage() {
             <div className="flex items-center rounded-lg border border-[#e4e7ec] bg-white p-0.5">
               {(["month", "week", "day"] as const).map((m) => <button key={m} onClick={() => setView(m)} className={cn("h-8 rounded-[7px] px-3 text-[12.5px] font-medium capitalize transition", view === m ? "bg-n100 text-n900" : "text-n600 hover:text-n900")}>{m}</button>)}
             </div>
-            <button onClick={() => setApptEdit({ appt: null })} className="btn-brand h-9 rounded-lg px-3.5 text-[12.5px] font-semibold transition">+ New appointment</button>
+            <button onClick={() => setApptEdit({ id: null })} className="btn-brand h-9 rounded-lg px-3.5 text-[12.5px] font-semibold transition">+ New appointment</button>
           </div>
         </div>
 
@@ -154,7 +154,7 @@ export default function CalendarPage() {
               <div className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n600">Reminder scheduled 1 hour before. AI will confirm the morning of.</div>
             </div>
             <div className="flex items-center gap-2 border-t border-[#e4e7ec] px-5 py-3">
-              <button onClick={() => { setApptEdit({ appt: null }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>
+              <button onClick={() => { setApptEdit({ id: sel.id }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>
               <button className="h-9 rounded-lg px-3 text-[13px] font-medium text-err hover:bg-err-soft">Cancel</button>
               <Link href={`/dashboard/leads/${sel.leadId}`} className="ml-auto h-9 rounded-lg bg-brand px-4 text-[13px] font-semibold leading-9 text-white transition hover:bg-brand-hover">Open lead</Link>
             </div>
@@ -162,7 +162,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {apptEdit && <EditAppointmentSheet open onClose={() => setApptEdit(null)} onCreated={reload} />}
+      {apptEdit && <EditAppointmentSheet open apptId={apptEdit.id ?? undefined} onClose={() => setApptEdit(null)} onCreated={reload} />}
     </>
   );
 }
