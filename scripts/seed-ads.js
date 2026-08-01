@@ -27,6 +27,23 @@ const CAMPAIGNS = [
     headline: "Weekend Sales Event — 3 days only", primaryText: "This weekend only at Dehy Auto Sales — special pricing across the lot. Come find your next ride. 🎉" },
 ];
 
+const FIRST = ["James", "Maria", "Robert", "Ashley", "David", "Jessica", "Michael", "Sarah", "Chris", "Amanda", "Daniel", "Nicole", "Kevin", "Brittany", "Jason", "Megan", "Eric", "Rachel", "Brian", "Lauren"];
+const LAST = ["Smith", "Johnson", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Wilson", "Anderson", "Taylor", "Thomas", "Moore", "Jackson", "White", "Harris"];
+const SOURCE = "seed-ads";
+
+/** Realistic status funnel for L delivered leads → returns an array of statuses. */
+function leadStatuses(L) {
+  const sold = Math.round(L * 0.09), appt = Math.round(L * 0.14), qual = Math.round(L * 0.18), cont = Math.round(L * 0.25), lost = Math.round(L * 0.12);
+  const out = [];
+  for (let i = 0; i < sold; i++) out.push("SOLD");
+  for (let i = 0; i < appt; i++) out.push("APPOINTMENT");
+  for (let i = 0; i < qual; i++) out.push("QUALIFIED");
+  for (let i = 0; i < cont; i++) out.push("CONTACTED");
+  for (let i = 0; i < lost; i++) out.push("LOST");
+  while (out.length < L) out.push("NEW");
+  return out.slice(0, L);
+}
+
 (async () => {
   const dealer = await p.dealership.findFirst({ where: { name: DEALER }, select: { id: true } });
   if (!dealer) { console.error(`✗ Dealer "${DEALER}" not found`); process.exit(1); }
@@ -40,22 +57,38 @@ const CAMPAIGNS = [
 
   const names = CAMPAIGNS.map((c) => c.name);
   await p.campaign.deleteMany({ where: { dealershipId, name: { in: names } } });
+  await p.lead.deleteMany({ where: { dealershipId, source: SOURCE } });
+
+  const start = new Date(); start.setDate(start.getDate() - 21); // campaigns have been live ~3 weeks
 
   for (const c of CAMPAIGNS) {
     const feeCents = Math.round(c.budget * 0.1);
     const imgs = c.format === "CAROUSEL" ? images : c.format === "SEARCH" ? [] : images.slice(0, 1);
-    await p.campaign.create({
+    const created = await p.campaign.create({
       data: {
         dealershipId, name: c.name, channel: c.channel, format: c.format, objective: c.objective, status: c.status,
         frequency: "MONTHLY", budgetCents: c.budget, feeCents, netSpendCents: c.budget - feeCents,
         radiusMiles: 30, ageMin: 25, ageMax: 60, gender: "all", smartTargeting: true,
         impressions: c.impressions, clicks: c.clicks, leadCount: c.leads, spentCents: c.spent,
-        startDate: c.status === "DRAFT" ? null : new Date(),
+        startDate: c.status === "DRAFT" || c.status === "PENDING_REVIEW" ? null : start,
         primaryText: c.primaryText, headline: c.headline, description: c.description ?? null, cta: c.cta,
         creativeImageUrl: imgs[0] ?? null, creativeImages: imgs,
       },
     });
-    console.log(`  · ${c.name} [${c.channel}/${c.format}] ${c.status} — $${(c.spent / 100).toLocaleString()} spent, ${c.leads} leads`);
+
+    let sold = 0;
+    if (c.leads > 0) {
+      const statuses = leadStatuses(c.leads);
+      sold = statuses.filter((s) => s === "SOLD").length;
+      await p.lead.createMany({
+        data: statuses.map((status, i) => ({
+          dealershipId, campaignId: created.id, source: SOURCE, status,
+          firstName: FIRST[(i * 7 + c.name.length) % FIRST.length], lastName: LAST[(i * 3) % LAST.length],
+          temperature: status === "SOLD" || status === "APPOINTMENT" ? "HOT" : status === "LOST" ? "COLD" : "WARM",
+        })),
+      });
+    }
+    console.log(`  · ${c.name} [${c.channel}/${c.format}] ${c.status} — $${(c.spent / 100).toLocaleString()} spent, ${c.leads} leads, ${sold} sold`);
   }
   console.log(`\n✓ Seeded ${CAMPAIGNS.length} campaigns for ${DEALER}`);
   await p.$disconnect();

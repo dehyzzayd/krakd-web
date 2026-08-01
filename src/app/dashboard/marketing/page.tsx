@@ -7,11 +7,18 @@ import { Topbar, AppMain } from "@/components/app/Topbar";
 import { Card } from "@/components/app/AppKit";
 import { useApi } from "@/lib/useApi";
 import { NewCampaignSheet } from "@/components/app/NewCampaignSheet";
+import { AreaChart, FunnelChart, SplitBar } from "@/components/app/Charts";
 import { NETWORKS, netByChannel, money } from "@/lib/networks";
-import { Megaphone, Wifi, WifiOff, ArrowRight } from "lucide-react";
+import { Megaphone, Wifi, WifiOff, ArrowRight, TrendingUp } from "lucide-react";
 
 type Net = { channel: string; spendCents: number; budgetCents: number; impressions: number; clicks: number; leads: number; active: number; count: number };
-type Summary = { connections: Record<string, boolean>; totals: Net; networks: Net[] };
+type Day = { date: string; spendCents: number; impressions: number; clicks: number; leads: number };
+type Metrics = { cpmCents: number; ctr: number; cpcCents: number; cplCents: number; costPerSoldCents: number; roas: number; grossCents: number };
+type Stage = { key: string; value: number; rate: number | null; costEachCents: number };
+type Summary = { connections: Record<string, boolean>; totals: Net; networks: Net[]; metrics: Metrics; sold: number; appts: number; funnel: Stage[]; daily: Day[] };
+
+const NET_COLOR: Record<string, string> = { FACEBOOK: "#1877F2", INSTAGRAM: "#E1306C", GOOGLE: "#F4B400" };
+const shortDate = (s: string) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 type Camp = { id: string; name: string; channel: string; status: string; spentCents: number; leadCount: number };
 
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -51,6 +58,20 @@ export default function MarketingOverview() {
           ))}
         </div>
 
+        {/* 30-day performance trend */}
+        {t && t.count > 0 && (data?.daily?.some((d) => d.spendCents > 0)) && (
+          <Card className="mt-3 p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Performance · last 30 days</p></div>
+              <div className="flex items-center gap-4 text-[11.5px] text-n500">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#ff5a16" }} />Spend</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#0ea5e9" }} />Leads</span>
+              </div>
+            </div>
+            <AreaChart data={(data?.daily ?? []).map((d) => ({ label: shortDate(d.date), a: d.spendCents, b: d.leads }))} aName="Spend" bName="Leads" fmtA={money} fmtB={(n) => `${n}`} />
+          </Card>
+        )}
+
         {/* networks — each a live, clickable channel */}
         <p className="mb-2 mt-6 text-[13px] font-semibold text-n900">Ad accounts</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -75,6 +96,31 @@ export default function MarketingOverview() {
             );
           })}
         </div>
+
+        {/* sales matchback — impression → sold vehicle */}
+        {t && t.count > 0 && data && (
+          <div className="mt-6 grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+            <Card className="p-5">
+              <p className="text-[13px] font-semibold text-n900">Sales matchback</p>
+              <p className="mb-4 mt-0.5 text-[12px] text-n500">From impression to sold vehicle — the cost at every step.</p>
+              <FunnelChart stages={data.funnel.map((s) => ({ key: s.key, value: s.value, rate: s.rate, cost: s.value ? `${money(s.costEachCents)}/ea` : "—" }))} />
+            </Card>
+            <div className="space-y-3">
+              <Card className="p-5">
+                <p className="mb-3 text-[13px] font-semibold text-n900">Attributed results</p>
+                <div className="grid grid-cols-2 gap-4">
+                  {[["Sold vehicles", `${data.sold}`], ["Cost / sold", data.metrics.costPerSoldCents ? money(data.metrics.costPerSoldCents) : "—"], ["Est. ROAS", data.metrics.roas ? `${data.metrics.roas.toFixed(1)}×` : "—"], ["Cost / lead", data.metrics.cplCents ? money(data.metrics.cplCents) : "—"]].map(([l, v]) => (
+                    <div key={l}><p className="tnum text-[22px] font-semibold text-n900">{v}</p><p className="text-[11px] uppercase tracking-wide text-n500">{l}</p></div>
+                  ))}
+                </div>
+              </Card>
+              <Card className="p-5">
+                <p className="mb-3 text-[13px] font-semibold text-n900">Spend by network</p>
+                <SplitBar parts={data.networks.map((nw) => ({ label: netByChannel(nw.channel)?.name ?? nw.channel, value: nw.spendCents, color: NET_COLOR[nw.channel] ?? "#94a3b8" }))} />
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* recent campaigns */}
         <div className="mb-2 mt-6 flex items-center justify-between">

@@ -8,6 +8,15 @@ import { Card } from "@/components/app/AppKit";
 import { useApi } from "@/lib/useApi";
 import { apiFetch } from "@/lib/api";
 import { AdPreview } from "@/components/app/AdPreview";
+import { AreaChart, FunnelChart } from "@/components/app/Charts";
+import { TrendingUp, Lightbulb } from "lucide-react";
+
+type Metrics = { cpmCents: number; ctr: number; cpcCents: number; cplCents: number; costPerSoldCents: number; roas: number; grossCents: number };
+type Stage = { key: string; value: number; rate: number | null; costEachCents: number };
+type Insight = { tone: "ok" | "warn" | "info" | "brand"; title: string; detail: string };
+type Analytics = { series: { date: string; spendCents: number; impressions: number; clicks: number; leads: number }[]; metrics: Metrics; funnel: Stage[]; insights: Insight[]; sold: number; appts: number };
+const shortDate = (s: string) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const INSIGHT_TONE: Record<string, string> = { ok: "bg-ok-soft text-ok", warn: "bg-warn-soft text-warn", info: "bg-n100 text-n600", brand: "bg-brand-soft text-brand" };
 
 type Campaign = {
   id: string; name: string; channel: string; objective: string; status: string;
@@ -34,6 +43,7 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString()}`;
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error, reload } = useApi<Campaign>(`/campaigns/${id}`);
+  const { data: an } = useApi<Analytics>(`/campaigns/${id}/analytics`);
   const { data: ov } = useApi<{ dealershipName?: string }>("/overview");
   const [busy, setBusy] = useState(false);
 
@@ -149,6 +159,44 @@ export default function CampaignDetail() {
               </div>
               {c.status === "DRAFT" && <p className="mt-2 text-[12px] text-n500">Performance starts reporting once the campaign is reviewed and goes live.</p>}
             </div>
+
+            {/* analytics — trend, efficiency metrics, matchback, insights */}
+            {an && c.impressions > 0 && (
+              <>
+                <Card className="p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Delivery · last 30 days</p></div>
+                    <div className="flex items-center gap-4 text-[11.5px] text-n500"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#ff5a16" }} />Spend</span><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#0ea5e9" }} />Leads</span></div>
+                  </div>
+                  <AreaChart data={an.series.map((d) => ({ label: shortDate(d.date), a: d.spendCents, b: d.leads }))} aName="Spend" bName="Leads" fmtA={money} fmtB={(n) => `${n}`} />
+                </Card>
+
+                <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
+                  {[["CPM", money(an.metrics.cpmCents)], ["CTR", `${an.metrics.ctr.toFixed(2)}%`], ["CPC", money(an.metrics.cpcCents)], ["Cost / lead", money(an.metrics.cplCents)], ["Cost / sold", an.metrics.costPerSoldCents ? money(an.metrics.costPerSoldCents) : "—"], ["ROAS", an.metrics.roas ? `${an.metrics.roas.toFixed(1)}×` : "—"]].map(([l, v]) => (
+                    <Card key={l} className="p-3.5"><p className="text-[11px] font-medium uppercase tracking-[0.04em] text-n500">{l}</p><p className="tnum mt-1.5 text-[17px] font-semibold text-n900">{v}</p></Card>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+                  <Card className="p-5">
+                    <p className="text-[13px] font-semibold text-n900">Sales matchback</p>
+                    <p className="mb-4 mt-0.5 text-[12px] text-n500">Impression → sold vehicle, with cost at each step.</p>
+                    <FunnelChart stages={an.funnel.map((s) => ({ key: s.key, value: s.value, rate: s.rate, cost: s.value ? `${money(s.costEachCents)}/ea` : "—" }))} />
+                  </Card>
+                  <Card className="p-5">
+                    <div className="mb-3 flex items-center gap-2"><Lightbulb className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Insights</p></div>
+                    <div className="space-y-2.5">
+                      {an.insights.map((it, i) => (
+                        <div key={i} className="flex gap-2.5">
+                          <span className={`mt-0.5 inline-flex h-4 shrink-0 items-center rounded-full px-2 text-[10px] font-bold uppercase ${INSIGHT_TONE[it.tone]}`}>{it.tone}</span>
+                          <div><p className="text-[12.5px] font-semibold text-n900">{it.title}</p><p className="text-[12px] leading-snug text-n500">{it.detail}</p></div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              </>
+            )}
 
             {/* targeting */}
             <Card className="p-5">
