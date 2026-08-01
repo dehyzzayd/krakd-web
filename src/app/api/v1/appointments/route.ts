@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import { AppointmentType, LeadStatus } from "@prisma/client";
 import { vertical as verticalDef } from "@/components/site/verticals";
+import { wallClockToUtc } from "@/lib/server/slots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,23 +16,33 @@ const STATUS_LABEL: Record<string, string> = { SCHEDULED: "Scheduled", CONFIRMED
 const createSchema = z.object({
   leadId: z.string().uuid(),
   type: z.nativeEnum(AppointmentType),
-  scheduledStart: z.string(),
-  scheduledEnd: z.string(),
+  // wall-clock in the store's timezone (preferred), or explicit ISO instants
+  date: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  scheduledStart: z.string().optional(),
+  scheduledEnd: z.string().optional(),
   location: z.string().optional(),
   notes: z.string().optional(),
 });
 
-/* POST /api/v1/appointments → book an appointment (advances the lead) */
+/* POST /api/v1/appointments → book an appointment (advances the lead).
+   Times are interpreted in the STORE's timezone, not the dealer's browser. */
 export const POST = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
   const parsed = createSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
 
-  const lead = await prisma.lead.findFirst({ where: { id: d.leadId, dealershipId }, select: { id: true } });
+  const [lead, dealer] = await Promise.all([
+    prisma.lead.findFirst({ where: { id: d.leadId, dealershipId }, select: { id: true } }),
+    prisma.dealership.findUnique({ where: { id: dealershipId }, select: { timezone: true } }),
+  ]);
   if (!lead) throw new HttpError(404, "Lead not found");
-  const start = new Date(d.scheduledStart), end = new Date(d.scheduledEnd);
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) throw new HttpError(400, "Invalid start/end time");
+  const tz = dealer?.timezone || "America/Chicago";
+  const start = d.date && d.startTime ? wallClockToUtc(d.date, d.startTime, tz) : d.scheduledStart ? new Date(d.scheduledStart) : null;
+  const end = d.date && d.endTime ? wallClockToUtc(d.date, d.endTime, tz) : d.scheduledEnd ? new Date(d.scheduledEnd) : null;
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) throw new HttpError(400, "Invalid start/end time");
 
   const appt = await prisma.$transaction(async (tx) => {
     const a = await tx.appointment.create({

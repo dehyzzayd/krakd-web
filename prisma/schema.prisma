@@ -697,3 +697,20 @@ model QuoteLineItem {
 
   @@map("quote_line_items")
 }
+
+/// Cross-tenant audit trail for privileged platform-admin actions (impersonation, etc.).
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @db.Uuid   // the admin who acted
+  actorEmail   String
+  action       String                // e.g. IMPERSONATE
+  targetType   String?               // e.g. DEALERSHIP
+  targetId     String?  @db.Uuid
+  dealershipId String?  @db.Uuid     // dealership the action touched
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([dealershipId])
+  @@map("audit_logs")
+}

@@ -20,7 +20,9 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ id: 
   if (!user) throw new HttpError(404, "This client has no user account to view as.");
 
   const tokens = await issueTokens({ userId: user.id, dealershipId: id, role: user.role, email: user.email });
-  // best-effort audit trail
-  console.log(`[impersonate] ${admin.email} viewing ${dealer.name} as ${user.email} @ ${new Date().toISOString()}`);
+  // durable audit trail — who viewed which client, as whom, and when
+  await prisma.auditLog.create({
+    data: { actorUserId: admin.userId, actorEmail: admin.email, action: "IMPERSONATE", targetType: "DEALERSHIP", targetId: id, dealershipId: id, metadata: { dealerName: dealer.name, viewedAs: user.email } },
+  }).catch(() => {});
   return json({ ...tokens, dealershipName: dealer.name, email: user.email });
 });

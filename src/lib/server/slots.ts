@@ -28,10 +28,27 @@ function tzOffsetMs(tz: string, at: Date): number {
 }
 
 /** Wall-clock date+minutes in `tz` → the correct UTC instant. */
-function zonedToUtc(y: number, m0: number, d: number, minutes: number, tz: string): Date {
+export function zonedToUtc(y: number, m0: number, d: number, minutes: number, tz: string): Date {
   const guess = Date.UTC(y, m0, d, Math.floor(minutes / 60), minutes % 60);
   const off = tzOffsetMs(tz, new Date(guess));
   return new Date(guess - off);
+}
+
+/** A "YYYY-MM-DD" + "HH:MM" wall-clock pair in `tz`, interpreted to the UTC instant. */
+export function wallClockToUtc(date: string, time: string, tz: string): Date | null {
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec((date ?? "").trim());
+  const tm = /^(\d{1,2}):(\d{2})$/.exec((time ?? "").trim());
+  if (!dm || !tm) return null;
+  return zonedToUtc(+dm[1], +dm[2] - 1, +dm[3], +tm[1] * 60 + +tm[2], tz);
+}
+
+/** A UTC instant → wall-clock { date: "YYYY-MM-DD", time: "HH:MM" } as seen in `tz`. */
+export function utcToWallClock(at: Date, tz: string): { date: string; time: string } {
+  const dtf = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const p: Record<string, string> = {};
+  for (const part of dtf.formatToParts(at)) if (part.type !== "literal") p[part.type] = part.value;
+  const hour = p.hour === "24" ? "00" : p.hour;
+  return { date: `${p.year}-${p.month}-${p.day}`, time: `${hour}:${p.minute}` };
 }
 
 /** Today's Y/M/D as seen in `tz`. */

@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
 import { apiFetch, ApiError } from "@/lib/api";
 import { vertical as verticalDef } from "@/components/site/verticals";
+import { compressImage } from "@/lib/image";
 import { Tag, DollarSign, ListChecks, Camera, Upload, ImageIcon, Home } from "lucide-react";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -15,10 +16,6 @@ export type EditListing = {
   id: string; title: string | null; subtitle: string | null; price: number; status: string;
   attributes: Record<string, unknown>; photos?: string[];
 };
-
-const fileToDataUrl = (file: File): Promise<string> => new Promise((res, rej) => {
-  const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(new Error("read failed")); r.readAsDataURL(file);
-});
 
 function Section({ icon: Icon, title, desc, children }: { icon: React.ComponentType<{ className?: string }>; title: string; desc: string; children: ReactNode }) {
   return (
@@ -65,8 +62,8 @@ export function ListingForm({ vertical, listing, initialPhotos = [] }: { vertica
     const urls: string[] = [];
     for (const file of Array.from(files).slice(0, 24)) {
       if (!file.type.startsWith("image/")) continue;
-      if (file.size > 1_500_000) { setPhotoErr("Some images were over 1.5MB and skipped."); continue; }
-      try { urls.push(await fileToDataUrl(file)); } catch { /* skip */ }
+      if (file.size > 25_000_000) { setPhotoErr("Some images were over 25MB and skipped."); continue; }
+      try { urls.push(await compressImage(file)); } catch { /* skip */ }
     }
     if (urls.length) setPhotoUrls((p) => [...p, ...urls].slice(0, 24));
   };

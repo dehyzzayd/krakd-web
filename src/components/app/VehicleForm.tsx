@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
 import { apiFetch, ApiError } from "@/lib/api";
 import { money, type Vehicle, type VStatus } from "@/lib/inventory";
+import { compressImage } from "@/lib/image";
 import { Barcode, Sparkles, Camera, Upload, DollarSign, Car, ImageIcon } from "lucide-react";
 
 const BODIES = ["Sedan", "Coupe", "SUV", "Crew Cab", "Double Cab", "Wagon", "Hatchback", "Van", "Convertible"];
@@ -26,9 +27,6 @@ function seed(v: Vehicle | undefined, initialPhotos: string[]): Form {
   return { vin: v.vin, year: String(v.year), make: v.make, model: v.model, trim: v.trim, body: v.body, mileage: String(v.mileage), color: v.color, stock: v.stock, status: v.status, cost: String(v.cost), recon: "1250", pack: "695", price: String(v.price), photoUrls: initialPhotos };
 }
 
-const fileToDataUrl = (file: File): Promise<string> => new Promise((res, rej) => {
-  const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = () => rej(new Error("read failed")); r.readAsDataURL(file);
-});
 
 function Section({ icon: Icon, title, desc, children }: { icon: React.ComponentType<{ className?: string }>; title: string; desc: string; children: ReactNode }) {
   return (
@@ -62,8 +60,8 @@ export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle
     const urls: string[] = [];
     for (const file of picks) {
       if (!file.type.startsWith("image/")) continue;
-      if (file.size > 1_500_000) { setPhotoErr("Some images were over 1.5MB and skipped."); continue; }
-      try { urls.push(await fileToDataUrl(file)); } catch { /* skip */ }
+      if (file.size > 25_000_000) { setPhotoErr("Some images were over 25MB and skipped."); continue; }
+      try { urls.push(await compressImage(file)); } catch { /* skip */ }
     }
     if (urls.length) setF((p) => ({ ...p, photoUrls: [...p.photoUrls, ...urls].slice(0, 24) }));
   };

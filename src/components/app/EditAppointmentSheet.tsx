@@ -11,8 +11,6 @@ const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-const toDateStr = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-const toTimeStr = (iso: string) => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const addMinutes = (time: string, mins: number) => { const [h, m] = time.split(":").map(Number); const t = new Date(2000, 0, 1, h, m + mins); return `${pad(t.getHours())}:${pad(t.getMinutes())}`; };
 const fmtTime = (t: string) => { const [h, m] = t.split(":").map(Number); if (isNaN(h)) return t; const am = h < 12; const hr = h % 12 || 12; return `${hr}:${pad(m)} ${am ? "AM" : "PM"}`; };
 
@@ -20,14 +18,17 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
   return <div className="space-y-1.5"><label className="text-[13px] font-medium text-n900">{label}</label>{children}</div>;
 }
 
-type ApptFull = { id: string; leadId: string | null; type: string; scheduledStart: string; scheduledEnd: string; location: string | null; notes: string | null };
+type ApptFull = { id: string; leadId: string | null; type: string; date: string; startTime: string; endTime: string; tz: string; location: string | null; notes: string | null };
 
 export function EditAppointmentSheet({ open, onClose, onCreated, apptId }: { open: boolean; onClose: () => void; onCreated?: () => void; apptId?: string }) {
   const editing = !!apptId;
   const { data } = useApi<{ items: { id: string; name: string }[] }>("/leads");
   const { data: me } = useApi<{ vertical?: string }>("/auth/me");
+  const { data: settings } = useApi<{ timezone?: string }>("/settings");
   const leads = data?.items ?? [];
   const TYPES = verticalDef(me?.vertical).apptTypes;
+  const [tz, setTz] = useState<string>("");
+  const storeTz = tz || settings?.timezone || "";
 
   const [type, setType] = useState("TEST_DRIVE");
   const [leadId, setLeadId] = useState("");
@@ -46,7 +47,7 @@ export function EditAppointmentSheet({ open, onClose, onCreated, apptId }: { ope
     setLoading(true); setErr(null);
     apiFetch<ApptFull>(`/appointments/${apptId}`).then((a) => {
       setType(a.type); setLeadId(a.leadId ?? "");
-      setDate(toDateStr(a.scheduledStart)); setStartT(toTimeStr(a.scheduledStart)); setEndT(toTimeStr(a.scheduledEnd));
+      setDate(a.date); setStartT(a.startTime); setEndT(a.endTime); setTz(a.tz);
       setLocation(a.location ?? ""); setNote(a.notes ?? "");
     }).catch(() => setErr("Could not load this appointment.")).finally(() => setLoading(false));
   }, [open, apptId]);
@@ -57,15 +58,16 @@ export function EditAppointmentSheet({ open, onClose, onCreated, apptId }: { ope
   const save = async () => {
     setErr(null);
     if (!editing && !effectiveLead) { setErr("Add a lead first — appointments are booked against a lead."); return; }
-    const s = new Date(`${date}T${startT}`), e = new Date(`${date}T${endT}`);
-    if (isNaN(s.getTime()) || isNaN(e.getTime())) { setErr("Choose a valid date and time."); return; }
-    if (e <= s) { setErr("End time must be after the start time."); return; }
+    if (!date || !startT || !endT) { setErr("Choose a date, start and end time."); return; }
+    if (endT <= startT) { setErr("End time must be after the start time."); return; }
     setBusy(true);
+    // send wall-clock times — the server interprets them in the store's timezone
+    const body = { type, date, startTime: startT, endTime: endT, location, notes: note };
     try {
       if (editing) {
-        await apiFetch(`/appointments/${apptId}`, { method: "PATCH", body: JSON.stringify({ type, scheduledStart: s.toISOString(), scheduledEnd: e.toISOString(), location, notes: note }) });
+        await apiFetch(`/appointments/${apptId}`, { method: "PATCH", body: JSON.stringify(body) });
       } else {
-        await apiFetch("/appointments", { method: "POST", body: JSON.stringify({ leadId: effectiveLead, type, scheduledStart: s.toISOString(), scheduledEnd: e.toISOString(), location, notes: note }) });
+        await apiFetch("/appointments", { method: "POST", body: JSON.stringify({ leadId: effectiveLead, ...body }) });
       }
       onCreated?.();
       onClose();
@@ -97,7 +99,7 @@ export function EditAppointmentSheet({ open, onClose, onCreated, apptId }: { ope
           <Labeled label="Start"><input type="time" value={startT} onChange={(e) => onStart(e.target.value)} className={cn(fieldCls, "tnum")} /></Labeled>
           <Labeled label="End"><input type="time" value={endT} onChange={(e) => setEndT(e.target.value)} className={cn(fieldCls, "tnum")} /></Labeled>
         </div>
-        <p className="-mt-2 text-[11.5px] text-n400">{fmtTime(startT)} – {fmtTime(endT)}</p>
+        <p className="-mt-2 text-[11.5px] text-n400">{fmtTime(startT)} – {fmtTime(endT)}{storeTz && ` · ${storeTz.split("/").pop()?.replace(/_/g, " ")} time`}</p>
 
         <div className="border-t border-n200" />
 
