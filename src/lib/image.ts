@@ -40,3 +40,14 @@ export async function compressImage(
   while (url.length * 0.75 > maxBytes && q > 0.4) { q -= 0.12; url = canvas.toDataURL("image/jpeg", q); }
   return url;
 }
+
+const UPLOADABLE = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+/** Same compression, but as a Blob for direct upload. Returns null for formats
+ *  we don't push to object storage (svg/gif/etc) so callers fall back to inline. */
+export async function compressImageToBlob(file: File, opts?: { maxDim?: number; quality?: number; maxBytes?: number }): Promise<Blob | null> {
+  const dataUrl = await compressImage(file, opts);
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return UPLOADABLE.has(blob.type) ? blob : null;
+}

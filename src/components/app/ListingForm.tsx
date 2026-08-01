@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
 import { apiFetch, ApiError } from "@/lib/api";
 import { vertical as verticalDef } from "@/components/site/verticals";
-import { compressImage } from "@/lib/image";
+import { uploadImage } from "@/lib/upload";
 import { Tag, DollarSign, ListChecks, Camera, Upload, ImageIcon, Home } from "lucide-react";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -63,7 +63,7 @@ export function ListingForm({ vertical, listing, initialPhotos = [] }: { vertica
     for (const file of Array.from(files).slice(0, 24)) {
       if (!file.type.startsWith("image/")) continue;
       if (file.size > 25_000_000) { setPhotoErr("Some images were over 25MB and skipped."); continue; }
-      try { urls.push(await compressImage(file)); } catch { /* skip */ }
+      try { urls.push(await uploadImage(file)); } catch { /* skip */ }
     }
     if (urls.length) setPhotoUrls((p) => [...p, ...urls].slice(0, 24));
   };

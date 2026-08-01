@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
 import { apiFetch, ApiError } from "@/lib/api";
 import { money, type Vehicle, type VStatus } from "@/lib/inventory";
-import { compressImage } from "@/lib/image";
+import { uploadImage } from "@/lib/upload";
 import { Barcode, Sparkles, Camera, Upload, DollarSign, Car, ImageIcon } from "lucide-react";
 
 const BODIES = ["Sedan", "Coupe", "SUV", "Crew Cab", "Double Cab", "Wagon", "Hatchback", "Van", "Convertible"];
@@ -61,7 +61,7 @@ export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle
     for (const file of picks) {
       if (!file.type.startsWith("image/")) continue;
       if (file.size > 25_000_000) { setPhotoErr("Some images were over 25MB and skipped."); continue; }
-      try { urls.push(await compressImage(file)); } catch { /* skip */ }
+      try { urls.push(await uploadImage(file)); } catch { /* skip */ }
     }
     if (urls.length) setF((p) => ({ ...p, photoUrls: [...p.photoUrls, ...urls].slice(0, 24) }));
   };
