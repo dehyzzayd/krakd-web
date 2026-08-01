@@ -25,7 +25,8 @@ const patchSchema = z.object({
   cta: z.string().max(40).optional(),
 });
 
-/* PATCH /api/v1/campaigns/[id] — rename, pause/resume, submit for review, end */
+/* PATCH /api/v1/campaigns/[id] — rename, edit creative, submit for review, pause/resume, end.
+   Submitting sends the campaign to Krakd's review queue; a platform admin approves it. */
 export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
   const { dealershipId } = await requireAuth(req);
   const { id } = await ctx.params;

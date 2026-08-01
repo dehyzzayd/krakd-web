@@ -61,6 +61,7 @@ model Dealership {
   hours         Json             @default("[]") // global business hours: [{ day, open, close }]
   brandColor    String?          // global brand accent (hex)
   logoUrl       String?          @db.Text // global logo (data URL or external)
+  adConnections Json             @default("{}") // connected ad accounts: { facebook, instagram, google }
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

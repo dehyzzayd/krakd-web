@@ -13,10 +13,10 @@ const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[
 const areaCls = "w-full rounded-md border border-n200 bg-white px-3 py-2 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 type Net = "FACEBOOK" | "INSTAGRAM" | "GOOGLE";
-const NETWORKS: { v: Net; label: string; sub: string; logo: string; connected: boolean }[] = [
-  { v: "FACEBOOK", label: "Facebook", sub: "Page feed, Marketplace, Reels", logo: "/logos/facebook.svg", connected: true },
-  { v: "INSTAGRAM", label: "Instagram", sub: "Feed & Stories", logo: "/logos/instagram.svg", connected: false },
-  { v: "GOOGLE", label: "Google", sub: "Search, Vehicle Ads & PMax", logo: "/logos/google.svg", connected: true },
+const NETWORKS: { v: Net; label: string; sub: string; logo: string }[] = [
+  { v: "FACEBOOK", label: "Facebook", sub: "Page feed, Marketplace, Reels", logo: "/logos/facebook.svg" },
+  { v: "INSTAGRAM", label: "Instagram", sub: "Feed & Stories", logo: "/logos/instagram.svg" },
+  { v: "GOOGLE", label: "Google", sub: "Search, Vehicle Ads & PMax", logo: "/logos/google.svg" },
 ];
 const FORMATS: Record<Net, { v: string; label: string; desc: string; Icon: typeof Square }[]> = {
   FACEBOOK: [{ v: "SINGLE_IMAGE", label: "Single image", desc: "One vehicle, one photo", Icon: Square }, { v: "CAROUSEL", label: "Carousel", desc: "Multiple vehicles, swipeable", Icon: Images }],
@@ -58,6 +58,8 @@ export function NewCampaignSheet({ open, onClose, onCreated, initialNetwork }: {
   const [vehicles, setVehicles] = useState<Veh[]>([]);
   const [vertical, setVertical] = useState<string>("AUTOMOTIVE");
   const [dealer, setDealer] = useState("Your dealership");
+  const [connections, setConnections] = useState<Record<string, boolean>>({});
+  const isConn = (v: Net) => !!connections[v.toLowerCase()];
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -69,6 +71,7 @@ export function NewCampaignSheet({ open, onClose, onCreated, initialNetwork }: {
     setF((p) => ({ ...p, channel: initialNetwork ?? "FACEBOOK", format: FORMATS[initialNetwork ?? "FACEBOOK"][0].v, primaryText: "", headline: "", description: "" }));
     apiFetch<{ items: Veh[]; vertical?: string }>("/inventory").then((r) => { setVehicles(r.items ?? []); if (r.vertical) setVertical(r.vertical); }).catch(() => setVehicles([]));
     apiFetch<{ dealershipName?: string }>("/overview").then((r) => { if (r.dealershipName) setDealer(r.dealershipName); }).catch(() => {});
+    apiFetch<Record<string, boolean>>("/marketing/connections").then(setConnections).catch(() => {});
   }, [open, initialNetwork]);
 
   const pickNetwork = (v: Net) => setF((p) => ({ ...p, channel: v, format: FORMATS[v][0].v }));
@@ -172,11 +175,11 @@ export function NewCampaignSheet({ open, onClose, onCreated, initialNetwork }: {
               <button key={n.v} type="button" onClick={() => pickNetwork(n.v)} className={cn("flex w-full items-center gap-3 rounded-xl border p-4 text-left transition", on ? "border-brand bg-brand-soft/30 ring-1 ring-brand/20" : "border-n200 bg-white hover:bg-n50")}>
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-n100">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={n.logo} alt={n.label} className="h-5 w-5" /></span>
                 <span className="min-w-0 flex-1"><span className="block text-[14px] font-semibold text-n900">{n.label}</span><span className="text-[12px] text-n500">{n.sub}</span></span>
-                <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", n.connected ? "bg-ok-soft text-ok" : "bg-n100 text-n500")}>{n.connected ? <><Wifi className="h-3 w-3" />Connected</> : <><WifiOff className="h-3 w-3" />Connect</>}</span>
+                <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", isConn(n.v) ? "bg-ok-soft text-ok" : "bg-n100 text-n500")}>{isConn(n.v) ? <><Wifi className="h-3 w-3" />Connected</> : <><WifiOff className="h-3 w-3" />Connect</>}</span>
               </button>
             );
           })}
-          {!net.connected && <p className="rounded-lg bg-warn-soft/50 px-3 py-2.5 text-[12px] text-warn">You&apos;ll connect {net.label} before this can go live — you can still build the campaign now.</p>}
+          {!isConn(f.channel) && <p className="rounded-lg bg-warn-soft/50 px-3 py-2.5 text-[12px] text-warn">You&apos;ll connect {net.label} before this can go live — you can still build the campaign now.</p>}
         </div>
       )}
 

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/layout/Logo";
 import { useSidebar } from "./SidebarContext";
-import { NETWORKS } from "@/lib/marketing";
+import { NETWORKS } from "@/lib/networks";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Settings as SettingsIcon, FileText } from "lucide-react";
 
@@ -41,7 +41,8 @@ const NAV: Entry[] = [
     type: "group", id: "mk", label: "Digital Marketing", Icon: IconMarketing, bases: ["/dashboard/marketing"],
     children: [
       { href: "/dashboard/marketing", label: "Overview" },
-      ...NETWORKS.map((n) => ({ href: `/dashboard/marketing/${n.id}`, label: n.name, logo: n.logo, connected: n.connected })),
+      { href: "/dashboard/marketing/campaigns", label: "Campaigns" },
+      ...NETWORKS.map((n) => ({ href: `/dashboard/marketing/${n.id}`, label: n.name, logo: n.logo })),
     ],
   },
   { type: "item", href: "/dashboard/reports", label: "Reports", Icon: IconReports },
@@ -56,9 +57,11 @@ export function Sidebar() {
   const [menu, setMenu] = useState(false);
   const [dealer, setDealer] = useState<string | null>(null);
   const [vertical, setVertical] = useState<string>("AUTOMOTIVE");
+  const [connections, setConnections] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (!getToken()) return;
     apiFetch<{ dealershipName: string; vertical?: string }>("/overview").then((d) => { setDealer(d.dealershipName); if (d.vertical) setVertical(d.vertical); }).catch(() => {});
+    apiFetch<Record<string, boolean>>("/marketing/connections").then(setConnections).catch(() => {});
   }, []);
   // the inventory nav item speaks the business's language ("Inventory" vs "Listings")
   const invLabel = cap(verticalDef(vertical).plural);
@@ -112,15 +115,17 @@ export function Sidebar() {
                 <div className="mt-0.5 space-y-0.5 pl-4">
                   {e.children.filter((c) => auto || !AUTO_ONLY_CHILDREN.has(c.href)).map((c) => {
                     const active = pathname === c.href;
+                    const isNet = !!c.logo;
+                    const connected = isNet ? !!connections[c.href.split("/").pop() ?? ""] : true;
                     return (
                       <Link key={c.href} href={c.href} className={cn("flex items-center gap-2.5 rounded-lg py-1.5 pl-3 pr-2 text-[13px] font-medium transition", active ? "bg-white text-n900 sh-card" : "text-n600 hover:bg-n100 hover:text-n900")}>
                         {c.logo
                           // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={c.logo} alt="" className={cn("h-4 w-4 shrink-0", !c.connected && "opacity-40 grayscale")} />
+                          ? <img src={c.logo} alt="" className={cn("h-4 w-4 shrink-0", !connected && "opacity-40 grayscale")} />
                           : <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-brand" : "bg-n300")} />}
                         <span className="flex-1">{c.label}</span>
                         {c.badge ? <span className="tnum rounded-full bg-err px-1.5 text-[10.5px] font-semibold text-white">{c.badge}</span> : null}
-                        {c.logo && !c.connected && <span className="text-[10px] font-semibold uppercase tracking-wide text-n400">Connect</span>}
+                        {isNet && !connected && <span className="text-[10px] font-semibold uppercase tracking-wide text-n400">Connect</span>}
                       </Link>
                     );
                   })}
