@@ -75,6 +75,8 @@ model Dealership {
   appointments  Appointment[]
   conversations AiConversation[]
   quotes        Quote[]
+  creditAppConfig CreditAppConfig?
+  creditApps    CreditApplication[]
   metrics       DailyMetric[]
   aiSettings    AiSettings?
   website       Website?
@@ -375,6 +377,7 @@ model Lead {
   appointments  Appointment[]
   conversations AiConversation[]
   quotes        Quote[]
+  creditApps    CreditApplication[]
 
   @@index([dealershipId, status])
   @@index([dealershipId, lastActivityAt])
@@ -697,6 +700,45 @@ model QuoteLineItem {
   sortOrder   Int    @default(0)
 
   @@map("quote_line_items")
+}
+
+enum CreditAppStatus {
+  NEW
+  REVIEWING
+  APPROVED
+  DECLINED
+}
+
+/// Per-dealer credit-application form config (the builder output) + its public token.
+model CreditAppConfig {
+  id             String     @id @default(uuid()) @db.Uuid
+  dealershipId   String     @unique @db.Uuid
+  dealership     Dealership @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  publicToken    String     @unique
+  config         Json       @default("{}") // { fields: { key: { enabled, required } }, coApplicant }
+  consentText    String     @db.Text
+  disclaimerText String     @db.Text
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("credit_app_configs")
+}
+
+/// A submitted credit application (from the standalone link or embedded iframe).
+model CreditApplication {
+  id           String          @id @default(uuid()) @db.Uuid
+  dealershipId String          @db.Uuid
+  dealership   Dealership      @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  leadId       String?         @db.Uuid
+  lead         Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  applicant    Json            @default("{}")
+  coApplicant  Json?
+  status       CreditAppStatus @default(NEW)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([dealershipId, status])
+  @@map("credit_applications")
 }
 
 /// Cross-tenant audit trail for privileged platform-admin actions (impersonation, etc.).
