@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Topbar } from "@/components/app/Topbar";
-import { Badge, Dot, type Tone } from "@/components/app/AppKit";
+import { Badge, Dot, ErrorBanner, type Tone } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { EditAppointmentSheet } from "@/components/app/EditAppointmentSheet";
 import { useApi } from "@/lib/useApi";
@@ -21,7 +21,7 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function CalendarPage() {
-  const { data, reload } = useApi<{ items: ApiAppt[] }>("/appointments");
+  const { data, error, reload } = useApi<{ items: ApiAppt[] }>("/appointments");
   const appts: Appt[] = useMemo(() => (data?.items ?? []).map((a) => {
     const st = new Date(a.start);
     return {
@@ -56,6 +56,7 @@ export default function CalendarPage() {
     <>
       <Topbar title="Calendar" />
       <div className="w-full px-6 py-5">
+        {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1"><button onClick={() => shiftMonth(-1)} className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">‹</button><button onClick={() => shiftMonth(1)} className="grid h-8 w-8 place-items-center rounded-lg text-n500 hover:bg-n100">›</button></div>
           <h2 className="text-[17px] font-semibold text-n900">{view === "day" ? `${MONTHS[anchor.m]} ${day}, ${anchor.y}` : monthLabel}</h2>

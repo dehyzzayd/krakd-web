@@ -8,6 +8,7 @@ import {
   MoreVertical, Eye, Pencil, Tag, PackageX, Camera,
 } from "lucide-react";
 import { Topbar } from "@/components/app/Topbar";
+import { ErrorBanner } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef, type ListingView } from "@/components/site/verticals";
@@ -66,7 +67,7 @@ function RowMenu({ v, noun, auto, openHref }: { v: V; noun: string; auto: boolea
 
 export default function InventoryPage() {
   const router = useRouter();
-  const { data, loading } = useApi<InvData>("/inventory");
+  const { data, loading, error, reload } = useApi<InvData>("/inventory");
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<string>("all");
   const [view, setView] = useState<"list" | "grid">("list");
@@ -93,6 +94,7 @@ export default function InventoryPage() {
     <>
       <Topbar title={section} />
       <div className="w-full px-6 py-5">
+        {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div><h1 className="text-[20px] font-bold text-n900">{section}</h1><p className="mt-0.5 text-[12px] text-n500">{auto ? `Live stock · ${s?.unitsLive ?? 0} units · ${money(s?.retailValue ?? 0)} retail` : `Live · ${s?.unitsLive ?? 0} ${dash.units} · ${money(s?.retailValue ?? 0)} ${dash.valueLabel.toLowerCase()}`}</p></div>
           <div className="flex items-center gap-2">

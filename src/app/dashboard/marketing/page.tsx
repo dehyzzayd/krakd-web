@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Topbar, AppMain } from "@/components/app/Topbar";
-import { Card } from "@/components/app/AppKit";
+import { Card, ErrorBanner } from "@/components/app/AppKit";
 import { useApi } from "@/lib/useApi";
 import { NewCampaignSheet } from "@/components/app/NewCampaignSheet";
 import { AreaChart, FunnelChart, SplitBar } from "@/components/app/Charts";
@@ -29,7 +29,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 export default function MarketingOverview() {
   const router = useRouter();
-  const { data, loading, reload } = useApi<Summary>("/marketing/summary");
+  const { data, loading, error, reload } = useApi<Summary>("/marketing/summary");
   const { data: camps, reload: reloadCamps } = useApi<{ items: Camp[] }>("/campaigns");
   const [open, setOpen] = useState(false);
 
@@ -49,6 +49,7 @@ export default function MarketingOverview() {
     <>
       <Topbar title="Digital Marketing" action={{ label: "New campaign", onClick: () => setOpen(true) }} />
       <AppMain>
+        {error && <ErrorBanner onRetry={reload} />}
         <p className="mb-4 text-[13.5px] text-n600">Connect your ad accounts, launch campaigns, and Krakd publishes them for you — then reports the numbers that matter back here.</p>
 
         {/* live KPIs */}

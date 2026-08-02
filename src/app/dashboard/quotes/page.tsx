@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/app/Topbar";
+import { ErrorBanner } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { apiFetch } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
@@ -16,7 +17,7 @@ const TABS = [["all", "All"], ["DRAFT", "Drafts"], ["SENT", "Sent"], ["ACCEPTED"
 
 export default function QuotesPage() {
   const router = useRouter();
-  const { data, loading } = useApi<{ items: Q[] }>("/quotes");
+  const { data, loading, error, reload } = useApi<{ items: Q[] }>("/quotes");
   const [tab, setTab] = useState<string>("all");
   const [creating, setCreating] = useState(false);
   const rows = data?.items ?? [];
@@ -30,6 +31,7 @@ export default function QuotesPage() {
     <>
       <Topbar title="Quotes" />
       <div className="w-full px-6 py-5">
+        {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div><h1 className="text-[20px] font-bold text-n900">Quotes & estimates</h1><p className="mt-0.5 text-[12px] text-n500">Build, send and track client estimates.</p></div>
           <button onClick={create} disabled={creating} className="btn-brand inline-flex h-9 items-center gap-2 rounded-md px-4 text-[13px] font-semibold text-white disabled:opacity-60">{creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}New quote</button>

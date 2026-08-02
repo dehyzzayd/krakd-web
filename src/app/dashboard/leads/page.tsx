@@ -8,6 +8,7 @@ import {
   Phone, MessageSquare, Mail, Calendar, FileText, User as UserIcon,
 } from "lucide-react";
 import { Topbar } from "@/components/app/Topbar";
+import { ErrorBanner } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
 import { AddLeadSheet } from "@/components/app/AddLeadSheet";
@@ -62,7 +63,7 @@ function ActionsMenu({ r }: { r: Row }) {
 
 export default function LeadsPage() {
   const router = useRouter();
-  const { data, loading, reload } = useApi<LeadsData>("/leads");
+  const { data, loading, error, reload } = useApi<LeadsData>("/leads");
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"All" | "Active" | "Unassigned">("All");
   const [adding, setAdding] = useState(false);
@@ -90,6 +91,7 @@ export default function LeadsPage() {
     <>
       <Topbar title="Leads" />
       <div className="w-full px-6 py-5">
+        {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div><h1 className="text-[20px] font-bold text-n900">Leads</h1><p className="mt-0.5 text-[12px] text-n500">Real-time lead management · {s?.active ?? 0} active</p></div>
           <button onClick={() => setAdding(true)} className="btn-brand inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[13px] font-semibold transition"><Plus className="h-4 w-4" />Add a Lead</button>

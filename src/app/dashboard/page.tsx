@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Topbar, AppMain } from "@/components/app/Topbar";
+import { ErrorBanner } from "@/components/app/AppKit";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef } from "@/components/site/verticals";
 
@@ -54,7 +55,7 @@ function Empty({ title, sub, cta }: { title: string; sub: string; cta?: ReactNod
 /* ── page ───────────────────────────────────────────────────────────── */
 
 export default function DashboardPage() {
-  const { data, loading } = useApi<Overview>("/overview");
+  const { data, loading, error, reload } = useApi<Overview>("/overview");
 
   const name = data?.dealershipName ?? "your business";
   const def = verticalDef(data?.vertical);
@@ -73,6 +74,7 @@ export default function DashboardPage() {
     <>
       <Topbar title="Overview" action={{ label: `Add ${def.noun}`, href: "/dashboard/inventory/new" }} />
       <AppMain>
+        {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13.5px] text-n600">Here&apos;s how <span className="font-semibold text-n900">{name}</span> is doing today.</p>
           <div className="flex items-center gap-2">
