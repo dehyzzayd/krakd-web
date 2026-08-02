@@ -18,10 +18,13 @@ const STATUS_LABEL: Record<string, string> = { NEW: "New", CONTACTED: "Contacted
 const ACT_LABEL: Record<string, string> = { NOTE: "Note", CALL: "Call", SMS: "Text", EMAIL: "Email", STATUS_CHANGE: "Status change", AI_MESSAGE: "Krakd AI", APPOINTMENT_SET: "Appointment", ASSIGNMENT: "Assignment" };
 
 async function load(dealershipId: string, id: string) {
-  const l = await prisma.lead.findFirst({
-    where: { id, dealershipId },
-    include: { vehicle: true, assignedTo: { select: { firstName: true, lastName: true } }, activities: { orderBy: { createdAt: "desc" }, take: 50 }, appointments: { orderBy: { scheduledStart: "desc" } } },
-  });
+  const [l, cfg] = await Promise.all([
+    prisma.lead.findFirst({
+      where: { id, dealershipId },
+      include: { vehicle: true, assignedTo: { select: { firstName: true, lastName: true } }, activities: { orderBy: { createdAt: "desc" }, take: 50 }, appointments: { orderBy: { scheduledStart: "desc" } }, creditApps: { orderBy: { createdAt: "desc" }, select: { id: true, status: true, createdAt: true } } },
+    }),
+    prisma.creditAppConfig.findUnique({ where: { dealershipId }, select: { publicToken: true } }),
+  ]);
   if (!l) throw new HttpError(404, "Lead not found");
   return {
     id: l.id,
@@ -32,7 +35,10 @@ async function load(dealershipId: string, id: string) {
     vehicle: l.vehicle ? `${l.vehicle.year} ${l.vehicle.make} ${l.vehicle.model}` : "—",
     assigned: l.ownerType === "AI" ? "Krakd AI" : l.assignedTo ? `${l.assignedTo.firstName} ${l.assignedTo.lastName ?? ""}`.trim() : "Unassigned",
     hasTradeIn: l.hasTradeIn, financing: l.financing, createdAgo: `${ago(l.createdAt)} ago`,
-    activities: l.activities.map((a) => ({ id: a.id, type: ACT_LABEL[a.type] ?? a.type, content: a.content ?? "", actor: a.actorType, when: `${ago(a.createdAt)} ago` })),
+    nextAction: l.nextAction ?? null, nextActionAt: l.nextActionAt?.toISOString() ?? null,
+    creditAppToken: cfg?.publicToken ?? null,
+    creditApps: l.creditApps.map((c) => ({ id: c.id, status: c.status, when: `${ago(c.createdAt)} ago` })),
+    activities: l.activities.map((a) => ({ id: a.id, type: ACT_LABEL[a.type] ?? a.type, kind: a.type, content: a.content ?? "", actor: a.actorType, when: `${ago(a.createdAt)} ago` })),
     appointments: l.appointments.map((a) => ({ id: a.id, type: a.type, status: a.status, start: a.scheduledStart.toISOString() })),
   };
 }
@@ -54,6 +60,8 @@ const patchSchema = z.object({
   vehicleId: z.string().uuid().nullable().optional(),
   hasTradeIn: z.boolean().optional(),
   financing: z.boolean().optional(),
+  nextAction: z.string().nullable().optional(),
+  nextActionAt: z.string().nullable().optional(),
 });
 
 export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
@@ -64,9 +72,10 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   const existing = await prisma.lead.findFirst({ where: { id, dealershipId }, select: { id: true, status: true } });
   if (!existing) throw new HttpError(404, "Lead not found");
 
-  const { phone, email, vehicleId, status, ...rest } = parsed.data;
+  const { phone, email, vehicleId, status, nextActionAt, ...rest } = parsed.data;
   const data: Prisma.LeadUpdateInput = { ...rest, lastActivityAt: new Date() };
   if (status) data.status = status;
+  if (nextActionAt !== undefined) data.nextActionAt = nextActionAt ? new Date(nextActionAt) : null;
   if (phone !== undefined) data.phones = (phone ? [{ value: phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue;
   if (email !== undefined) data.emails = (email ? [{ value: email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue;
   if (vehicleId !== undefined) {

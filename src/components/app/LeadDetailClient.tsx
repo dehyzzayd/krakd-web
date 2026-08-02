@@ -8,14 +8,36 @@ import { useApi } from "@/lib/useApi";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Sheet } from "@/components/app/Sheet";
 import { vertical as verticalDef } from "@/components/site/verticals";
-import { Phone, MessageSquare, Calendar, StickyNote, Pencil } from "lucide-react";
+import { Phone, MessageSquare, Calendar, StickyNote, Pencil, Sparkles, Check, Copy, CircleDollarSign, ChevronRight, Flag } from "lucide-react";
 
-type Activity = { id: string; type: string; content: string; actor: string; when: string };
+type Activity = { id: string; type: string; kind: string; content: string; actor: string; when: string };
 type Lead = {
   id: string; name: string; phone: string; email: string; source: string; status: string; statusLabel: string;
   temperature: string; score: number; vehicle: string; assigned: string; hasTradeIn: boolean; financing: boolean; createdAgo: string;
+  nextAction: string | null; nextActionAt: string | null; creditAppToken: string | null;
+  creditApps: { id: string; status: string; when: string }[];
   activities: Activity[]; appointments: { id: string; type: string; status: string; start: string }[];
 };
+
+const PIPELINE = ["NEW", "CONTACTED", "QUALIFIED", "APPOINTMENT", "SOLD"] as const;
+const PIPE_LABEL: Record<string, string> = { NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified", APPOINTMENT: "Appointment", SOLD: "Sold" };
+const CREDIT_TONE: Record<string, string> = { NEW: "bg-brand-soft text-brand", REVIEWING: "bg-warn-soft text-warn", APPROVED: "bg-ok-soft text-ok", DECLINED: "bg-err-soft text-err" };
+
+/** Deterministic deal summary from the lead's real signals — no LLM required. */
+function summarize(l: Lead): string {
+  const p: string[] = [];
+  p.push(`${l.name.split(" ")[0]} came in via ${l.source}${l.vehicle !== "—" ? `, eyeing the ${l.vehicle}` : ""}.`);
+  p.push(`They're ${l.statusLabel.toLowerCase()} and running ${l.temperature.toLowerCase()}.`);
+  if (l.financing) p.push("Looking for financing.");
+  if (l.hasTradeIn) p.push("Has a trade-in to appraise.");
+  if (l.creditApps.length) p.push(`Credit app is ${l.creditApps[0].status.toLowerCase()}.`);
+  const upcoming = l.appointments.find((a) => new Date(a.start).getTime() > Date.now());
+  if (upcoming) p.push(`Appointment ${new Date(upcoming.start).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}.`);
+  if (l.activities[0]) p.push(`Last touch: ${l.activities[0].type.toLowerCase()} ${l.activities[0].when}.`);
+  const rec = l.status === "NEW" ? "Call now while it's hot." : l.status === "APPOINTMENT" ? "Confirm the appointment and prep the unit." : l.financing && !l.creditApps.length ? "Send the credit app link." : l.status === "SOLD" ? "Handle delivery + follow-up." : "Follow up to keep it moving.";
+  p.push(`Next best step — ${rec}`);
+  return p.join(" ");
+}
 
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 const avatarBg = (n: string) => ["#2b6ba4", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b"][(n.charCodeAt(0) || 0) % 5];
@@ -74,27 +96,36 @@ export function LeadDetailClient({ id }: { id: string }) {
                 </button>
               ))}
             </div>
+            {/* deal pipeline path */}
+            <div className="mt-4 border-t border-n100 pt-4"><Pipeline l={l} onSet={(s) => patch({ status: s })} busy={busy} /></div>
           </div>
 
-          <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
-            <h3 className="text-[14px] font-semibold text-n900">Activity timeline</h3>
-            {l.activities.length === 0
-              ? <p className="mt-3 text-[12.5px] text-n500">No activity yet. Log a note, message or call and it shows up here.</p>
-              : (
-                <div className="mt-3 space-y-3">
-                  {l.activities.map((a) => (
-                    <div key={a.id} className="flex gap-2.5 border-t border-n100 pt-3 first:border-t-0 first:pt-0">
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand" />
-                      <div className="min-w-0 flex-1"><p className="text-[12.5px] font-medium text-n900">{a.type}{a.actor === "AI" ? " · Krakd AI" : ""}</p>{a.content && <p className="text-[12px] text-n600">{a.content}</p>}</div>
-                      <span className="shrink-0 text-[11px] text-n400">{a.when}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-          </div>
+          {/* AI summary */}
+          <AiSummary l={l} />
+
+        <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+          <h3 className="text-[14px] font-semibold text-n900">Activity</h3>
+          <Composer id={id} lead={l} onDone={reload} />
+          {l.activities.length === 0
+            ? <p className="mt-4 text-[12.5px] text-n500">No activity yet. Log a note, call or text and it shows up here.</p>
+            : (
+              <div className="mt-4 space-y-3">
+                {l.activities.map((a) => (
+                  <div key={a.id} className="flex gap-2.5 border-t border-n100 pt-3 first:border-t-0 first:pt-0">
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: a.kind === "CALL" ? "#c08532" : a.kind === "SMS" || a.kind === "EMAIL" ? "#1f8a65" : "#2b6ba4" }} />
+                    <div className="min-w-0 flex-1"><p className="text-[12.5px] font-medium text-n900">{a.type}{a.actor === "AI" ? " · Krakd AI" : a.actor === "SYSTEM" ? " · System" : ""}</p>{a.content && <p className="text-[12px] text-n600">{a.content}</p>}</div>
+                    <span className="shrink-0 text-[11px] text-n400">{a.when}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+        </div>
         </div>
 
         <div className="space-y-4">
+          <NextActionCard l={l} id={id} onDone={reload} />
+          <CreditCard l={l} />
+
           <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
             <h3 className="text-[13px] font-semibold text-n900">Lead details</h3>
             <div className="mt-3 space-y-3">
@@ -123,6 +154,124 @@ export function LeadDetailClient({ id }: { id: string }) {
       {modal === "message" && <MessageModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} />}
       {modal === "appt" && <ApptModal id={id} onClose={() => setModal(null)} onDone={reload} />}
       {modal === "edit" && <EditModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} />}
+    </div>
+  );
+}
+
+function Pipeline({ l, onSet, busy }: { l: Lead; onSet: (s: string) => void; busy: boolean }) {
+  const lost = l.status === "LOST";
+  const idx = PIPELINE.indexOf(l.status as (typeof PIPELINE)[number]);
+  return (
+    <div>
+      <div className="mb-2.5 flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-n500">Deal pipeline</p>
+        {!lost && l.status !== "SOLD" && <button onClick={() => onSet("LOST")} disabled={busy} className="inline-flex items-center gap-1 text-[11.5px] font-medium text-n400 transition hover:text-err"><Flag className="h-3 w-3" />Mark lost</button>}
+      </div>
+      {lost ? (
+        <div className="flex items-center justify-between rounded-lg bg-err-soft px-3 py-2 text-[12.5px]"><span className="font-semibold text-err">Marked lost</span><button onClick={() => onSet("NEW")} className="text-[12px] font-medium text-n600 hover:text-n900">Reopen</button></div>
+      ) : (
+        <div className="flex gap-1.5">
+          {PIPELINE.map((s, i) => (
+            <button key={s} onClick={() => onSet(s)} disabled={busy} className="min-w-0 flex-1 text-left">
+              <div className={cn("h-1.5 rounded-full transition", i <= idx ? "bg-brand" : "bg-n200")} />
+              <span className={cn("mt-1.5 block truncate text-[10.5px] font-medium transition", i === idx ? "text-n900" : i < idx ? "text-n600" : "text-n400")}>{PIPE_LABEL[s]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AiSummary({ l }: { l: Lead }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-n900"><Sparkles className="h-4 w-4 text-brand" />AI summary</h3>
+        {!open && <button onClick={() => setOpen(true)} className="text-[12px] font-semibold text-brand">Summarize</button>}
+      </div>
+      {open ? <p className="mt-2.5 text-[13px] leading-relaxed text-n700">{summarize(l)}</p> : <p className="mt-2 text-[12px] text-n400">Generate a quick read on where this deal stands.</p>}
+    </div>
+  );
+}
+
+function Composer({ id, lead, onDone }: { id: string; lead: Lead; onDone: () => void }) {
+  const [tab, setTab] = useState<"NOTE" | "CALL" | "SMS">("NOTE");
+  const [text, setText] = useState("");
+  const [outcome, setOutcome] = useState("Connected");
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    if (tab !== "CALL" && !text.trim()) return;
+    setBusy(true);
+    const content = tab === "CALL" ? `Call — ${outcome}${text.trim() ? `: ${text}` : ""}` : tab === "SMS" ? `Text${lead.phone ? ` to ${lead.phone}` : ""}: ${text}` : text;
+    try { await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type: tab, content }) }); setText(""); onDone(); } finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 rounded-xl border border-n200 p-2.5">
+      <div className="mb-2 flex gap-1">
+        {([["NOTE", "Note"], ["CALL", "Log call"], ["SMS", "Text"]] as const).map(([v, lbl]) => <button key={v} onClick={() => setTab(v)} className={cn("h-7 rounded-md px-2.5 text-[12px] font-semibold transition", tab === v ? "bg-brand-soft text-brand" : "text-n500 hover:bg-n100")}>{lbl}</button>)}
+      </div>
+      {tab === "CALL" && <div className="mb-2 flex flex-wrap gap-1.5">{["Connected", "Voicemail", "No answer", "Bad number"].map((o) => <button key={o} onClick={() => setOutcome(o)} className={cn("rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition", outcome === o ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n50")}>{o}</button>)}</div>}
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder={tab === "CALL" ? "Add a call note (optional)…" : tab === "SMS" ? "Type your text…" : "Log a note…"} className="w-full resize-none rounded-lg border border-n200 px-2.5 py-2 text-[13px] text-n900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" />
+      <div className="mt-2 flex justify-end"><button onClick={send} disabled={busy || (tab !== "CALL" && !text.trim())} className="btn-brand h-8 rounded-md px-3.5 text-[12.5px] font-semibold disabled:opacity-50">{busy ? "Logging…" : tab === "CALL" ? "Log call" : tab === "SMS" ? "Send & log" : "Add note"}</button></div>
+    </div>
+  );
+}
+
+function NextActionCard({ l, id, onDone }: { l: Lead; id: string; onDone: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(l.nextAction ?? "");
+  const [date, setDate] = useState(l.nextActionAt ? l.nextActionAt.slice(0, 10) : "");
+  const [busy, setBusy] = useState(false);
+  const save = async () => { if (!text.trim()) return; setBusy(true); try { await apiFetch(`/leads/${id}`, { method: "PATCH", body: JSON.stringify({ nextAction: text.trim(), nextActionAt: date ? new Date(`${date}T09:00`).toISOString() : null }) }); setEditing(false); onDone(); } finally { setBusy(false); } };
+  const complete = async () => { setBusy(true); try { await apiFetch(`/leads/${id}`, { method: "PATCH", body: JSON.stringify({ nextAction: null, nextActionAt: null }) }); await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type: "NOTE", content: `✓ Completed: ${l.nextAction}` }) }); onDone(); } finally { setBusy(false); } };
+  const overdue = l.nextActionAt && new Date(l.nextActionAt).getTime() < Date.now();
+  return (
+    <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+      <h3 className="text-[13px] font-semibold text-n900">Next action</h3>
+      {editing || (!l.nextAction) ? (
+        <div className="mt-3 space-y-2">
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Call to confirm test drive" className={field} />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+          <div className="flex gap-2">
+            <button onClick={save} disabled={busy || !text.trim()} className="btn-brand h-9 flex-1 rounded-md text-[12.5px] font-semibold disabled:opacity-50">{busy ? "Saving…" : "Set action"}</button>
+            {l.nextAction && <button onClick={() => setEditing(false)} className="h-9 rounded-md border border-n200 px-3 text-[12.5px] font-medium text-n600">Cancel</button>}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3">
+          <p className="text-[13px] font-medium text-n900">{l.nextAction}</p>
+          {l.nextActionAt && <p className={cn("mt-0.5 text-[12px]", overdue ? "font-semibold text-err" : "text-n500")}>{overdue ? "Overdue · " : "Due "}{new Date(l.nextActionAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</p>}
+          <div className="mt-3 flex gap-2">
+            <button onClick={complete} disabled={busy} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-ok-soft px-3 text-[12px] font-semibold text-ok disabled:opacity-50"><Check className="h-3.5 w-3.5" />Mark done</button>
+            <button onClick={() => setEditing(true)} className="h-8 rounded-md border border-n200 px-3 text-[12px] font-medium text-n600 hover:bg-n50">Edit</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CreditCard({ l }: { l: Lead }) {
+  const [copied, setCopied] = useState(false);
+  const latest = l.creditApps[0];
+  const link = l.creditAppToken ? `${typeof window !== "undefined" ? window.location.origin : ""}/apply/${l.creditAppToken}` : "";
+  const copy = () => { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  return (
+    <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+      <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-n900"><CircleDollarSign className="h-4 w-4 text-brand" />Credit application</h3>
+      {latest ? (
+        <div className="mt-3">
+          <div className="flex items-center justify-between"><span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", CREDIT_TONE[latest.status] ?? "bg-n100 text-n600")}>{latest.status[0] + latest.status.slice(1).toLowerCase()}</span><span className="text-[11px] text-n400">{latest.when}</span></div>
+          <Link href={`/dashboard/crm/credit/${latest.id}`} className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand">View application <ChevronRight className="h-3.5 w-3.5" /></Link>
+        </div>
+      ) : link ? (
+        <div className="mt-3">
+          <p className="text-[12.5px] text-n500">No application yet — send this buyer the secure link.</p>
+          <button onClick={copy} className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-brand text-[12.5px] font-semibold text-white transition hover:bg-brand-hover">{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Link copied" : "Copy credit app link"}</button>
+        </div>
+      ) : <p className="mt-2 text-[12.5px] text-n500">Set up your form under CRM → Credit applications to share a link.</p>}
     </div>
   );
 }

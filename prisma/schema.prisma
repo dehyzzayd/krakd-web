@@ -369,6 +369,8 @@ model Lead {
   assignedTo    User?           @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   hasTradeIn    Boolean         @default(false)
   financing     Boolean         @default(false)
+  nextAction    String?
+  nextActionAt  DateTime?
   lastActivityAt DateTime       @default(now())
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
