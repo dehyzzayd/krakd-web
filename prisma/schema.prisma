@@ -580,6 +580,7 @@ enum WebsiteTemplate {
   MINIMAL        // airy Scandinavian/EV, hairlines + whitespace
   AURORA         // dark navy + vivid accent, lowercase display, circular badge (Northline Aurora)
   QUIET          // warm off-white + teal, utility bar, calm/premium (Northline)
+  VELOCITY       // high-energy powersports/adventure — angular, italic display, split hero
 }
 
 enum WebsiteStatus {

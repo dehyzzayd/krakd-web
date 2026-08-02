@@ -5,7 +5,7 @@ export type SiteConfig = {
   slug: string;
   dealershipName: string;
   vertical: string;
-  template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET";
+  template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET" | "VELOCITY";
   logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string;
   headline: string; intro: string; ctaLabel: string;
   aboutText: string; financingText: string; tradeInText: string;
