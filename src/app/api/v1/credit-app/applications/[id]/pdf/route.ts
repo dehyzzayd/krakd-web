@@ -12,15 +12,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   try {
     const { dealershipId } = await requireAuth(req);
     const { id } = await ctx.params;
-    const r = await prisma.creditApplication.findFirst({
-      where: { id, dealershipId },
-      include: { dealership: { select: { name: true, brandColor: true, logoUrl: true } } },
-    });
+    const [r, cfg] = await Promise.all([
+      prisma.creditApplication.findFirst({ where: { id, dealershipId }, include: { dealership: { select: { name: true, brandColor: true, logoUrl: true, phone: true, addressLine1: true, city: true, state: true } } } }),
+      prisma.creditAppConfig.findUnique({ where: { dealershipId }, select: { consentText: true } }),
+    ]);
     if (!r) throw new HttpError(404, "Application not found");
 
+    const d = r.dealership;
+    const contact = [d.addressLine1, [d.city, d.state].filter(Boolean).join(", "), d.phone].filter(Boolean).join("  ·  ");
     const doc = buildCreditPdf(
       { applicant: (r.applicant ?? {}) as Record<string, string>, coApplicant: (r.coApplicant ?? null) as Record<string, string> | null, status: r.status, createdAt: r.createdAt },
-      { name: r.dealership.name, brandColor: r.dealership.brandColor, logoUrl: r.dealership.logoUrl },
+      { name: d.name, brandColor: d.brandColor, logoUrl: d.logoUrl, contact, consentText: cfg?.consentText ?? "" },
     );
     const bytes = doc.output("arraybuffer");
     const applicant = (r.applicant ?? {}) as Record<string, string>;

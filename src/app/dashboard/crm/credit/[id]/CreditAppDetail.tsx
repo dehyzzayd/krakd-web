@@ -14,25 +14,29 @@ const STATUSES = ["NEW", "REVIEWING", "APPROVED", "DECLINED"] as const;
 const STATUS_CLS: Record<string, string> = { NEW: "bg-brand-soft text-brand", REVIEWING: "bg-warn-soft text-warn", APPROVED: "bg-ok-soft text-ok", DECLINED: "bg-err-soft text-err" };
 const fmt = (key: string, val: string) => (catalogField(key)?.type === "money" && val ? `$${Number(val).toLocaleString()}` : catalogField(key)?.type === "ssn" && val ? `•••-••-${val.slice(-4)}` : val);
 
-function Row({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between gap-4 border-b border-n100 py-1.5 last:border-0"><span className="text-[12.5px] text-n500">{label}</span><span className="text-[12.5px] font-medium text-n900">{value}</span></div>;
+function Cell({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-lg border border-n100 bg-n50/40 px-3 py-2"><p className="text-[10.5px] font-medium uppercase tracking-wide text-n400">{label}</p><p className="mt-0.5 truncate text-[13px] font-medium text-n900" title={value}>{value || "—"}</p></div>;
 }
 
 function Party({ title, data }: { title: string; data: Record<string, string> }) {
   const coKeys = new Set(CATALOG.find((s) => s.coapp)!.fields.map((f) => f.key));
   return (
     <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
-      <p className="mb-3 text-[13px] font-semibold text-n900">{title}</p>
-      {CATALOG.map((s) => {
-        const fields = s.fields.filter((f) => (title.startsWith("Co-") ? coKeys.has(f.key) : !coKeys.has(f.key)) && String(data[f.key] ?? "").trim());
-        if (fields.length === 0) return null;
-        return (
-          <div key={s.id} className="mb-3 last:mb-0">
-            {!s.coapp && <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-n400">{s.title}</p>}
-            {fields.map((f) => <Row key={f.key} label={f.label} value={fmt(f.key, data[f.key])} />)}
-          </div>
-        );
-      })}
+      <p className="mb-4 text-[15px] font-semibold text-n900">{title}</p>
+      <div className="space-y-5">
+        {CATALOG.map((s) => {
+          const fields = s.fields.filter((f) => (title.startsWith("Co-") ? coKeys.has(f.key) : !coKeys.has(f.key)) && String(data[f.key] ?? "").trim());
+          if (fields.length === 0) return null;
+          return (
+            <div key={s.id}>
+              {!s.coapp && <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-brand">{s.title}</p>}
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                {fields.map((f) => <Cell key={f.key} label={f.label} value={fmt(f.key, data[f.key])} />)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -63,7 +67,7 @@ export function CreditAppDetail({ id }: { id: string }) {
       <Topbar crumbs={[{ label: "Credit applications", href: "/dashboard/crm/credit" }, { label: name || "Application" }]} />
       <AppMain>
         {!data ? <div className="py-16 text-center text-[13px] text-n400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : (
-          <div className="print-doc mx-auto max-w-[860px]">
+          <div className="w-full">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <div className="mr-auto">
                 <h1 className="text-[20px] font-bold text-n900">{name}</h1>
@@ -76,7 +80,7 @@ export function CreditAppDetail({ id }: { id: string }) {
               <button onClick={downloadPdf} disabled={dl} className="no-print inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{dl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download PDF</button>
             </div>
 
-            <div className={cn("grid gap-4", data.coApplicant ? "lg:grid-cols-2" : "")}>
+            <div className="space-y-4">
               <Party title="Applicant" data={data.applicant} />
               {data.coApplicant && <Party title="Co-applicant" data={data.coApplicant} />}
             </div>
