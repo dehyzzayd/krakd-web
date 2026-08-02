@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { cn } from "@/lib/cn";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_URL, getToken } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { CATALOG, catalogField } from "@/lib/creditApp";
-import { Printer, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 type Data = { id: string; status: string; createdAt: string; applicant: Record<string, string>; coApplicant: Record<string, string> | null };
 const STATUSES = ["NEW", "REVIEWING", "APPROVED", "DECLINED"] as const;
@@ -40,13 +40,26 @@ function Party({ title, data }: { title: string; data: Record<string, string> })
 export function CreditAppDetail({ id }: { id: string }) {
   const { data, reload } = useApi<Data>(`/credit-app/applications/${id}`);
   const [busy, setBusy] = useState(false);
+  const [dl, setDl] = useState(false);
   const setStatus = async (status: string) => { setBusy(true); try { await apiFetch(`/credit-app/applications/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); reload(); } finally { setBusy(false); } };
+  const downloadPdf = async () => {
+    setDl(true);
+    try {
+      const res = await fetch(`${API_URL}/credit-app/applications/${id}/pdf`, { headers: getToken() ? { authorization: `Bearer ${getToken()}` } : {} });
+      if (!res.ok) throw new Error("Could not generate the PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${name || "credit-application"}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert(e instanceof Error ? e.message : "PDF failed"); }
+    finally { setDl(false); }
+  };
 
   const name = data ? `${data.applicant.firstName ?? ""} ${data.applicant.lastName ?? ""}`.trim() || "Applicant" : "";
 
   return (
     <>
-      <style>{`@media print { body * { visibility: hidden !important; } .print-doc, .print-doc * { visibility: visible !important; } .print-doc { position: absolute; left: 0; top: 0; width: 100%; } .no-print { display: none !important; } }`}</style>
       <Topbar crumbs={[{ label: "Credit applications", href: "/dashboard/crm/credit" }, { label: name || "Application" }]} />
       <AppMain>
         {!data ? <div className="py-16 text-center text-[13px] text-n400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : (
@@ -60,7 +73,7 @@ export function CreditAppDetail({ id }: { id: string }) {
               <div className="no-print flex items-center gap-1 rounded-lg border border-n200 bg-white p-0.5">
                 {STATUSES.map((s) => <button key={s} disabled={busy} onClick={() => setStatus(s)} className={cn("h-8 rounded-md px-2.5 text-[11.5px] font-semibold transition disabled:opacity-50", data.status === s ? "bg-n100 text-n900" : "text-n500 hover:text-n900")}>{s[0] + s.slice(1).toLowerCase()}</button>)}
               </div>
-              <button onClick={() => window.print()} className="no-print inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover"><Printer className="h-4 w-4" />Export PDF</button>
+              <button onClick={downloadPdf} disabled={dl} className="no-print inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{dl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download PDF</button>
             </div>
 
             <div className={cn("grid gap-4", data.coApplicant ? "lg:grid-cols-2" : "")}>

@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { CATALOG, fieldConf, type CField, type CreditConfig } from "@/lib/creditApp";
-import { ShieldCheck, Loader2, Check } from "lucide-react";
+import { ShieldCheck, Loader2, Check, Lock } from "lucide-react";
 
 type Business = { name: string; brandColor: string | null; logoUrl: string | null; phone: string | null };
-const input = "h-10 w-full rounded-lg border border-[#d5d9e0] bg-white px-3 text-[13.5px] text-[#0f1b2d] outline-none transition focus:border-[var(--acc)] focus:ring-2 focus:ring-[var(--acc)]/20";
+const input = "h-11 w-full rounded-xl border border-[#e2e6ec] bg-[#f9fafb] px-3.5 text-[14px] text-[#0f1b2d] outline-none transition focus:border-[var(--acc)] focus:bg-white focus:ring-4 focus:ring-[var(--acc)]/12";
 
 function FieldInput({ f, value, onChange, disabled, req }: { f: CField; value: string; onChange: (v: string) => void; disabled?: boolean; req: boolean }) {
   const common = { value, disabled, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange(e.target.value), className: input };
@@ -61,41 +61,58 @@ export function CreditAppForm({ token, config, consentText, disclaimerText, busi
     </div>
   );
 
+  let idx = 0;
   return (
-    <div className="mx-auto max-w-[720px]" style={{ ["--acc" as string]: accent }}>
-      <div className="mb-6 flex items-center gap-3">
-        {business.logoUrl /* eslint-disable-next-line @next/next/no-img-element */ ? <img src={business.logoUrl} alt={business.name} className="h-9 w-auto" /> : <span className="text-[18px] font-bold text-[#0f1b2d]">{business.name}</span>}
-        <span className="ml-auto rounded-full bg-[#f1f5f9] px-3 py-1 text-[12px] font-semibold text-[#475569]">Secure credit application</span>
+    <div className="mx-auto max-w-[760px]" style={{ ["--acc" as string]: accent }}>
+      {/* branded header */}
+      <div className="overflow-hidden rounded-2xl border border-[#e6e9ee] bg-white shadow-[0_12px_44px_-28px_rgba(15,27,45,.35)]">
+        <div className="h-1.5 w-full" style={{ background: accent }} />
+        <div className="flex flex-wrap items-center gap-4 px-6 py-5 sm:px-8">
+          {business.logoUrl
+            /* eslint-disable-next-line @next/next/no-img-element */
+            ? <img src={business.logoUrl} alt={business.name} className="h-11 w-auto max-w-[220px] object-contain" />
+            : <span className="text-[22px] font-bold tracking-tight text-[#0f1b2d]">{business.name}</span>}
+          <div className="ml-auto flex items-center gap-1.5 rounded-full bg-[#f1f5f9] px-3 py-1.5 text-[12px] font-semibold text-[#475569]"><Lock className="h-3.5 w-3.5" style={{ color: accent }} />Secure application</div>
+        </div>
+        <div className="border-t border-[#eef1f5] px-6 py-3 sm:px-8">
+          <p className="text-[15px] font-semibold text-[#0f1b2d]">Apply for financing</p>
+          <p className="text-[12.5px] text-[#64748b]">Takes about 5 minutes · Submitting won&apos;t affect your credit score.</p>
+        </div>
       </div>
 
-      <div className="space-y-6 rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-[0_10px_40px_-24px_rgba(15,27,45,.3)]">
+      {/* form */}
+      <div className="mt-4 space-y-7 rounded-2xl border border-[#e6e9ee] bg-white p-6 shadow-[0_12px_44px_-28px_rgba(15,27,45,.35)] sm:p-8">
         {sections.map((s) => {
           const shown = s.fields.filter(visible);
           if (shown.length === 0) return null;
+          idx += 1;
           return (
             <div key={s.id}>
-              <p className="mb-3 border-b border-[#eef1f5] pb-2 text-[13px] font-bold uppercase tracking-wide" style={{ color: accent }}>{s.title}</p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="mb-4 flex items-center gap-2.5">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white" style={{ background: accent }}>{idx}</span>
+                <p className="text-[15px] font-semibold text-[#0f1b2d]">{s.title}</p>
+                <span className="h-px flex-1 bg-[#eef1f5]" />
+              </div>
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3.5 sm:grid-cols-2">
                 {shown.map((f) => <FieldInput key={f.key} f={f} value={v[f.key] ?? ""} onChange={(val) => set(f.key, val)} disabled={preview} req={fieldConf(config, f).required} />)}
               </div>
             </div>
           );
         })}
 
-        {disclaimerText && <p className="rounded-lg bg-[#f8fafc] p-3 text-[11.5px] leading-relaxed text-[#64748b]">{disclaimerText}</p>}
-
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e2e8f0] p-3.5">
-          <input type="checkbox" checked={consent} disabled={preview} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--acc)]" />
-          <span className="text-[12.5px] leading-relaxed text-[#475569]">{consentText}</span>
-        </label>
-
-        {err && <p className="text-[12.5px] font-medium text-[#dc2626]">{err}</p>}
-
-        <button onClick={submit} disabled={busy || preview} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg text-[14px] font-semibold text-white transition disabled:opacity-60" style={{ background: accent }}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}{preview ? "Preview — submit disabled" : "Submit application"}
-        </button>
+        <div className="space-y-3 border-t border-[#eef1f5] pt-6">
+          {disclaimerText && <p className="rounded-xl bg-[#f8fafc] p-3.5 text-[11.5px] leading-relaxed text-[#64748b]">{disclaimerText}</p>}
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#e2e6ec] bg-[#f9fafb] p-4 transition hover:border-[var(--acc)]/40">
+            <input type="checkbox" checked={consent} disabled={preview} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-[var(--acc)]" />
+            <span className="text-[12.5px] leading-relaxed text-[#475569]">{consentText}</span>
+          </label>
+          {err && <p className="text-[12.5px] font-medium text-[#dc2626]">{err}</p>}
+          <button onClick={submit} disabled={busy || preview} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white shadow-sm transition hover:brightness-105 disabled:opacity-60" style={{ background: accent }}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4.5 w-4.5" />}{preview ? "Preview — submit disabled" : "Submit application"}
+          </button>
+        </div>
       </div>
-      <p className="mt-4 text-center text-[11.5px] text-[#94a3b8]">Secured by Krakd · your information is encrypted in transit</p>
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11.5px] text-[#94a3b8]"><Lock className="h-3 w-3" />Secured by Krakd · encrypted in transit</p>
     </div>
   );
 }
