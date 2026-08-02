@@ -5,7 +5,7 @@ import { ListingForm } from "@/components/app/ListingForm";
 import { useApi } from "@/lib/useApi";
 import type { Vehicle } from "@/lib/inventory";
 
-type ApiVehicle = { id: string; vin: string; year: number; make: string; model: string; trim: string; body: string; mileage: number; color: string; stock: string; status: string; cost: number; price: number; photoCount: number; photos?: string[]; title: string | null; subtitle: string | null; attributes: Record<string, unknown> };
+type ApiVehicle = { id: string; vin: string; year: number; make: string; model: string; trim: string; body: string; category?: string; mileage: number; color: string; stock: string; status: string; cost: number; price: number; photoCount: number; photos?: string[]; title: string | null; subtitle: string | null; attributes: Record<string, unknown> };
 
 export function EditVehicleClient({ id }: { id: string }) {
   const { data, loading } = useApi<ApiVehicle>(`/inventory/${id}`);
@@ -26,5 +26,5 @@ export function EditVehicleClient({ id }: { id: string }) {
     cost: data.cost, price: data.price, photos: data.photoCount,
   } as unknown as Vehicle;
 
-  return <VehicleForm vehicle={vehicle} initialPhotos={photos} />;
+  return <VehicleForm vehicle={vehicle} initialPhotos={photos} initialCategory={data.category ?? "CAR"} initialSpecs={(data.attributes ?? {}) as Record<string, string | boolean>} />;
 }

@@ -216,6 +216,7 @@ model Vehicle {
   model         String?
   trim          String?
   bodyType      String?
+  category      String?       // vehicle class: CAR | MOTORCYCLE | POWERSPORT | RV | TRAILER (deep specs live in attributes)
   mileage       Int           @default(0)
   status        VehicleStatus @default(RECON)
   priceCents    Int           @default(0)

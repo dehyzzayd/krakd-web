@@ -8,25 +8,27 @@ import { Topbar } from "@/components/app/Topbar";
 import { apiFetch, ApiError } from "@/lib/api";
 import { money, type Vehicle, type VStatus } from "@/lib/inventory";
 import { uploadImage } from "@/lib/upload";
-import { Barcode, Sparkles, Camera, Upload, DollarSign, Car, ImageIcon } from "lucide-react";
+import { SpecFields } from "./SpecFields";
+import { CATEGORIES, categoryById } from "@/lib/vehicleSpecs";
+import { Barcode, Sparkles, Camera, Upload, DollarSign, Car, Bike, Zap, Caravan, Truck, ListChecks, ImageIcon } from "lucide-react";
 
-const BODIES = ["Sedan", "Coupe", "SUV", "Crew Cab", "Double Cab", "Wagon", "Hatchback", "Van", "Convertible"];
+type Specs = Record<string, string | boolean>;
+const CAT_ICON: Record<string, React.ComponentType<{ className?: string }>> = { CAR: Car, MOTORCYCLE: Bike, POWERSPORT: Zap, RV: Caravan, TRAILER: Truck };
 const STATUSES: { v: VStatus; label: string }[] = [
   { v: "available", label: "Available" }, { v: "recon", label: "In recon" }, { v: "reserved", label: "Reserved" }, { v: "wholesale", label: "Wholesale" },
 ];
-const DECODE = { year: "2022", make: "Toyota", model: "Camry", trim: "XSE", body: "Sedan", color: "Celestial Silver" };
+const DECODE = { year: "2022", make: "Toyota", model: "Camry", trim: "XSE" };
 
 type Form = {
-  vin: string; year: string; make: string; model: string; trim: string; body: string;
-  mileage: string; color: string; stock: string; status: VStatus;
+  vin: string; year: string; make: string; model: string; trim: string;
+  mileage: string; stock: string; status: VStatus;
   cost: string; recon: string; pack: string; price: string; photoUrls: string[];
 };
 
 function seed(v: Vehicle | undefined, initialPhotos: string[]): Form {
-  if (!v) return { vin: "", year: "", make: "", model: "", trim: "", body: "", mileage: "", color: "", stock: "", status: "recon", cost: "", recon: "1250", pack: "695", price: "", photoUrls: initialPhotos };
-  return { vin: v.vin, year: String(v.year), make: v.make, model: v.model, trim: v.trim, body: v.body, mileage: String(v.mileage), color: v.color, stock: v.stock, status: v.status, cost: String(v.cost), recon: "1250", pack: "695", price: String(v.price), photoUrls: initialPhotos };
+  if (!v) return { vin: "", year: "", make: "", model: "", trim: "", mileage: "", stock: "", status: "recon", cost: "", recon: "1250", pack: "695", price: "", photoUrls: initialPhotos };
+  return { vin: v.vin, year: String(v.year), make: v.make, model: v.model, trim: v.trim, mileage: String(v.mileage), stock: v.stock, status: v.status, cost: String(v.cost), recon: "1250", pack: "695", price: String(v.price), photoUrls: initialPhotos };
 }
-
 
 function Section({ icon: Icon, title, desc, children }: { icon: React.ComponentType<{ className?: string }>; title: string; desc: string; children: ReactNode }) {
   return (
@@ -44,21 +46,23 @@ function Field({ label, children, wide }: { label: string; children: ReactNode; 
 }
 const inputCls = "h-9 w-full rounded-lg border border-n200 bg-white px-2.5 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 placeholder:text-n400";
 
-export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle; initialPhotos?: string[] }) {
+export function VehicleForm({ vehicle, initialPhotos = [], initialCategory = "CAR", initialSpecs = {} }: { vehicle?: Vehicle; initialPhotos?: string[]; initialCategory?: string; initialSpecs?: Specs }) {
   const edit = !!vehicle;
   const router = useRouter();
   const [f, setF] = useState<Form>(() => seed(vehicle, initialPhotos));
+  const [category, setCategory] = useState(initialCategory);
+  const [specs, setSpecs] = useState<Specs>(initialSpecs);
   const set = (k: keyof Form, v: string | number) => setF((p) => ({ ...p, [k]: v }));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [photoErr, setPhotoErr] = useState<string | null>(null);
+  const def = categoryById(category);
 
   const addPhotos = async (files: FileList | null) => {
     if (!files) return;
     setPhotoErr(null);
-    const picks = Array.from(files).slice(0, 24);
     const urls: string[] = [];
-    for (const file of picks) {
+    for (const file of Array.from(files).slice(0, 24)) {
       if (!file.type.startsWith("image/")) continue;
       if (file.size > 25_000_000) { setPhotoErr("Some images were over 25MB and skipped."); continue; }
       try { urls.push(await uploadImage(file)); } catch { /* skip */ }
@@ -70,24 +74,26 @@ export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle
 
   const save = async () => {
     setErr(null);
-    if (!f.vin || !f.year || !f.make || !f.model || !f.stock) { setErr("Fill in VIN, year, make, model and stock #."); return; }
+    if (!f.year || !f.make || !f.model || !f.stock) { setErr("Fill in year, make, model and stock #."); return; }
     setSaving(true);
     try {
       const priceCents = Math.round((+f.price || 0) * 100);
       const costCents = Math.round((+f.cost || 0) * 100);
+      const bodyType = String(specs.bodyStyle ?? specs.trailerType ?? specs.rvClass ?? specs.motoType ?? specs.subType ?? "") || undefined;
+      const exteriorColor = String(specs.exteriorColor ?? specs.color ?? "") || undefined;
+      const common = { mileage: +f.mileage || 0, status: f.status.toUpperCase(), category, bodyType, exteriorColor, attributes: specs, photoUrls: f.photoUrls };
       if (edit && vehicle) {
-        await apiFetch(`/inventory/${vehicle.id}`, { method: "PATCH", body: JSON.stringify({ priceCents, costCents, mileage: +f.mileage || 0, status: f.status, exteriorColor: f.color || undefined, photoUrls: f.photoUrls }) });
+        await apiFetch(`/inventory/${vehicle.id}`, { method: "PATCH", body: JSON.stringify({ priceCents, costCents, ...common }) });
         router.push(`/dashboard/inventory/${vehicle.id}`);
       } else {
         const res = await apiFetch<{ id: string }>("/inventory", { method: "POST", body: JSON.stringify({
-          vin: f.vin, stockNumber: f.stock, year: +f.year, make: f.make, model: f.model,
-          trim: f.trim || undefined, bodyType: f.body || undefined, mileage: +f.mileage || 0,
-          priceCents, costCents, status: f.status, exteriorColor: f.color || undefined, photoUrls: f.photoUrls,
+          vin: f.vin || undefined, stockNumber: f.stock, year: +f.year, make: f.make, model: f.model, trim: f.trim || undefined,
+          priceCents, costCents, ...common,
         }) });
         router.push(`/dashboard/inventory/${res.id}`);
       }
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "Could not save the vehicle.");
+      setErr(e instanceof ApiError ? e.message : `Could not save the ${def.noun}.`);
     } finally {
       setSaving(false);
     }
@@ -102,35 +108,53 @@ export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle
   const avgPos = high > low ? Math.max(0, Math.min(1, (avg - low) / (high - low))) : 0.5;
   const suggested = avg ? Math.round((avg - 300) / 10) * 10 : 0;
   const delta = price && avg ? price - avg : 0;
-  const title = [f.year, f.make, f.model].filter(Boolean).join(" ") || "New vehicle";
+  const title = [f.year, f.make, f.model].filter(Boolean).join(" ") || `New ${def.noun}`;
+  const specSummary = [specs.condition, specs.bodyStyle || specs.rvClass || specs.trailerType || specs.motoType || specs.subType].filter(Boolean).join(" · ");
 
   return (
     <div className="app-scope flex min-h-dvh flex-col bg-white">
-      <Topbar crumbs={[{ label: "Inventory", href: "/dashboard/inventory" }, { label: edit ? `Edit ${vehicle!.stock}` : "Add vehicle" }]} />
+      <Topbar crumbs={[{ label: "Inventory", href: "/dashboard/inventory" }, { label: edit ? `Edit ${vehicle!.stock}` : `Add a ${def.noun}` }]} />
 
       <div className="grid w-full grid-cols-1 gap-4 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* form */}
         <div className="space-y-4">
           <div>
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-n900">{edit ? "Edit vehicle" : "Add a vehicle"}</h1>
-            <p className="text-[13px] text-n500">{edit ? `Update the record for ${vehicle!.year} ${vehicle!.make} ${vehicle!.model}.` : "Enter the details to add a new unit to your lot."}</p>
+            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-n900">{edit ? "Edit unit" : "Add a unit"}</h1>
+            <p className="text-[13px] text-n500">{edit ? "Update this record." : "Pick a category — the spec sheet adapts to it."}</p>
           </div>
 
-          <Section icon={Barcode} title="Vehicle identity" desc="Decode the VIN to auto-fill year, make, model and trim.">
+          {/* category selector */}
+          <section className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-n500">Category</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {CATEGORIES.map((c) => {
+                const Icon = CAT_ICON[c.id] ?? Car; const on = category === c.id;
+                return (
+                  <button key={c.id} type="button" onClick={() => setCategory(c.id)} className={cn("flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center transition", on ? "border-brand bg-brand-soft/40 ring-1 ring-brand/20" : "border-n200 hover:bg-n50")}>
+                    <Icon className={cn("h-5 w-5", on ? "text-brand" : "text-n500")} />
+                    <span className={cn("text-[12px] font-semibold", on ? "text-brand" : "text-n700")}>{c.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <Section icon={Barcode} title="Identity" desc="VIN, year, make, model and stock number.">
             <div className="mb-3.5 flex gap-2">
-              <input value={f.vin} onChange={(e) => set("vin", e.target.value.toUpperCase())} placeholder="Enter 17-digit VIN" maxLength={17} className={cn(inputCls, "tnum flex-1")} />
-              <button type="button" onClick={() => setF((p) => ({ ...p, ...DECODE, stock: p.stock || "K-2299" }))} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-n900 px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-n800"><Sparkles className="h-3.5 w-3.5" />Decode VIN</button>
+              <input value={f.vin} onChange={(e) => set("vin", e.target.value.toUpperCase())} placeholder="Enter 17-digit VIN (optional for trailers)" maxLength={17} className={cn(inputCls, "tnum flex-1")} />
+              <button type="button" onClick={() => { setF((p) => ({ ...p, ...DECODE, stock: p.stock || "K-2299" })); setSpecs((s) => ({ ...s, condition: s.condition || "Used", bodyStyle: s.bodyStyle || "Sedan", exteriorColor: s.exteriorColor || "Celestial Silver" })); }} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-n900 px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-n800"><Sparkles className="h-3.5 w-3.5" />Decode VIN</button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Field label="Year"><input value={f.year} onChange={(e) => set("year", e.target.value)} className={cn(inputCls, "tnum")} placeholder="2022" /></Field>
-              <Field label="Make"><input value={f.make} onChange={(e) => set("make", e.target.value)} className={inputCls} placeholder="Toyota" /></Field>
-              <Field label="Model"><input value={f.model} onChange={(e) => set("model", e.target.value)} className={inputCls} placeholder="Camry" /></Field>
-              <Field label="Trim"><input value={f.trim} onChange={(e) => set("trim", e.target.value)} className={inputCls} placeholder="XSE" /></Field>
-              <Field label="Body"><select value={f.body} onChange={(e) => set("body", e.target.value)} className={inputCls}><option value="">Select…</option>{BODIES.map((b) => <option key={b}>{b}</option>)}</select></Field>
+              <Field label="Year"><input value={f.year} onChange={(e) => set("year", e.target.value.replace(/[^0-9]/g, ""))} className={cn(inputCls, "tnum")} placeholder="2022" /></Field>
+              <Field label="Make"><input value={f.make} onChange={(e) => set("make", e.target.value)} className={inputCls} placeholder={def.id === "TRAILER" ? "Big Tex" : def.id === "MOTORCYCLE" ? "Harley-Davidson" : "Toyota"} /></Field>
+              <Field label="Model"><input value={f.model} onChange={(e) => set("model", e.target.value)} className={inputCls} placeholder={def.id === "TRAILER" ? "22GN" : "Camry"} /></Field>
+              <Field label="Trim / series"><input value={f.trim} onChange={(e) => set("trim", e.target.value)} className={inputCls} placeholder="XSE" /></Field>
               <Field label="Stock #"><input value={f.stock} onChange={(e) => set("stock", e.target.value)} className={cn(inputCls, "tnum")} placeholder="K-2299" /></Field>
-              <Field label="Mileage"><input value={f.mileage} onChange={(e) => set("mileage", e.target.value)} className={cn(inputCls, "tnum")} placeholder="28,000" /></Field>
-              <Field label="Exterior color" wide><input value={f.color} onChange={(e) => set("color", e.target.value)} className={inputCls} placeholder="Summit White" /></Field>
+              {def.usageLabel && <Field label={def.usageLabel}><div className="relative"><input value={f.mileage} onChange={(e) => set("mileage", e.target.value.replace(/[^0-9]/g, ""))} className={cn(inputCls, "tnum", def.usageUnit && "pr-9")} placeholder="28,000" />{def.usageUnit && <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-n400">{def.usageUnit}</span>}</div></Field>}
             </div>
+          </Section>
+
+          <Section icon={ListChecks} title={`${def.label} specifications`} desc="The fields adapt to the category — fill what applies.">
+            <SpecFields category={category} values={specs} onChange={setSpecs} />
           </Section>
 
           <Section icon={DollarSign} title="Pricing & profit" desc="Front-end gross and market position update live as you type.">
@@ -174,7 +198,7 @@ export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle
               </>
             ) : (
               <label className="grid w-full cursor-pointer place-items-center gap-1 rounded-xl border-2 border-dashed border-n300 bg-n50/50 py-8 text-center transition hover:bg-n50">
-                <Camera className="h-6 w-6 text-n400" /><p className="text-[13px] font-semibold text-n700">Upload photos</p><p className="text-[11.5px] text-n500">Click to choose images (up to 24 · 1.5MB each)</p>
+                <Camera className="h-6 w-6 text-n400" /><p className="text-[13px] font-semibold text-n700">Upload photos</p><p className="text-[11.5px] text-n500">Click to choose images (up to 24)</p>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addPhotos(e.target.files)} />
               </label>
             )}
@@ -190,11 +214,11 @@ export function VehicleForm({ vehicle, initialPhotos = [] }: { vehicle?: Vehicle
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={f.photoUrls[0] || vehicle!.image} alt="" className="aspect-[16/10] w-full object-cover" />
               ) : (
-                <div className="grid aspect-[16/10] place-items-center bg-n100 text-n400"><Car className="h-8 w-8" /></div>
+                <div className="grid aspect-[16/10] place-items-center bg-n100 text-n400">{(() => { const I = CAT_ICON[category] ?? Car; return <I className="h-8 w-8" />; })()}</div>
               )}
               <div className="p-4">
                 <p className="text-[14px] font-semibold text-n900">{title}</p>
-                <p className="text-[12px] text-n500">{[f.trim, f.body].filter(Boolean).join(" · ") || "—"}</p>
+                <p className="text-[12px] text-n500">{[f.trim, specSummary].filter(Boolean).join(" · ") || def.label}</p>
                 <p className="tnum mt-2 text-[24px] font-bold text-n900">{price ? money(price) : "$—"}</p>
                 <div className="mt-3 flex items-center justify-between rounded-lg bg-n50 px-3 py-2">
                   <span className="text-[12px] font-medium text-n600">Front-end gross</span>

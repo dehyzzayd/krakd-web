@@ -15,7 +15,7 @@ async function load(dealershipId: string, id: string) {
   if (!v) throw new HttpError(404, "Vehicle not found");
   const photos = Array.isArray(v.photoUrls) ? (v.photoUrls as string[]) : [];
   return {
-    id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim ?? "", body: v.bodyType ?? "",
+    id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim ?? "", body: v.bodyType ?? "", category: v.category ?? "CAR",
     title: v.title, subtitle: v.subtitle, attributes: (v.attributes && typeof v.attributes === "object" ? v.attributes : {}) as Record<string, unknown>,
     stock: v.stockNumber, vin: v.vin, price: Math.round(v.priceCents / 100), cost: Math.round(v.costCents / 100),
     mileage: v.mileage, status: v.status, color: v.exteriorColor ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
@@ -39,6 +39,8 @@ const patchSchema = z.object({
   mileage: z.coerce.number().int().min(0).optional(),
   status: z.enum(["AVAILABLE", "RECON", "RESERVED", "WHOLESALE", "SOLD"]).optional(),
   exteriorColor: z.string().optional(),
+  bodyType: z.string().optional(),
+  category: z.string().optional(),
   title: z.string().optional(),
   subtitle: z.string().optional(),
   attributes: z.record(z.string(), z.unknown()).optional(),
