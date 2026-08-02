@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Search, SlidersHorizontal, ArrowUpDown, Download, Plus, MoreVertical,
+  Search, SlidersHorizontal, ArrowUpDown, Download, Plus, MoreVertical, Check,
   Phone, MessageSquare, Mail, Calendar, FileText, User as UserIcon,
 } from "lucide-react";
 import { Topbar } from "@/components/app/Topbar";
@@ -67,16 +67,39 @@ export default function LeadsPage() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"All" | "Active" | "Unassigned">("All");
   const [adding, setAdding] = useState(false);
+  const [sort, setSort] = useState<"recent" | "name" | "status" | "temp">("recent");
+  const [temp, setTemp] = useState("");            // "" | Hot | Warm | Cold
+  const [menu, setMenu] = useState<"" | "sort" | "filter">("");
 
   const rows = data?.items ?? [];
   const s = data?.stats;
 
-  const filtered = useMemo(() => rows.filter((r) => {
-    if (tab === "Active" && ["Sold", "Lost"].includes(r.statusLabel)) return false;
-    if (tab === "Unassigned" && r.assigned) return false;
-    if (q.trim() && !`${r.name} ${r.email} ${r.phone} ${r.vehicle}`.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  }), [rows, tab, q]);
+  const filtered = useMemo(() => {
+    const RANK: Record<string, number> = { Hot: 0, Warm: 1, Cold: 2 };
+    const out = rows.filter((r) => {
+      if (tab === "Active" && ["Sold", "Lost"].includes(r.statusLabel)) return false;
+      if (tab === "Unassigned" && r.assigned) return false;
+      if (temp && r.temperature !== temp) return false;
+      if (q.trim() && !`${r.name} ${r.email} ${r.phone} ${r.vehicle}`.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
+    if (sort === "name") out.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === "status") out.sort((a, b) => a.statusLabel.localeCompare(b.statusLabel));
+    else if (sort === "temp") out.sort((a, b) => (RANK[a.temperature] ?? 9) - (RANK[b.temperature] ?? 9));
+    return out;
+  }, [rows, tab, q, temp, sort]);
+
+  const exportCsv = () => {
+    const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = ["Name", "Phone", "Email", "Source", "Vehicle of interest", "Status", "Temperature", "Assigned to", "Added"];
+    const body = filtered.map((r) => [r.name, r.phone, r.email, r.source, r.vehicle, r.statusLabel, r.temperature, r.assigned || "", r.lastAdded].map(esc).join(","));
+    const csv = [head.map(esc).join(","), ...body].join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "krakd-leads-export.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   const kpis = [
     { label: "New today", value: s?.newToday ?? 0, sub: "last 24 hours" },
@@ -108,10 +131,31 @@ export default function LeadsPage() {
                 <Search className="h-4 w-4 shrink-0 text-n400" />
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, phone…" className="w-64 bg-transparent text-[13px] text-n900 outline-none placeholder:text-n400" />
               </div>
-              <button className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><SlidersHorizontal className="h-4 w-4" />Filters</button>
-              <button className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><ArrowUpDown className="h-4 w-4" />Sort</button>
+              <div className="relative">
+                <button onClick={() => setMenu((m) => (m === "filter" ? "" : "filter"))} className={cn("flex h-10 items-center gap-2 rounded-md border bg-white px-4 text-[13px] font-medium transition hover:bg-n50", temp ? "border-brand text-brand" : "border-n200 text-n700")}><SlidersHorizontal className="h-4 w-4" />Filters{temp && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">1</span>}</button>
+                {menu === "filter" && (<>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenu("")} />
+                  <div className="absolute left-0 top-11 z-20 w-48 rounded-lg border border-n200 bg-white p-1.5 shadow-lg">
+                    <p className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-n400">Temperature</p>
+                    {[["", "All"], ["Hot", "Hot"], ["Warm", "Warm"], ["Cold", "Cold"]].map(([v, label]) => (
+                      <button key={label} onClick={() => { setTemp(v); setMenu(""); }} className={cn("flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[12.5px] transition hover:bg-n50", temp === v ? "font-semibold text-brand" : "text-n700")}>{label}{temp === v && <Check className="h-3.5 w-3.5" />}</button>
+                    ))}
+                  </div>
+                </>)}
+              </div>
+              <div className="relative">
+                <button onClick={() => setMenu((m) => (m === "sort" ? "" : "sort"))} className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><ArrowUpDown className="h-4 w-4" />Sort</button>
+                {menu === "sort" && (<>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenu("")} />
+                  <div className="absolute left-0 top-11 z-20 w-48 rounded-lg border border-n200 bg-white p-1.5 shadow-lg">
+                    {([["recent", "Most recent"], ["name", "Name (A–Z)"], ["status", "Status"], ["temp", "Temperature"]] as const).map(([v, label]) => (
+                      <button key={v} onClick={() => { setSort(v); setMenu(""); }} className={cn("flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[12.5px] transition hover:bg-n50", sort === v ? "font-semibold text-brand" : "text-n700")}>{label}{sort === v && <Check className="h-3.5 w-3.5" />}</button>
+                    ))}
+                  </div>
+                </>)}
+              </div>
             </div>
-            <button className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><Download className="h-4 w-4" />Export</button>
+            <button onClick={exportCsv} className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><Download className="h-4 w-4" />Export</button>
           </div>
         </div>
 

@@ -14,7 +14,7 @@ import { Settings as SettingsIcon, FileText } from "lucide-react";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import {
   IconOverview, IconInventory, IconLeads, IconInbox, IconMarketing,
-  IconReports, IconChevron, IconAI, IconWebsite,
+  IconChevron, IconAI, IconWebsite,
 } from "./AppIcons";
 
 type Child = { href: string; label: string; logo?: string; connected?: boolean; badge?: number };
@@ -45,7 +45,6 @@ const NAV: Entry[] = [
       ...NETWORKS.map((n) => ({ href: `/dashboard/marketing/${n.id}`, label: n.name, logo: n.logo })),
     ],
   },
-  { type: "item", href: "/dashboard/reports", label: "Reports", Icon: IconReports },
   { type: "item", href: "/dashboard/settings", label: "Settings", Icon: (p: { className?: string }) => <SettingsIcon className={p.className} /> },
 ];
 
@@ -106,7 +105,7 @@ export function Sidebar() {
           const isOpen = open[e.id];
           return (
             <div key={e.id}>
-              <button onClick={() => setOpen((o) => ({ ...o, [e.id]: !o[e.id] }))} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition", groupActive ? "text-n900" : "text-n600 hover:bg-n100 hover:text-n900")}>
+              <button onClick={() => setOpen((o) => (o[e.id] ? {} : { [e.id]: true }))} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition", groupActive ? "text-n900" : "text-n600 hover:bg-n100 hover:text-n900")}>
                 <e.Icon className={cn("h-[18px] w-[18px] shrink-0", groupActive ? "text-brand" : "text-n500")} />
                 <span className="flex-1 text-left">{e.label}</span>
                 <IconChevron className={cn("h-4 w-4 text-n400 transition", isOpen && "rotate-180")} />

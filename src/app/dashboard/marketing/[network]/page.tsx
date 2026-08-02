@@ -25,8 +25,9 @@ export default function NetworkPage() {
   const router = useRouter();
   const { network } = useParams<{ network: string }>();
   const n = netById(network);
-  const { data, reload } = useApi<Summary>("/marketing/summary");
+  const { data, loading, reload } = useApi<Summary>("/marketing/summary");
   const { data: camps, reload: reloadCamps } = useApi<{ items: Camp[] }>("/campaigns");
+  const ready = !!data;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -56,16 +57,18 @@ export default function NetworkPage() {
       <AppMain>
         {/* header */}
         <div className="flex flex-wrap items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-n100">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={n.logo} alt={n.name} className={`h-6 w-6 ${connected ? "" : "opacity-40 grayscale"}`} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-n100">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={n.logo} alt={n.name} className={`h-6 w-6 ${ready && connected ? "" : "opacity-40 grayscale"}`} /></span>
           <div className="mr-auto">
             <h1 className="text-[20px] font-semibold text-n900">{n.name}</h1>
-            <span className={`inline-flex items-center gap-1 text-[12.5px] font-medium ${connected ? "text-ok" : "text-n500"}`}>{connected ? <><Wifi className="h-3.5 w-3.5" />Connected</> : <><WifiOff className="h-3.5 w-3.5" />Not connected</>}</span>
+            {!ready
+              ? <span className="inline-flex items-center gap-1 text-[12.5px] font-medium text-n400"><Loader2 className="h-3.5 w-3.5 animate-spin" />Checking connection…</span>
+              : <span className={`inline-flex items-center gap-1 text-[12.5px] font-medium ${connected ? "text-ok" : "text-n500"}`}>{connected ? <><Wifi className="h-3.5 w-3.5" />Connected</> : <><WifiOff className="h-3.5 w-3.5" />Not connected</>}</span>}
           </div>
-          <button onClick={toggle} disabled={busy} className={`inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[12.5px] font-semibold transition disabled:opacity-60 ${connected ? "border border-n200 bg-white text-n700 hover:bg-n100" : "bg-brand text-white hover:bg-brand-hover"}`}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{connected ? "Disconnect" : `Connect ${n.name}`}</button>
-          {connected && <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover"><Plus className="h-4 w-4" />New campaign</button>}
+          {ready && <button onClick={toggle} disabled={busy} className={`inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[12.5px] font-semibold transition disabled:opacity-60 ${connected ? "border border-n200 bg-white text-n700 hover:bg-n100" : "bg-brand text-white hover:bg-brand-hover"}`}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{connected ? "Disconnect" : `Connect ${n.name}`}</button>}
+          {ready && connected && <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover"><Plus className="h-4 w-4" />New campaign</button>}
         </div>
 
-        {!connected && (
+        {ready && !connected && (
           <Card className="mt-4 p-5">
             <p className="text-[13.5px] font-semibold text-n900">Connect your {n.name} ad account</p>
             <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-n500">Authorize Krakd on {n.name} so we can publish campaigns to your account, sync your inventory, and pull spend, impressions and leads back into this dashboard automatically. Until then you can build campaigns as drafts — they&apos;ll go live the moment you connect.</p>
