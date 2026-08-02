@@ -9,26 +9,32 @@ import { apiFetch, getToken, ApiError } from "./api";
 const isTransient = (e: unknown) => !(e instanceof ApiError) || e.status >= 500 || e.status === 408 || e.status === 429;
 const BACKOFF = [400, 900, 1800]; // ms — ~3s of self-healing before we surface an error
 
-/** Fetch tenant data for the logged-in dealer. Auto-retries transient failures
- *  (network blips, momentary 5xx) before surfacing an error; redirects to /login
+// stale-while-revalidate cache: a page you've already seen paints instantly from
+// cache while it silently refreshes in the background — no empty flash on revisit.
+const cache = new Map<string, unknown>();
+
+/** Fetch tenant data for the logged-in dealer. Shows cached data instantly on
+ *  revisit and revalidates; auto-retries transient failures; redirects to /login
  *  on 401. `reload()` re-runs on demand. */
 export function useApi<T>(path: string) {
   const router = useRouter();
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<T | null>(() => (cache.has(path) ? (cache.get(path) as T) : null));
+  const [loading, setLoading] = useState(!cache.has(path));
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     if (!getToken()) { router.replace("/login"); return; }
     let alive = true;
-    setLoading(true); setError(null);
+    // paint cached data immediately (if any), then revalidate quietly
+    if (cache.has(path)) { setData(cache.get(path) as T); setLoading(false); } else { setLoading(true); }
+    setError(null);
 
     (async () => {
       for (let attempt = 0; ; attempt++) {
         try {
           const d = await apiFetch<T>(path);
-          if (alive) { setData(d); setError(null); setLoading(false); }
+          if (alive) { cache.set(path, d); setData(d); setError(null); setLoading(false); }
           return;
         } catch (e) {
           if (!alive) return;
@@ -38,7 +44,8 @@ export function useApi<T>(path: string) {
             if (!alive) return;
             continue; // retry
           }
-          setError(e instanceof Error ? e.message : "Failed to load");
+          // only surface an error if we have nothing cached to show
+          if (!cache.has(path)) { setError(e instanceof Error ? e.message : "Failed to load"); setData(null); }
           setLoading(false);
           return;
         }

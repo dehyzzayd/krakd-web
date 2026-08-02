@@ -20,6 +20,17 @@ export async function issueTokens(p: Principal) {
   return { accessToken, refreshToken, tokenType: "Bearer" };
 }
 
+/** Verify a refresh token (not an OTP/reset token) → the user id, or null. */
+export async function verifyRefresh(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, refreshSecret());
+    if (payload.purpose) return null; // OTP / reset tokens share the secret but carry a purpose
+    return (payload.sub as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function signOtp(email: string, code: string) {
   return new SignJWT({ email, code, purpose: "otp" })
     .setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("10m").sign(refreshSecret());

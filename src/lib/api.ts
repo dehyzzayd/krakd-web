@@ -37,17 +37,45 @@ export function snapshotSession(): { accessToken: string; refreshToken?: string 
   return { accessToken, refreshToken: window.localStorage.getItem(REFRESH_KEY) ?? undefined };
 }
 
+// Refresh the access token using the stored refresh token. Shared in-flight
+// promise so concurrent 401s trigger a single refresh, not a storm.
+let refreshing: Promise<boolean> | null = null;
+async function refreshSession(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (refreshing) return refreshing;
+  const refreshToken = window.localStorage.getItem(REFRESH_KEY);
+  if (!refreshToken) return false;
+  refreshing = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ refreshToken }) });
+      if (!res.ok) return false;
+      setSession(await res.json());
+      return true;
+    } catch { return false; }
+  })();
+  const ok = await refreshing;
+  refreshing = null;
+  return ok;
+}
+
 export async function apiFetch<T = unknown>(path: string, opts: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${API_URL}${path}`, {
+  const run = () => fetch(`${API_URL}${path}`, {
     ...opts,
     credentials: "same-origin", // send/receive the OTP cookie
     headers: {
       "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(getToken() ? { authorization: `Bearer ${getToken()}` } : {}),
       ...(opts.headers ?? {}),
     },
   });
+
+  let res = await run();
+  // access token expired → silently refresh once and retry (keeps the session alive)
+  if (res.status === 401 && !path.startsWith("/auth/") && typeof window !== "undefined" && window.localStorage.getItem(REFRESH_KEY)) {
+    if (await refreshSession()) res = await run();
+    else clearSession();
+  }
+
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const msg = (data && (data.message as string)) || `Request failed (${res.status})`;
