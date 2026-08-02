@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { Topbar } from "@/components/app/Topbar";
 import { ErrorBanner } from "@/components/app/AppKit";
+import { BulkImportSheet } from "@/components/app/BulkImportSheet";
+import { Upload } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef, type ListingView } from "@/components/site/verticals";
@@ -71,6 +73,7 @@ export default function InventoryPage() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<string>("all");
   const [view, setView] = useState<"list" | "grid">("list");
+  const [importing, setImporting] = useState(false);
 
   const def = verticalDef(data?.vertical);
   const dash = def.dash;
@@ -101,6 +104,7 @@ export default function InventoryPage() {
             <div className="inline-flex items-center rounded-lg border border-n200 bg-white p-0.5">
               {([["list", ListIcon, "Table"], ["grid", LayoutGrid, "Grid"]] as const).map(([m, Ic, lbl]) => <button key={m} onClick={() => setView(m)} className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition", view === m ? "bg-n100 text-n900" : "text-n500 hover:text-n700")}><Ic className="h-3.5 w-3.5" />{lbl}</button>)}
             </div>
+            <button onClick={() => setImporting(true)} className="inline-flex h-9 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-semibold text-n700 transition hover:bg-n100"><Upload className="h-4 w-4" />Import</button>
             <Link href="/dashboard/inventory/new" className="btn-brand inline-flex h-9 items-center gap-2 rounded-md px-4 text-[13px] font-semibold transition"><Plus className="h-4 w-4" />Add {def.noun}</Link>
           </div>
         </div>
@@ -171,6 +175,7 @@ export default function InventoryPage() {
           </div>
         </div>
       </div>
+      <BulkImportSheet open={importing} onClose={() => setImporting(false)} onImported={reload} />
     </>
   );
 }
