@@ -610,6 +610,7 @@ model Website {
   heroImageUrl String?         @db.Text // optional hero background asset
   primaryColor String          @default("#2b6ba4")
   headerStyle  String          @default("auto") // auto | light | dark | accent
+  logoScale    String          @default("md")   // sm | md | lg | xl — header logo size
   headline     String          @default("Find your next vehicle.")
   intro        String          @default("Browse our latest inventory — updated daily.")
   ctaLabel     String          @default("Browse inventory")

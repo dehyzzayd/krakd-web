@@ -27,7 +27,7 @@ export default function WebsitePreview() {
       const tpl = (["MODERN","INVENTORY_FIRST","PREMIUM","CLASSIC","SPORT","MINIMAL","AURORA","QUIET","VELOCITY"].includes(override ?? "") ? override : (w.template as string)) as SiteConfig["template"];
       setConfig({
         slug: w.slug, dealershipName: (w.dealershipName as string) || "Your dealership", vertical: (w.vertical as string) || "AUTOMOTIVE", template: tpl || "MODERN",
-        logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor, headerStyle: (w.headerStyle as string) || "auto",
+        logoUrl: w.logoUrl ?? null, heroImageUrl: w.heroImageUrl ?? null, primaryColor: w.primaryColor, headerStyle: (w.headerStyle as string) || "auto", logoScale: (w.logoScale as string) || "md",
         headline: w.headline || "", intro: w.intro || "", ctaLabel: w.ctaLabel || "Browse inventory",
         aboutText: w.aboutText || "", financingText: w.financingText || "", tradeInText: w.tradeInText || "",
         whyUs: w.whyUs || [], staff: w.staff || [], reviews: w.reviews || [],

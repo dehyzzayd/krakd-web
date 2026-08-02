@@ -6,7 +6,7 @@ export type SiteConfig = {
   dealershipName: string;
   vertical: string;
   template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET" | "VELOCITY";
-  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string;
+  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; logoScale: string;
   headline: string; intro: string; ctaLabel: string;
   aboutText: string; financingText: string; tradeInText: string;
   whyUs: { title: string; body: string }[];
@@ -62,7 +62,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     dealershipName: dealer?.name ?? "Dealership",
     vertical: dealer?.vertical ?? "AUTOMOTIVE",
     template: w.template,
-    logoUrl: w.logoUrl, heroImageUrl: w.heroImageUrl, primaryColor: w.primaryColor, headerStyle: w.headerStyle,
+    logoUrl: w.logoUrl, heroImageUrl: w.heroImageUrl, primaryColor: w.primaryColor, headerStyle: w.headerStyle, logoScale: w.logoScale ?? "md",
     headline: w.headline, intro: w.intro, ctaLabel: w.ctaLabel,
     aboutText: w.aboutText ?? "", financingText: w.financingText ?? "", tradeInText: w.tradeInText ?? "",
     whyUs: (Array.isArray(w.whyUs) ? w.whyUs : []) as SiteConfig["whyUs"],

@@ -8,7 +8,7 @@ import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Uploa
 
 export type Web = {
   id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET" | "VELOCITY"; status: "DRAFT" | "PUBLISHED";
-  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; headline: string; intro: string; ctaLabel: string;
+  logoUrl: string | null; heroImageUrl: string | null; primaryColor: string; headerStyle: string; logoScale: string; headline: string; intro: string; ctaLabel: string;
   aboutText: string | null; financingText: string | null; tradeInText: string | null;
   whyUs: { title: string; body: string }[]; staff: { name: string; role: string; photoUrl?: string }[]; reviews: { name: string; rating: number; body: string }[];
   pages: { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean }[];
@@ -247,6 +247,7 @@ export function BrandingPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [primaryColor, setColor] = useState(w.primaryColor);
   const [headerStyle, setHeader] = useState(w.headerStyle ?? "auto");
   const [logoUrl, setLogo] = useState(w.logoUrl ?? "");
+  const [logoScale, setLogoScale] = useState(w.logoScale ?? "md");
   const [heroImageUrl, setHero] = useState(w.heroImageUrl ?? "");
   const s = useSave(reload);
   return (
@@ -258,11 +259,17 @@ export function BrandingPanel({ w, reload }: { w: Web; reload: () => void }) {
           <L label="Navbar style"><div className="grid grid-cols-4 gap-1.5">{(["auto", "light", "dark", "accent"] as const).map((v) => <button key={v} type="button" onClick={() => setHeader(v)} className={cn("h-9 rounded-md border text-[12.5px] font-medium capitalize transition", headerStyle === v ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n50")}>{v === "accent" ? "Brand" : v}</button>)}</div></L>
         </div>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <L label="Logo"><Uploader value={logoUrl} onChange={setLogo} label="logo" aspect="wide" /></L>
+          <L label="Logo">
+            <Uploader value={logoUrl} onChange={setLogo} label="logo" aspect="wide" />
+            <div className="mt-2">
+              <p className="mb-1 text-[11px] font-medium text-n500">Logo size</p>
+              <div className="grid grid-cols-4 gap-1.5">{(["sm", "md", "lg", "xl"] as const).map((v) => <button key={v} type="button" onClick={() => setLogoScale(v)} className={cn("h-9 rounded-md border text-[12.5px] font-medium uppercase transition", logoScale === v ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n50")}>{v}</button>)}</div>
+            </div>
+          </L>
           <L label="Hero background"><Uploader value={heroImageUrl} onChange={setHero} label="hero" aspect="wide" /></L>
         </div>
       </Card>
-      <SaveBar {...s} onSave={() => s.save({ primaryColor, headerStyle, logoUrl, heroImageUrl })} label="Save branding" />
+      <SaveBar {...s} onSave={() => s.save({ primaryColor, headerStyle, logoUrl, logoScale, heroImageUrl })} label="Save branding" />
     </div>
   );
 }
