@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const d = r.dealership;
     const contact = [d.addressLine1, [d.city, d.state].filter(Boolean).join(", "), d.phone].filter(Boolean).join("  ·  ");
     const doc = buildCreditPdf(
-      { applicant: (r.applicant ?? {}) as Record<string, string>, coApplicant: (r.coApplicant ?? null) as Record<string, string> | null, status: r.status, createdAt: r.createdAt },
+      { applicant: (r.applicant ?? {}) as Record<string, string>, coApplicant: (r.coApplicant ?? null) as Record<string, string> | null, createdAt: r.createdAt },
       { name: d.name, brandColor: d.brandColor, logoUrl: d.logoUrl, contact, consentText: cfg?.consentText ?? "" },
     );
     const bytes = doc.output("arraybuffer");
