@@ -11,6 +11,7 @@ import { Topbar } from "@/components/app/Topbar";
 import { ErrorBanner } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
+import { API_URL, getToken } from "@/lib/api";
 import { AddLeadSheet } from "@/components/app/AddLeadSheet";
 
 type Row = {
@@ -69,7 +70,7 @@ export default function LeadsPage() {
   const [adding, setAdding] = useState(false);
   const [sort, setSort] = useState<"recent" | "name" | "status" | "temp">("recent");
   const [temp, setTemp] = useState("");            // "" | Hot | Warm | Cold
-  const [menu, setMenu] = useState<"" | "sort" | "filter">("");
+  const [menu, setMenu] = useState<"" | "sort" | "filter" | "export">("");
 
   const rows = data?.items ?? [];
   const s = data?.stats;
@@ -99,6 +100,18 @@ export default function LeadsPage() {
     a.download = "krakd-leads-export.csv";
     a.click();
     URL.revokeObjectURL(a.href);
+  };
+
+  const exportAdf = async () => {
+    try {
+      const res = await fetch(`${API_URL}/leads/adf`, { headers: getToken() ? { authorization: `Bearer ${getToken()}` } : {} });
+      if (!res.ok) throw new Error("Export failed");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(await res.blob());
+      a.download = "krakd-leads.adf.xml";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { alert(e instanceof Error ? e.message : "Export failed"); }
   };
 
   const kpis = [
@@ -155,7 +168,16 @@ export default function LeadsPage() {
                 </>)}
               </div>
             </div>
-            <button onClick={exportCsv} className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><Download className="h-4 w-4" />Export</button>
+            <div className="relative">
+              <button onClick={() => setMenu((m) => (m === "export" ? "" : "export"))} className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n50"><Download className="h-4 w-4" />Export</button>
+              {menu === "export" && (<>
+                <div className="fixed inset-0 z-10" onClick={() => setMenu("")} />
+                <div className="absolute right-0 top-11 z-20 w-56 rounded-lg border border-n200 bg-white p-1.5 shadow-lg">
+                  <button onClick={() => { exportCsv(); setMenu(""); }} className="w-full rounded-md px-2 py-1.5 text-left text-[12.5px] text-n700 transition hover:bg-n50"><span className="font-semibold text-n900">CSV</span><span className="block text-[11px] text-n400">Spreadsheet of the current view</span></button>
+                  <button onClick={() => { exportAdf(); setMenu(""); }} className="w-full rounded-md px-2 py-1.5 text-left text-[12.5px] text-n700 transition hover:bg-n50"><span className="font-semibold text-n900">ADF (XML)</span><span className="block text-[11px] text-n400">Industry format for your CRM / DMS</span></button>
+                </div>
+              </>)}
+            </div>
           </div>
         </div>
 
