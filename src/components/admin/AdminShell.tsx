@@ -63,7 +63,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh bg-n50">
-      <aside className="sticky top-0 hidden h-dvh w-[228px] shrink-0 flex-col border-r border-n200 bg-n900 px-3 py-4 lg:flex">
+      <aside style={{ backgroundColor: "#0d1117" }} className="sticky top-0 hidden h-dvh w-[228px] shrink-0 flex-col border-r border-white/10 px-3 py-4 lg:flex">
         <div className="px-2 pb-4">
           <p className="text-[16px] font-bold tracking-tight text-white">Krakd<span className="text-brand">.</span></p>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40">Internal ops</p>
