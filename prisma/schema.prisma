@@ -12,7 +12,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL") // runtime — point at Neon's POOLED host at scale
+  url       = env("DATABASE_URL")        // app runtime — Neon POOLED host (PgBouncer)
+  directUrl = env("DIRECT_URL")          // migrations / db push — Neon DIRECT host
 }
 
 // ─────────────────────────────── Tenant & identity ───────────────────────────────
