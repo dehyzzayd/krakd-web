@@ -84,10 +84,10 @@ export function Sidebar() {
     <>
       {mobileOpen && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />}
       <aside className={cn(
-        "z-50 flex h-dvh shrink-0 flex-col self-start border-r border-n200 bg-n50",
-        "fixed inset-y-0 left-0 w-[248px] transition-transform duration-200", // mobile: off-canvas drawer
+        "z-50 flex shrink-0 flex-col border-r border-n200 bg-n50",
+        "fixed inset-y-0 left-0 h-dvh w-[248px] transition-transform duration-200", // mobile: off-canvas drawer
         mobileOpen ? "translate-x-0 shadow-xl" : "-translate-x-full",
-        "lg:sticky lg:top-0 lg:translate-x-0 lg:shadow-none lg:transition-[width]", // desktop: in-flow sticky
+        "lg:static lg:h-full lg:translate-x-0 lg:shadow-none lg:transition-[width]", // desktop: in-flow, fills the shell, never scrolls with the page
         collapsed ? "lg:w-[68px]" : "lg:w-[248px]",
       )}>
       <div className={cn("flex h-14 items-center border-b border-n200", collapsed ? "justify-center px-0" : "px-4")}>

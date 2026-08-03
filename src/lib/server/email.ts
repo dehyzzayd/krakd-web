@@ -21,6 +21,37 @@ async function send(to: string, subject: string, html: string) {
   }
 }
 
+/** Deliver a lead as ADF: the XML in the body (how most CRM/provider inboxes parse it)
+ *  plus an attachment for the ones that want a file. */
+export async function sendAdfEmail(to: string, subject: string, xml: string) {
+  const recipient = override || to;
+  if (!resend) { console.log(`[email disabled] would send ADF "${subject}" to ${recipient}`); return; }
+  try {
+    const { error } = await resend.emails.send({
+      from, to: recipient, subject, text: xml,
+      attachments: [{ filename: "lead.adf.xml", content: Buffer.from(xml, "utf8") }],
+    });
+    if (error) console.warn(`resend ADF error to ${recipient}: ${error.message}`);
+  } catch (e) {
+    console.error("ADF email failed:", e);
+  }
+}
+
+/** A dealer messaging a lead from the CRM. Returns whether the provider actually accepted it. */
+export async function sendLeadMessageEmail(p: { to: string; fromName: string; body: string }): Promise<{ sent: boolean; reason?: string }> {
+  const recipient = override || p.to;
+  if (!resend) return { sent: false, reason: "Email not connected" };
+  const html = shell(`Message from ${p.fromName}`, `<p style="font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap">${p.body.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</p>`);
+  try {
+    const { error } = await resend.emails.send({ from, to: recipient, subject: `Message from ${p.fromName}`, html, text: p.body });
+    if (error) { console.warn(`resend message error to ${recipient}: ${error.message}`); return { sent: false, reason: error.message }; }
+    return { sent: true };
+  } catch (e) {
+    console.error("lead message email failed:", e);
+    return { sent: false, reason: "Send failed" };
+  }
+}
+
 export async function sendOtpEmail(p: { to: string; code: string }) {
   await send(
     p.to,

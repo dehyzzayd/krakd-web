@@ -290,18 +290,32 @@ function NoteModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
 function MessageModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; onClose: () => void; onDone: () => void }) {
   const [channel, setChannel] = useState<"SMS" | "EMAIL">(lead.phone ? "SMS" : "EMAIL");
   const [text, setText] = useState(""); const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
   const to = channel === "SMS" ? lead.phone : lead.email;
-  const save = async () => { if (!text.trim()) return; setBusy(true); try { await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type: channel, content: `To ${to || "lead"}: ${text}` }) }); onDone(); onClose(); } finally { setBusy(false); } };
+  const save = async () => {
+    if (!text.trim() || !to) return;
+    setBusy(true); setNote(null);
+    try {
+      const r = await apiFetch<{ sent: boolean; reason: string | null }>(`/leads/${id}/message`, { method: "POST", body: JSON.stringify({ channel, content: text }) });
+      if (r.sent) { onDone(); onClose(); return; }
+      // couldn't deliver — it's still logged; keep the sheet open and tell the truth
+      setNote(`${r.reason ?? "Not connected"} — saved to the timeline, but not delivered yet.`);
+      onDone();
+    } catch (e) {
+      setNote(e instanceof ApiError ? e.message : "Couldn't send.");
+    } finally { setBusy(false); }
+  };
   return (
-    <Sheet open onClose={onClose} width="max-w-[440px]" title="Send a message" subtitle="Recorded on the lead and in your inbox."
-      footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy || !text.trim()} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Sending…" : "Send & log"}</button></>}>
+    <Sheet open onClose={onClose} width="max-w-[440px]" title="Send a message" subtitle="Texts and emails send live, then log to the timeline."
+      footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy || !text.trim() || !to} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Sending…" : "Send & log"}</button></>}>
       <div className="space-y-3">
         <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">
-          {(["SMS", "EMAIL"] as const).map((c) => <button key={c} onClick={() => setChannel(c)} className={cn("h-8 rounded-[7px] px-4 text-[12.5px] font-medium", channel === c ? "bg-n100 text-n900" : "text-n600")}>{c === "SMS" ? "Text" : "Email"}</button>)}
+          {(["SMS", "EMAIL"] as const).map((c) => <button key={c} onClick={() => { setChannel(c); setNote(null); }} className={cn("h-8 rounded-[7px] px-4 text-[12.5px] font-medium", channel === c ? "bg-n100 text-n900" : "text-n600")}>{c === "SMS" ? "Text" : "Email"}</button>)}
         </div>
         <p className="text-[12px] text-n500">To: <span className="font-medium text-n800">{to || "—"}</span></p>
+        {!to && <p className="text-[12px] font-medium text-warn">This lead has no {channel === "SMS" ? "phone number" : "email"} on file.</p>}
         <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder={channel === "SMS" ? "Type your text…" : "Type your email…"} className={cn(field, "h-auto resize-none py-2")} />
-        <p className="text-[11px] text-n400">Live send hooks up once your number/email channel is connected.</p>
+        {note && <p className="text-[12px] font-medium text-warn">{note}</p>}
       </div>
     </Sheet>
   );

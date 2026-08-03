@@ -62,8 +62,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const logout = () => { clearSession(); router.replace("/login"); };
 
   return (
-    <div className="flex min-h-dvh bg-n50">
-      <aside style={{ backgroundColor: "#0d1117" }} className="sticky top-0 hidden h-dvh w-[228px] shrink-0 flex-col border-r border-white/10 px-3 py-4 lg:flex">
+    <div className="flex h-dvh bg-n50">
+      <aside style={{ backgroundColor: "#0d1117" }} className="hidden h-full w-[228px] shrink-0 flex-col border-r border-white/10 px-3 py-4 lg:flex">
         <div className="px-2 pb-4">
           <p className="text-[16px] font-bold tracking-tight text-white">Krakd<span className="text-brand">.</span></p>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40">Internal ops</p>
@@ -75,7 +75,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <button onClick={logout} className="mt-2 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-white/60 hover:bg-white/5 hover:text-white"><LogOut className="h-4 w-4" />Sign out</button>
         </div>
       </aside>
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }

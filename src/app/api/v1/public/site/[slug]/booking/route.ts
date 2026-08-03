@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
+import { deliverAdf } from "@/lib/server/adfDelivery";
 import { computeSlots, parseDuration, type Hour, type Busy } from "@/lib/server/slots";
 import type { Prisma } from "@prisma/client";
 
@@ -105,6 +106,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug
   const label = start.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: c.tz });
   const ownerEmail = dealer?.users[0]?.email;
   if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: "Website booking", vehicle: label, contact: d.phone ?? d.email ?? "", leadId: lead.id });
+  void deliverAdf(lead.dealershipId, lead.id).catch(() => {});
 
   return json({ ok: true, id: appt.id, start: start.toISOString(), durationMin }, 201);
 });

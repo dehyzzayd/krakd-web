@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
+import { deliverAdf } from "@/lib/server/adfDelivery";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -60,6 +61,7 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
   const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
   const ownerEmail = dealer?.users[0]?.email;
   if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: "Website", vehicle: vehicleLabel, contact: d.phone ?? d.email ?? "", leadId: lead.id });
+  void deliverAdf(lead.dealershipId, lead.id).catch(() => {});
 
   return json({ ok: true }, 201);
 });

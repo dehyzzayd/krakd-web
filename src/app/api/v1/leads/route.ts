@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import type { Prisma } from "@prisma/client";
 import { sendLeadNotification } from "@/lib/server/email";
+import { deliverAdf } from "@/lib/server/adfDelivery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export const POST = route(async (req: NextRequest) => {
   const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
   const ownerEmail = dealer?.users[0]?.email;
   if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: d.source ?? "", vehicle: vehicleLabel, contact: d.phone ?? d.email ?? "", leadId: lead.id });
+  void deliverAdf(lead.dealershipId, lead.id).catch(() => {});
 
   return json({ id: lead.id }, 201);
 });

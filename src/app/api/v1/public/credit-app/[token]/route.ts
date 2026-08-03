@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
+import { deliverAdf } from "@/lib/server/adfDelivery";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -71,5 +72,6 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ toke
   if (to) {
     sendLeadNotification({ to, dealershipName: c.dealership.name, leadName: `${firstName} ${lastName}`, source: "Credit Application", vehicle: "—", contact: phone, leadId: app.leadId ?? "" }).catch(() => {});
   }
+  if (app.leadId) void deliverAdf(dealershipId, app.leadId).catch(() => {});
   return json({ ok: true }, 201);
 });

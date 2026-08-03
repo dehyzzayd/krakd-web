@@ -12,13 +12,14 @@ export const metadata: Metadata = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`${GeistSans.variable} ${GeistMono.variable} app-scope min-h-dvh`}>
+    <div className={`${GeistSans.variable} ${GeistMono.variable} app-scope flex h-dvh flex-col`}>
       <BrandTheme />
       <ImpersonationBanner />
       <SidebarProvider>
-        <div className="flex min-h-dvh">
+        {/* fixed-height shell: the row fills what's left under the banner; only <main> scrolls */}
+        <div className="flex min-h-0 flex-1">
           <Sidebar />
-          <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
         </div>
       </SidebarProvider>
     </div>

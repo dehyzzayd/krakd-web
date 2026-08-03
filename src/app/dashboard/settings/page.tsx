@@ -6,6 +6,7 @@ import { Topbar } from "@/components/app/Topbar";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { Building2, MapPin, Clock, Palette, Loader2, Check, Upload } from "lucide-react";
+import { IntegrationsPanel } from "@/components/app/IntegrationsPanel";
 
 const INDUSTRIES = [
   { id: "AUTOMOTIVE", label: "Automotive" }, { id: "REAL_ESTATE", label: "Real estate" },
@@ -153,6 +154,8 @@ export default function SettingsPage() {
               </L>
             </div>
           </Section>
+
+          <div className="pt-1"><IntegrationsPanel /></div>
         </div>
       </div>
     </>
