@@ -51,7 +51,9 @@ const MENU = [{ label: "Documentation", href: "/docs" }, { label: "Settings", hr
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { collapsed } = useSidebar();
+  const { collapsed, mobileOpen, setMobileOpen } = useSidebar();
+  // close the mobile drawer whenever the route changes
+  useEffect(() => { setMobileOpen(false); }, [pathname, setMobileOpen]);
   const [menu, setMenu] = useState(false);
   const [dealer, setDealer] = useState<string | null>(null);
   const [vertical, setVertical] = useState<string>("AUTOMOTIVE");
@@ -79,7 +81,15 @@ export function Sidebar() {
   });
 
   return (
-    <aside className={cn("sticky top-0 hidden h-dvh shrink-0 flex-col self-start border-r border-n200 bg-n50 transition-[width] duration-200 lg:flex", collapsed ? "w-[68px]" : "w-[248px]")}>
+    <>
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />}
+      <aside className={cn(
+        "z-50 flex h-dvh shrink-0 flex-col self-start border-r border-n200 bg-n50",
+        "fixed inset-y-0 left-0 w-[248px] transition-transform duration-200", // mobile: off-canvas drawer
+        mobileOpen ? "translate-x-0 shadow-xl" : "-translate-x-full",
+        "lg:sticky lg:top-0 lg:translate-x-0 lg:shadow-none lg:transition-[width]", // desktop: in-flow sticky
+        collapsed ? "lg:w-[68px]" : "lg:w-[248px]",
+      )}>
       <div className={cn("flex h-14 items-center border-b border-n200", collapsed ? "justify-center px-0" : "px-4")}>
         <Link href="/dashboard" aria-label="Krakd" className={cn(collapsed && "flex h-9 w-9 items-center justify-center rounded-lg hover:bg-n100")}>
           {collapsed ? <span className="whitespace-nowrap text-[18px] font-semibold leading-none tracking-[-0.04em] text-ink">K<span className="text-accent">.</span></span> : <Logo />}
@@ -140,5 +150,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

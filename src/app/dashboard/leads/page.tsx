@@ -129,7 +129,7 @@ export default function LeadsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-3 shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15">
                 <Search className="h-4 w-4 shrink-0 text-n400" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, phone…" className="w-64 bg-transparent text-[13px] text-n900 outline-none placeholder:text-n400" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, phone…" className="w-full min-w-0 sm:w-64 bg-transparent text-[13px] text-n900 outline-none placeholder:text-n400" />
               </div>
               <div className="relative">
                 <button onClick={() => setMenu((m) => (m === "filter" ? "" : "filter"))} className={cn("flex h-10 items-center gap-2 rounded-md border bg-white px-4 text-[13px] font-medium transition hover:bg-n50", temp ? "border-brand text-brand" : "border-n200 text-n700")}><SlidersHorizontal className="h-4 w-4" />Filters{temp && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">1</span>}</button>

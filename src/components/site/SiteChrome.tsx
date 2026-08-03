@@ -90,7 +90,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
             {config.logoUrl
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={config.logoUrl} alt={config.dealershipName} className={cn(({ sm: "h-6", md: "h-9", lg: "h-12", xl: "h-16" } as Record<string, string>)[config.logoScale] ?? "h-9", "w-auto", (isHome || contractor) && "brightness-0 invert")} />
-              : <span className={contractor ? "text-[20px] font-bold uppercase tracking-wide" : "text-[19px]"} style={{ fontFamily: logoFont, color: fg }}>{config.dealershipName}</span>}
+              : <span className={cn("inline-block max-w-[58vw] truncate align-middle sm:max-w-none", contractor ? "text-[20px] font-bold uppercase tracking-wide" : "text-[19px]")} style={{ fontFamily: logoFont, color: fg }}>{config.dealershipName}</span>}
           </Link>
           <nav className="hidden items-center gap-9 md:flex">
             {items.filter((i) => i.label !== "Home").map((it) => <Link key={it.href} href={it.href} className="text-[11px] uppercase transition hover:opacity-70" style={{ ...DISP, color: fg }}>{it.label}</Link>)}

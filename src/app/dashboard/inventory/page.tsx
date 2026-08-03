@@ -120,7 +120,7 @@ export default function InventoryPage() {
         <div className="flex flex-col justify-between gap-3 pt-5 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-3 shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15">
-              <Search className="h-4 w-4 shrink-0 text-n400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={auto ? "Search make, model, VIN, stock…" : def.searchPlaceholder} className="w-64 bg-transparent text-[13px] text-n900 outline-none placeholder:text-n400" />
+              <Search className="h-4 w-4 shrink-0 text-n400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={auto ? "Search make, model, VIN, stock…" : def.searchPlaceholder} className="w-full min-w-0 sm:w-64 bg-transparent text-[13px] text-n900 outline-none placeholder:text-n400" />
             </div>
             <button className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 hover:bg-n50"><SlidersHorizontal className="h-4 w-4" />Filters</button>
             <button className="flex h-10 items-center gap-2 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 hover:bg-n50"><ArrowUpDown className="h-4 w-4" />Sort</button>

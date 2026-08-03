@@ -16,10 +16,17 @@ export function Topbar({
   crumbs?: { label: string; href?: string }[];
   action?: { label: string; href?: string; onClick?: () => void };
 }) {
-  const { toggle } = useSidebar();
+  const { toggle, setMobileOpen } = useSidebar();
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#e4e7ec] bg-n50/85 px-4 backdrop-blur sm:px-5">
+      <button
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open menu"
+        className="grid h-9 w-9 place-items-center rounded-lg text-n500 transition hover:bg-n100 hover:text-n800 lg:hidden"
+      >
+        <IconPanel className="h-[18px] w-[18px]" />
+      </button>
       <button
         onClick={toggle}
         aria-label="Toggle sidebar"
