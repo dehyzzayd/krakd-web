@@ -39,7 +39,12 @@ export function CreditAppForm({ token, config, consentText, disclaimerText, busi
     if (preview) return;
     setErr(null);
     for (const s of sections) for (const f of s.fields) {
-      if (visible(f) && fieldConf(config, f).required && !String(v[f.key] ?? "").trim()) { setErr(`Please fill in “${f.label}”.`); return; }
+      if (!visible(f)) continue;
+      const val = String(v[f.key] ?? "").trim();
+      if (fieldConf(config, f).required && !val) { setErr(`Please fill in “${f.label}”.`); return; }
+      if (val && f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { setErr(`“${f.label}” doesn't look like a valid email.`); return; }
+      if (val && f.type === "tel" && val.replace(/\D/g, "").length < 10) { setErr(`“${f.label}” needs at least 10 digits.`); return; }
+      if (val && f.type === "ssn" && val.replace(/\D/g, "").length !== 9) { setErr(`“${f.label}” must be 9 digits.`); return; }
     }
     if (!consent) { setErr("Please review and accept the authorization to continue."); return; }
     const coKeys = new Set(CATALOG.find((s) => s.coapp)!.fields.map((f) => f.key));
