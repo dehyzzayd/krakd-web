@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { Contact } from "@/lib/crm";
@@ -9,7 +8,6 @@ import { Mail, Phone, Plus, Trash2, ChevronDown } from "lucide-react";
 
 type Email = { value: string; type: string };
 type PhoneN = { value: string; type: string };
-type Addr = { street: string; city: string; state: string; zip: string; country: string };
 
 const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 const miniSel = "h-8 rounded-md border border-n200 bg-white px-2 text-[12.5px] text-n700 outline-none focus:ring-2 focus:ring-brand/20";
@@ -19,17 +17,15 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 }
 
 export function EditContactSheet({ open, onClose, contact, onCreated }: { open: boolean; onClose: () => void; contact?: Contact | null; onCreated?: () => void }) {
+  const editing = !!contact?.id;
   const [first, setFirst] = useState(contact?.name.split(" ")[0] ?? "");
   const [last, setLast] = useState(contact?.name.split(" ").slice(1).join(" ") ?? "");
   const [emails, setEmails] = useState<Email[]>([{ value: contact?.email ?? "", type: "personal" }]);
   const [phones, setPhones] = useState<PhoneN[]>([{ value: contact?.phone ?? "", type: "mobile" }]);
-  const [addrs, setAddrs] = useState<Addr[]>([{ street: "", city: "", state: "", zip: "", country: "" }]);
   const [source, setSource] = useState(contact?.source ?? "");
-  const [assignee, setAssignee] = useState("Dana M.");
 
   const setEmail = (i: number, patch: Partial<Email>) => setEmails((p) => p.map((e, j) => (j === i ? { ...e, ...patch } : e)));
   const setPhone = (i: number, patch: Partial<PhoneN>) => setPhones((p) => p.map((e, j) => (j === i ? { ...e, ...patch } : e)));
-  const setAddr = (i: number, patch: Partial<Addr>) => setAddrs((p) => p.map((e, j) => (j === i ? { ...e, ...patch } : e)));
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -37,8 +33,16 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
     setErr(null);
     if (!first.trim()) { setErr("Enter a first name."); return; }
     setBusy(true);
+    // keep every email/phone the user entered — not just the first
+    const cleanEmails = emails.filter((e) => e.value.trim());
+    const cleanPhones = phones.filter((p) => p.value.trim());
     try {
-      await apiFetch("/leads", { method: "POST", body: JSON.stringify({ firstName: first, lastName: last || undefined, email: emails[0]?.value || undefined, phone: phones[0]?.value || undefined, source: source || undefined }) });
+      if (editing) {
+        // update the existing lead/contact in place — never create a duplicate
+        await apiFetch(`/leads/${contact!.id}`, { method: "PATCH", body: JSON.stringify({ firstName: first, lastName: last || undefined, emails: cleanEmails, phones: cleanPhones, source: source || undefined }) });
+      } else {
+        await apiFetch("/leads", { method: "POST", body: JSON.stringify({ firstName: first, lastName: last || undefined, emails: cleanEmails, phones: cleanPhones, source: source || undefined }) });
+      }
       onCreated?.();
       onClose();
     } catch (e) {
@@ -53,10 +57,10 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
   );
 
   return (
-    <Sheet open={open} onClose={onClose} width="max-w-[420px]" title={contact ? "Edit contact" : "Add contact"} subtitle="Update contact information"
+    <Sheet open={open} onClose={onClose} width="max-w-[420px]" title={editing ? "Edit contact" : "Add contact"} subtitle={editing ? "Update this contact's details" : "Add a new contact"}
       footer={<>
         <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>
-        <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : contact ? "Save changes" : "Add contact"}</button>
+        <button onClick={save} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : editing ? "Save changes" : "Add contact"}</button>
       </>}>
       <div className="space-y-6">
         {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
@@ -103,35 +107,8 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
 
         <div className="border-t border-n200" />
 
-        {/* addresses */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between"><label className="text-[13px] font-medium text-n900">Addresses</label><span className="text-[12px] text-n500">{addrs.length} address{addrs.length > 1 ? "es" : ""}</span></div>
-          <div className="space-y-2">
-            {addrs.map((ad, i) => (
-              <div key={i} className="relative space-y-3 rounded-lg border border-n200 bg-n50/40 p-4">
-                {addrs.length > 1 && <button onClick={() => setAddrs((p) => p.filter((_, j) => j !== i))} className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-md text-n400 transition hover:text-err"><Trash2 className="h-4 w-4" /></button>}
-                <Labeled label="Street address"><input value={ad.street} onChange={(e) => setAddr(i, { street: e.target.value })} className={fieldCls} /></Labeled>
-                <div className="grid grid-cols-2 gap-3">
-                  <Labeled label="City"><input value={ad.city} onChange={(e) => setAddr(i, { city: e.target.value })} className={fieldCls} /></Labeled>
-                  <Labeled label="State"><input value={ad.state} onChange={(e) => setAddr(i, { state: e.target.value })} className={fieldCls} /></Labeled>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Labeled label="ZIP code"><input value={ad.zip} onChange={(e) => setAddr(i, { zip: e.target.value })} className={fieldCls} /></Labeled>
-                  <Labeled label="Country"><select value={ad.country} onChange={(e) => setAddr(i, { country: e.target.value })} className={cn(fieldCls, "px-2.5")}><option value="">Select country</option><option value="us">United States</option><option value="ca">Canada</option></select></Labeled>
-                </div>
-              </div>
-            ))}
-          </div>
-          <AddBtn label="Add address" onClick={() => setAddrs((p) => [...p, { street: "", city: "", state: "", zip: "", country: "" }])} />
-        </div>
-
-        <div className="border-t border-n200" />
-
-        {/* source & assignee */}
-        <div className="grid grid-cols-2 gap-4">
-          <Labeled label="Source"><input value={source} onChange={(e) => setSource(e.target.value)} className={fieldCls} /></Labeled>
-          <Labeled label="Assignee"><select value={assignee} onChange={(e) => setAssignee(e.target.value)} className={cn(fieldCls, "px-2.5")}><option>Dana M.</option><option>Marco T.</option><option>Krakd AI</option></select></Labeled>
-        </div>
+        {/* source */}
+        <Labeled label="Source"><input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. Referral, Walk-in, Cars.com" className={fieldCls} /></Labeled>
       </div>
     </Sheet>
   );

@@ -29,10 +29,12 @@ export const GET = route(async (req: NextRequest) => {
 
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(startOfDay.getTime() + 86_400_000);
+  const startOfMonth = new Date(); startOfMonth.setHours(0, 0, 0, 0); startOfMonth.setDate(1);
 
   const [dealer, sold, activeLeads, apptsToday, liveVehicles, recent] = await Promise.all([
     prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, vertical: true, brandColor: true, logoUrl: true } }),
-    prisma.vehicle.findMany({ where: { dealershipId, status: "SOLD" }, select: { priceCents: true, costCents: true } }),
+    // month-to-date sales: SOLD units marked sold since the 1st (so "MTD" labels are truthful)
+    prisma.vehicle.findMany({ where: { dealershipId, status: "SOLD", soldAt: { gte: startOfMonth } }, select: { priceCents: true, costCents: true } }),
     prisma.lead.count({ where: { dealershipId, status: { notIn: ["SOLD", "LOST"] } } }),
     prisma.appointment.count({ where: { dealershipId, scheduledStart: { gte: startOfDay, lt: endOfDay } } }),
     prisma.vehicle.findMany({ where: { dealershipId, status: { not: "SOLD" } }, select: { listedAt: true } }),

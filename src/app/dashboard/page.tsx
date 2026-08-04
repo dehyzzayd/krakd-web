@@ -77,11 +77,6 @@ export default function DashboardPage() {
         {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13.5px] text-n600">Here&apos;s how <span className="font-semibold text-n900">{name}</span> is doing today.</p>
-          <div className="flex items-center gap-2">
-            {["Today", "7d", "30d"].map((r, i) => (
-              <button key={r} className={`h-8 rounded-lg px-3 text-[12.5px] font-medium transition ${i === 2 ? "border border-n200 bg-white text-n900 sh-card" : "text-n600 hover:bg-n100"}`}>{r}</button>
-            ))}
-          </div>
         </div>
 
         {/* KPIs */}

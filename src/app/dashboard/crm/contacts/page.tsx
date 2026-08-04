@@ -55,7 +55,7 @@ export default function ContactsPage() {
                 </tr></thead>
                 <tbody>
                   {list.map((c) => (
-                    <tr key={c.id} className="cursor-pointer border-t border-n200 transition hover:bg-n50" onClick={() => setEdit({ contact: null })}>
+                    <tr key={c.id} className="cursor-pointer border-t border-n200 transition hover:bg-n50" onClick={() => setEdit({ contact: { id: c.id, name: c.name, email: c.email, phone: c.phone, source: c.source, vehicle: c.vehicle, type: "lead", ltv: 0, last: "" } })}>
                       <td className="px-4 py-2.5"><div className="flex items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white" style={{ background: avatarBg(c.name) }}>{initials(c.name)}</span><div><p className="text-[13px] font-medium text-n900">{c.name}</p><p className="text-[11.5px] text-n500">{c.email}</p></div></div></td>
                       <td className="px-3 py-2.5 text-[13px] text-n700">{c.vehicle}</td>
                       <td className="tnum px-3 py-2.5 text-[12.5px] text-n600">{c.phone}</td>

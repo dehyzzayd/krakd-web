@@ -56,6 +56,8 @@ const patchSchema = z.object({
   lastName: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
+  emails: z.array(z.object({ value: z.string(), type: z.string() })).max(10).optional(),
+  phones: z.array(z.object({ value: z.string(), type: z.string() })).max(10).optional(),
   source: z.string().optional(),
   vehicleId: z.string().uuid().nullable().optional(),
   hasTradeIn: z.boolean().optional(),
@@ -72,12 +74,15 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   const existing = await prisma.lead.findFirst({ where: { id, dealershipId }, select: { id: true, status: true } });
   if (!existing) throw new HttpError(404, "Lead not found");
 
-  const { phone, email, vehicleId, status, nextActionAt, ...rest } = parsed.data;
+  const { phone, email, emails, phones, vehicleId, status, nextActionAt, ...rest } = parsed.data;
   const data: Prisma.LeadUpdateInput = { ...rest, lastActivityAt: new Date() };
   if (status) data.status = status;
   if (nextActionAt !== undefined) data.nextActionAt = nextActionAt ? new Date(nextActionAt) : null;
-  if (phone !== undefined) data.phones = (phone ? [{ value: phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue;
-  if (email !== undefined) data.emails = (email ? [{ value: email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue;
+  // full arrays (from the contact editor) win over the single phone/email convenience fields
+  if (phones !== undefined) data.phones = phones.filter((p) => p.value.trim()) as unknown as Prisma.InputJsonValue;
+  else if (phone !== undefined) data.phones = (phone ? [{ value: phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue;
+  if (emails !== undefined) data.emails = emails.filter((e) => e.value.trim()) as unknown as Prisma.InputJsonValue;
+  else if (email !== undefined) data.emails = (email ? [{ value: email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue;
   if (vehicleId !== undefined) {
     if (vehicleId) {
       const v = await prisma.vehicle.findFirst({ where: { id: vehicleId, dealershipId }, select: { id: true } });
