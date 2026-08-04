@@ -20,6 +20,7 @@ const createSchema = z.object({
   source: z.string().optional(),
   vehicle: z.string().optional(),
   vehicleId: z.string().uuid().optional(),
+  assignedToId: z.string().uuid().optional(),
   temperature: z.enum(["HOT", "WARM", "COLD"]).optional(),
 });
 
@@ -40,6 +41,11 @@ export const POST = route(async (req: NextRequest) => {
     vehicleLabel = `${v.year} ${v.make} ${v.model}`;
   }
 
+  if (d.assignedToId) {
+    const u = await prisma.user.findFirst({ where: { id: d.assignedToId, dealershipId, role: { not: "PLATFORM_ADMIN" } }, select: { id: true } });
+    if (!u) throw new HttpError(400, "That teammate isn't on your team");
+  }
+
   const lead = await prisma.lead.create({
     data: {
       dealershipId,
@@ -50,6 +56,7 @@ export const POST = route(async (req: NextRequest) => {
       phones: ((d.phones?.filter((p) => p.value.trim())) ?? (d.phone ? [{ value: d.phone, type: "mobile" }] : [])) as unknown as Prisma.InputJsonValue,
       source: d.source,
       temperature: d.temperature ?? "WARM",
+      ...(d.assignedToId ? { assignedToId: d.assignedToId, ownerType: "HUMAN" as const } : {}),
     },
   });
 

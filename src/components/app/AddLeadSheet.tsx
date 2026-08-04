@@ -15,15 +15,17 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 }
 
 export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", source: "Website", vehicle: "", vehicleId: "", temperature: "WARM" });
+  const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", source: "Website", vehicle: "", vehicleId: "", temperature: "WARM", assignedToId: "" });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
   const [vehicles, setVehicles] = useState<Veh[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string; status: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     apiFetch<{ items: Veh[] }>("/inventory").then((r) => setVehicles(r.items ?? [])).catch(() => setVehicles([]));
+    apiFetch<{ members: { id: string; name: string; status: string }[] }>("/team").then((r) => setMembers((r.members ?? []).filter((m) => m.status === "ACTIVE"))).catch(() => setMembers([]));
   }, [open]);
 
   const save = async () => {
@@ -31,8 +33,8 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
     if (!f.firstName.trim()) { setErr("Enter a first name."); return; }
     setBusy(true);
     try {
-      const { vehicleId, ...rest } = f;
-      await apiFetch("/leads", { method: "POST", body: JSON.stringify(vehicleId ? { ...rest, vehicleId } : rest) });
+      const { vehicleId, assignedToId, ...rest } = f;
+      await apiFetch("/leads", { method: "POST", body: JSON.stringify({ ...rest, ...(vehicleId ? { vehicleId } : {}), ...(assignedToId ? { assignedToId } : {}) }) });
       onCreated();
       onClose();
     } catch (e) {
@@ -72,6 +74,9 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
           <Labeled label="Source"><select value={f.source} onChange={(e) => set("source", e.target.value)} className={cn(fieldCls, "px-2.5")}>{SOURCES.map((s) => <option key={s}>{s}</option>)}</select></Labeled>
           <Labeled label="Temperature"><select value={f.temperature} onChange={(e) => set("temperature", e.target.value)} className={cn(fieldCls, "px-2.5")}><option value="HOT">Hot</option><option value="WARM">Warm</option><option value="COLD">Cold</option></select></Labeled>
         </div>
+        {members.length > 0 && (
+          <Labeled label="Assign to"><select value={f.assignedToId} onChange={(e) => set("assignedToId", e.target.value)} className={cn(fieldCls, "px-2.5")}><option value="">Unassigned · Krakd AI works it</option>{members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Labeled>
+        )}
         {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
       </div>
     </Sheet>

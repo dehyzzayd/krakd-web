@@ -89,6 +89,20 @@ export async function sendLeadNotification(p: { to: string; dealershipName: stri
   );
 }
 
+export async function sendTeamInviteEmail(p: { to: string; firstName: string; inviterName: string; dealershipName: string; token: string }) {
+  const setupUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/reset?token=${encodeURIComponent(p.token)}`;
+  await send(
+    p.to,
+    `${p.inviterName} invited you to ${p.dealershipName} on Krakd`,
+    shell(
+      "You've been added to the team",
+      `<p style="font-size:14px;line-height:1.6;color:#374151">Hi ${p.firstName}, <b>${p.inviterName}</b> added you to <b>${p.dealershipName}</b> on Krakd. Set your password to jump in — leads, inventory, and your calendar are waiting.</p>
+       <p style="margin:18px 0"><a href="${setupUrl}" style="background:#2b6ba4;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px">Set your password →</a></p>
+       <p style="font-size:13px;color:#6b7280">This link expires in 30 minutes. If you weren't expecting this, you can ignore it.</p>`,
+    ),
+  );
+}
+
 export async function sendPasswordResetEmail(p: { to: string; firstName: string; token: string }) {
   const resetUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/reset?token=${encodeURIComponent(p.token)}`;
   await send(

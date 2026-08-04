@@ -16,7 +16,9 @@ export const POST = route(async (req: NextRequest) => {
   const userId = await verifyResetToken(parsed.data.token);
   if (!userId) throw new HttpError(401, "This reset link is invalid or has expired");
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
   const passwordHash = await hashPassword(parsed.data.password);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  // an invited teammate setting their password for the first time becomes ACTIVE
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash, ...(user?.status === "INVITED" ? { status: "ACTIVE" as const } : {}) } });
   return json({ ok: true });
 });

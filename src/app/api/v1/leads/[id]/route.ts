@@ -60,6 +60,7 @@ const patchSchema = z.object({
   phones: z.array(z.object({ value: z.string(), type: z.string() })).max(10).optional(),
   source: z.string().optional(),
   vehicleId: z.string().uuid().nullable().optional(),
+  assignedToId: z.string().uuid().nullable().optional(),
   hasTradeIn: z.boolean().optional(),
   financing: z.boolean().optional(),
   nextAction: z.string().nullable().optional(),
@@ -74,7 +75,7 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   const existing = await prisma.lead.findFirst({ where: { id, dealershipId }, select: { id: true, status: true } });
   if (!existing) throw new HttpError(404, "Lead not found");
 
-  const { phone, email, emails, phones, vehicleId, status, nextActionAt, ...rest } = parsed.data;
+  const { phone, email, emails, phones, vehicleId, assignedToId, status, nextActionAt, ...rest } = parsed.data;
   const data: Prisma.LeadUpdateInput = { ...rest, lastActivityAt: new Date() };
   if (status) data.status = status;
   if (nextActionAt !== undefined) data.nextActionAt = nextActionAt ? new Date(nextActionAt) : null;
@@ -93,10 +94,28 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
     }
   }
 
+  let assignActivity: string | null = null;
+  if (assignedToId !== undefined) {
+    if (assignedToId) {
+      const u = await prisma.user.findFirst({ where: { id: assignedToId, dealershipId, role: { not: "PLATFORM_ADMIN" } }, select: { firstName: true, lastName: true } });
+      if (!u) throw new HttpError(400, "That teammate isn't on your team");
+      data.assignedTo = { connect: { id: assignedToId } };
+      data.ownerType = "HUMAN";
+      assignActivity = `Assigned to ${u.firstName} ${u.lastName ?? ""}`.trim();
+    } else {
+      data.assignedTo = { disconnect: true };
+      data.ownerType = "UNASSIGNED";
+      assignActivity = "Unassigned";
+    }
+  }
+
   await prisma.lead.update({ where: { id, dealershipId }, data });
   // log a status change to the timeline
   if (status && status !== existing.status) {
     await prisma.leadActivity.create({ data: { dealershipId, leadId: id, type: "STATUS_CHANGE", actorType: "USER", content: `Status set to ${STATUS_LABEL[status] ?? status}` } }).catch(() => {});
+  }
+  if (assignActivity) {
+    await prisma.leadActivity.create({ data: { dealershipId, leadId: id, type: "ASSIGNMENT", actorType: "USER", content: assignActivity } }).catch(() => {});
   }
   return json(await load(dealershipId, id));
 });

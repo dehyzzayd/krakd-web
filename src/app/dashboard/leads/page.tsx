@@ -11,8 +11,39 @@ import { Topbar } from "@/components/app/Topbar";
 import { ErrorBanner } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
-import { API_URL, getToken } from "@/lib/api";
+import { API_URL, getToken, apiFetch, ApiError } from "@/lib/api";
 import { AddLeadSheet } from "@/components/app/AddLeadSheet";
+
+type Member = { id: string; name: string; role: string; status: string };
+
+function AssignCell({ leadId, current, members, onDone }: { leadId: string; current: string | null; members: Member[]; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { const f = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, []);
+  const assign = async (id: string | null) => {
+    setBusy(true);
+    try { await apiFetch(`/leads/${leadId}`, { method: "PATCH", body: JSON.stringify({ assignedToId: id }) }); onDone(); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Could not assign."); }
+    finally { setBusy(false); setOpen(false); }
+  };
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen((o) => !o)} disabled={busy} className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[12px] transition", current ? "border-n200 text-n700 hover:bg-n100" : "border-dashed border-n300 text-n400 hover:border-brand hover:text-brand")}>
+        {current ? <><UserIcon className="h-3 w-3" />{current}</> : "Assign"}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 max-h-64 w-52 overflow-y-auto rounded-lg border border-n200 bg-white py-1 sh-raised">
+          {current && <button onClick={() => assign(null)} className="block w-full px-3 py-1.5 text-left text-[12.5px] text-n500 hover:bg-n50">Unassign</button>}
+          {members.length === 0 && <p className="px-3 py-2 text-[12px] text-n400">No teammates yet. Add them in Team.</p>}
+          {members.map((m) => (
+            <button key={m.id} onClick={() => assign(m.id)} className="block w-full px-3 py-1.5 text-left text-[12.5px] text-n700 hover:bg-n50">{m.name}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Row = {
   id: string; name: string; phone: string; email: string; source: string; vehicle: string;
@@ -65,6 +96,8 @@ function ActionsMenu({ r }: { r: Row }) {
 export default function LeadsPage() {
   const router = useRouter();
   const { data, loading, error, reload } = useApi<LeadsData>("/leads");
+  const { data: teamData } = useApi<{ members: Member[] }>("/team");
+  const assignable = (teamData?.members ?? []).filter((m) => m.status === "ACTIVE");
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"All" | "Active" | "Unassigned">("All");
   const [adding, setAdding] = useState(false);
@@ -211,7 +244,7 @@ export default function LeadsPage() {
                         <td className="p-2"><span className="inline-flex items-center rounded border border-n200 bg-white px-2 py-0.5 text-[11px] font-medium text-n600">{r.source}</span></td>
                         <td className="p-2"><p className="text-[12.5px] font-medium text-n900">{r.vehicle}</p></td>
                         <td className="p-2"><span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold", TEMP_TONE[r.temperature] ?? "bg-n100 text-n600")}><span className="h-2 w-2 rounded-full" style={{ background: TEMP_DOT[r.temperature] ?? "#9aa0ac" }} />{r.temperature}</span></td>
-                        <td className="p-2">{r.assigned ? <span className="inline-flex items-center gap-1 rounded-full border border-n200 px-2 py-1 text-[12px] text-n700"><UserIcon className="h-3 w-3" />{r.assigned}</span> : <span className="inline-flex items-center rounded-full border border-dashed border-n300 px-2 py-1 text-[12px] text-n400">Unassigned</span>}</td>
+                        <td className="p-2" onClick={(e) => e.stopPropagation()}><AssignCell leadId={r.id} current={r.assigned} members={assignable} onDone={reload} /></td>
                         <td className="tnum p-2 text-[12.5px] text-n500">{r.lastAdded}</td>
                         <td className="p-2" onClick={(e) => e.stopPropagation()}><ActionsMenu r={r} /></td>
                       </tr>
