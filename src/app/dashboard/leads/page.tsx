@@ -44,9 +44,9 @@ function ActionsMenu({ r }: { r: Row }) {
   const items: { icon: React.ComponentType<{ className?: string }>; label: string; href?: string; primary?: boolean }[] = [
     { icon: FileText, label: "View lead", href: `/dashboard/leads/${r.id}`, primary: true },
     { icon: Phone, label: "Call", href: r.phone ? `tel:${r.phone}` : undefined },
-    { icon: MessageSquare, label: "Send SMS" },
+    { icon: MessageSquare, label: "Send SMS", href: `/dashboard/leads/${r.id}?action=message` },
     { icon: Mail, label: "Email", href: r.email ? `mailto:${r.email}` : undefined },
-    { icon: Calendar, label: "Schedule appointment" },
+    { icon: Calendar, label: "Schedule appointment", href: `/dashboard/leads/${r.id}?action=appt` },
   ];
   return (
     <div className="relative" ref={ref}>

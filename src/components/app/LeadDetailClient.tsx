@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
@@ -51,7 +52,11 @@ function CancelBtn({ onClose }: { onClose: () => void }) {
 
 export function LeadDetailClient({ id }: { id: string }) {
   const { data: l, loading, error, reload } = useApi<Lead>(`/leads/${id}`);
-  const [modal, setModal] = useState<null | "note" | "message" | "appt" | "edit">(null);
+  // deep-link from the leads list: ?action=message / ?action=appt opens that action straight away
+  const initialAction = useSearchParams().get("action");
+  const [modal, setModal] = useState<null | "note" | "message" | "appt" | "edit">(
+    initialAction === "message" ? "message" : initialAction === "appt" ? "appt" : null,
+  );
   const [busy, setBusy] = useState(false);
 
   const patch = async (body: Record<string, unknown>) => {

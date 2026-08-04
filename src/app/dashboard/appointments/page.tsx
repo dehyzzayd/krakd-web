@@ -6,6 +6,7 @@ import { Topbar } from "@/components/app/Topbar";
 import { Badge, Dot, ErrorBanner, type Tone } from "@/components/app/AppKit";
 import { cn } from "@/lib/cn";
 import { EditAppointmentSheet } from "@/components/app/EditAppointmentSheet";
+import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 
 type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; typeKey: string; status: string; time: string; date: number; month: number; year: number; day: string; owner: string };
@@ -47,6 +48,15 @@ export default function CalendarPage() {
   const [day, setDay] = useState(() => new Date().getDate());
   const [apptEdit, setApptEdit] = useState<{ id: string | null } | null>(null);
   const [sel, setSel] = useState<Appt | null>(null);
+  const [canceling, setCanceling] = useState(false);
+
+  const cancelAppt = async (a: Appt) => {
+    if (!confirm("Cancel this appointment? Its reminders will stop.")) return;
+    setCanceling(true);
+    try { await apiFetch(`/appointments/${a.id}`, { method: "PATCH", body: JSON.stringify({ status: "CANCELED" }) }); reload(); setSel(null); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Could not cancel."); }
+    finally { setCanceling(false); }
+  };
   const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   const weekStart = day - new Date(anchor.y, anchor.m, day).getDay();
   const week = Array.from({ length: 7 }, (_, i) => weekStart + i); // day-numbers; out-of-range shown blank
@@ -156,7 +166,7 @@ export default function CalendarPage() {
             </div>
             <div className="flex items-center gap-2 border-t border-[#e4e7ec] px-5 py-3">
               <button onClick={() => { setApptEdit({ id: sel.id }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>
-              <button className="h-9 rounded-lg px-3 text-[13px] font-medium text-err hover:bg-err-soft">Cancel</button>
+              <button onClick={() => cancelAppt(sel)} disabled={canceling || sel.status === "canceled"} className="h-9 rounded-lg px-3 text-[13px] font-medium text-err transition hover:bg-err-soft disabled:opacity-40">{sel.status === "canceled" ? "Canceled" : canceling ? "Canceling…" : "Cancel"}</button>
               <Link href={`/dashboard/leads/${sel.leadId}`} className="ml-auto h-9 rounded-lg bg-brand px-4 text-[13px] font-semibold leading-9 text-white transition hover:bg-brand-hover">Open lead</Link>
             </div>
           </div>

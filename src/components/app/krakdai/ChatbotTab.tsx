@@ -7,7 +7,7 @@ import { authApi } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Section, Field, Row, Switch, LinkField, inputCls } from "./controls";
-import { MessageCircle, Link2, Phone, ScrollText, Check, RefreshCw, Loader2 } from "lucide-react";
+import { MessageCircle, Link2, Phone, ScrollText, Check, Loader2 } from "lucide-react";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -74,7 +74,7 @@ export function ChatbotTab() {
         {/* voice */}
         <Section icon={MessageCircle} title="Voice & tone" desc="How the agent introduces itself and sounds to buyers.">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Agent name"><input defaultValue="Krakd AI" className={inputCls} /></Field>
+            <Field label="Agent name"><input value="Krakd AI" readOnly title="Your AI assistant's name" className={cn(inputCls, "cursor-default bg-n50 text-n500")} /></Field>
             <Field label="Tone"><select value={tone} onChange={(e) => setTone(e.target.value)} className={inputCls}>{TONES.map((t) => <option key={t}>{t}</option>)}</select></Field>
           </div>
           <div className="mt-4">
@@ -108,7 +108,6 @@ export function ChatbotTab() {
               <div className="flex items-center gap-2"><span className="tnum text-[18px] font-bold text-n900">{AI_CONFIG.phone}</span><span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Provided by Krakd</span></div>
               <p className="mt-0.5 text-[12px] text-n600">Local Austin number · SMS &amp; voice · included in your plan</p>
             </div>
-            <button className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-n200 bg-white px-3 text-[12px] font-semibold text-n700 transition hover:bg-n50"><RefreshCw className="h-3.5 w-3.5" />Change number</button>
           </div>
           <div className="mt-4"><Field label="Forward live calls to" hint="When a buyer asks for a person, Krakd rings this line.">
             <input value={forward} onChange={(e) => setForward(e.target.value)} className={cn(inputCls, "tnum")} /></Field></div>
