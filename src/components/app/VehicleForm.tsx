@@ -15,10 +15,8 @@ import { Barcode, Sparkles, Camera, Upload, DollarSign, Car, Bike, Zap, Caravan,
 type Specs = Record<string, string | boolean>;
 const CAT_ICON: Record<string, React.ComponentType<{ className?: string }>> = { CAR: Car, MOTORCYCLE: Bike, POWERSPORT: Zap, RV: Caravan, TRAILER: Truck };
 const STATUSES: { v: VStatus; label: string }[] = [
-  { v: "available", label: "Available" }, { v: "recon", label: "In recon" }, { v: "reserved", label: "Reserved" }, { v: "wholesale", label: "Wholesale" },
+  { v: "available", label: "Available" }, { v: "recon", label: "In recon" }, { v: "reserved", label: "Reserved" }, { v: "wholesale", label: "Wholesale" }, { v: "sold", label: "Sold" },
 ];
-const DECODE = { year: "2022", make: "Toyota", model: "Camry", trim: "XSE" };
-
 type Form = {
   vin: string; year: string; make: string; model: string; trim: string;
   mileage: string; stock: string; status: VStatus;
@@ -56,7 +54,27 @@ export function VehicleForm({ vehicle, initialPhotos = [], initialCategory = "CA
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [photoErr, setPhotoErr] = useState<string | null>(null);
+  const [decoding, setDecoding] = useState(false);
+  const [decodeErr, setDecodeErr] = useState<string | null>(null);
   const def = categoryById(category);
+
+  type Decoded = { year: string; make: string; model: string; trim: string; bodyStyle: string; fuelType: string; drivetrain: string; transmission: string };
+  const decodeVin = async () => {
+    const vin = f.vin.trim();
+    if (vin.length < 11) { setDecodeErr("Enter the full VIN first."); return; }
+    setDecoding(true); setDecodeErr(null);
+    try {
+      const d = await apiFetch<Decoded>(`/inventory/decode-vin?vin=${encodeURIComponent(vin)}`);
+      setF((p) => ({ ...p, year: d.year || p.year, make: d.make || p.make, model: d.model || p.model, trim: d.trim || p.trim }));
+      setSpecs((s) => ({ ...s,
+        ...(d.bodyStyle ? { bodyStyle: s.bodyStyle || d.bodyStyle } : {}),
+        ...(d.fuelType ? { fuelType: s.fuelType || d.fuelType } : {}),
+        ...(d.drivetrain ? { drivetrain: s.drivetrain || d.drivetrain } : {}),
+        ...(d.transmission ? { transmission: s.transmission || d.transmission } : {}),
+      }));
+    } catch (e) { setDecodeErr(e instanceof ApiError ? e.message : "Couldn't decode that VIN."); }
+    finally { setDecoding(false); }
+  };
 
   const addPhotos = async (files: FileList | null) => {
     if (!files) return;
@@ -139,10 +157,12 @@ export function VehicleForm({ vehicle, initialPhotos = [], initialCategory = "CA
           </section>
 
           <Section icon={Barcode} title="Identity" desc="VIN, year, make, model and stock number.">
-            <div className="mb-3.5 flex gap-2">
-              <input value={f.vin} onChange={(e) => set("vin", e.target.value.toUpperCase())} placeholder="Enter 17-digit VIN (optional for trailers)" maxLength={17} className={cn(inputCls, "tnum flex-1")} />
-              <button type="button" onClick={() => { setF((p) => ({ ...p, ...DECODE, stock: p.stock || "K-2299" })); setSpecs((s) => ({ ...s, condition: s.condition || "Used", bodyStyle: s.bodyStyle || "Sedan", exteriorColor: s.exteriorColor || "Celestial Silver" })); }} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-n900 px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-n800"><Sparkles className="h-3.5 w-3.5" />Decode VIN</button>
+            <div className="mb-1.5 flex gap-2">
+              <input value={f.vin} onChange={(e) => { set("vin", e.target.value.toUpperCase()); setDecodeErr(null); }} placeholder="Enter 17-digit VIN (optional for trailers)" maxLength={17} className={cn(inputCls, "tnum flex-1")} />
+              <button type="button" onClick={decodeVin} disabled={decoding} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-n900 px-3.5 text-[12.5px] font-semibold text-white transition hover:bg-n800 disabled:opacity-60"><Sparkles className="h-3.5 w-3.5" />{decoding ? "Decoding…" : "Decode VIN"}</button>
             </div>
+            {decodeErr && <p className="mb-3 text-[12px] font-medium text-err">{decodeErr}</p>}
+            {!decodeErr && <div className="mb-3" />}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Field label="Year"><input value={f.year} onChange={(e) => set("year", e.target.value.replace(/[^0-9]/g, ""))} className={cn(inputCls, "tnum")} placeholder="2022" /></Field>
               <Field label="Make"><input value={f.make} onChange={(e) => set("make", e.target.value)} className={inputCls} placeholder={def.id === "TRAILER" ? "Big Tex" : def.id === "MOTORCYCLE" ? "Harley-Davidson" : "Toyota"} /></Field>
@@ -167,7 +187,7 @@ export function VehicleForm({ vehicle, initialPhotos = [], initialCategory = "CA
           </Section>
 
           <Section icon={Car} title="Lot status" desc="Where this unit sits in your workflow.">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {STATUSES.map((s) => <button key={s.v} type="button" onClick={() => set("status", s.v)} className={cn("h-9 rounded-lg border text-[12.5px] font-semibold transition", f.status === s.v ? "border-brand bg-brand-soft text-brand" : "border-n200 text-n600 hover:bg-n100")}>{s.label}</button>)}
             </div>
           </Section>

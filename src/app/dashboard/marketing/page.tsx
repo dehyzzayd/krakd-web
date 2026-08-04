@@ -50,7 +50,8 @@ export default function MarketingOverview() {
       <Topbar title="Digital Marketing" action={{ label: "New campaign", onClick: () => setOpen(true) }} />
       <AppMain>
         {error && <ErrorBanner onRetry={reload} />}
-        <p className="mb-4 text-[13.5px] text-n600">Connect your ad accounts, launch campaigns, and Krakd publishes them for you — then reports the numbers that matter back here.</p>
+        <p className="mb-3 text-[13.5px] text-n600">Build campaigns from your inventory, set a budget, and track the leads they drive — all in one place.</p>
+        <div className="mb-4 rounded-lg border border-n200 bg-n50 px-3.5 py-2.5 text-[12px] leading-relaxed text-n600"><b className="text-n800">Preview:</b> Ad-account connections and live delivery metrics (spend, impressions, ROAS) are in preview — connecting an account doesn&apos;t spend real budget yet. Campaign building and lead capture are fully live.</div>
 
         {/* live KPIs */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -50,11 +50,11 @@ export default function CalendarPage() {
   const [sel, setSel] = useState<Appt | null>(null);
   const [canceling, setCanceling] = useState(false);
 
-  const cancelAppt = async (a: Appt) => {
-    if (!confirm("Cancel this appointment? Its reminders will stop.")) return;
+  const setStatus = async (a: Appt, status: "CANCELED" | "COMPLETED" | "CONFIRMED", confirmMsg?: string) => {
+    if (confirmMsg && !confirm(confirmMsg)) return;
     setCanceling(true);
-    try { await apiFetch(`/appointments/${a.id}`, { method: "PATCH", body: JSON.stringify({ status: "CANCELED" }) }); reload(); setSel(null); }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Could not cancel."); }
+    try { await apiFetch(`/appointments/${a.id}`, { method: "PATCH", body: JSON.stringify({ status }) }); reload(); setSel(null); }
+    catch (e) { alert(e instanceof ApiError ? e.message : "Could not update the appointment."); }
     finally { setCanceling(false); }
   };
   const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
@@ -166,7 +166,10 @@ export default function CalendarPage() {
             </div>
             <div className="flex items-center gap-2 border-t border-[#e4e7ec] px-5 py-3">
               <button onClick={() => { setApptEdit({ id: sel.id }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>
-              <button onClick={() => cancelAppt(sel)} disabled={canceling || sel.status === "canceled"} className="h-9 rounded-lg px-3 text-[13px] font-medium text-err transition hover:bg-err-soft disabled:opacity-40">{sel.status === "canceled" ? "Canceled" : canceling ? "Canceling…" : "Cancel"}</button>
+              {sel.status !== "completed" && sel.status !== "canceled" && (
+                <button onClick={() => setStatus(sel, "COMPLETED")} disabled={canceling} className="h-9 rounded-lg px-3 text-[13px] font-medium text-ok transition hover:bg-ok-soft disabled:opacity-40">Mark complete</button>
+              )}
+              <button onClick={() => setStatus(sel, "CANCELED", "Cancel this appointment? Its reminders will stop.")} disabled={canceling || sel.status === "canceled"} className="h-9 rounded-lg px-3 text-[13px] font-medium text-err transition hover:bg-err-soft disabled:opacity-40">{sel.status === "canceled" ? "Canceled" : canceling ? "Working…" : "Cancel"}</button>
               <Link href={`/dashboard/leads/${sel.leadId}`} className="ml-auto h-9 rounded-lg bg-brand px-4 text-[13px] font-semibold leading-9 text-white transition hover:bg-brand-hover">Open lead</Link>
             </div>
           </div>
