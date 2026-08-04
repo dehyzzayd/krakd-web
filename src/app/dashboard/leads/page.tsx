@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Search, SlidersHorizontal, ArrowUpDown, Download, Plus, MoreVertical, Check,
-  Phone, MessageSquare, Mail, Calendar, FileText, User as UserIcon,
+  Phone, MessageSquare, Mail, Calendar, FileText, User as UserIcon, CircleDollarSign,
 } from "lucide-react";
 import { Topbar } from "@/components/app/Topbar";
 import { ErrorBanner } from "@/components/app/AppKit";
@@ -78,6 +78,7 @@ function ActionsMenu({ r }: { r: Row }) {
     { icon: MessageSquare, label: "Send SMS", href: `/dashboard/leads/${r.id}?action=message` },
     { icon: Mail, label: "Email", href: r.email ? `mailto:${r.email}` : undefined },
     { icon: Calendar, label: "Schedule appointment", href: `/dashboard/leads/${r.id}?action=appt` },
+    { icon: CircleDollarSign, label: "Work the deal", href: `/dashboard/leads/${r.id}?action=deal` },
   ];
   return (
     <div className="relative" ref={ref}>

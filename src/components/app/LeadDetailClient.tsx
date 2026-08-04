@@ -8,6 +8,7 @@ import { Topbar } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Sheet } from "@/components/app/Sheet";
+import { DealSheet } from "@/components/app/DealSheet";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Phone, MessageSquare, Calendar, StickyNote, Pencil, Sparkles, Check, Copy, CircleDollarSign, ChevronRight, Flag } from "lucide-react";
 
@@ -54,8 +55,8 @@ export function LeadDetailClient({ id }: { id: string }) {
   const { data: l, loading, error, reload } = useApi<Lead>(`/leads/${id}`);
   // deep-link from the leads list: ?action=message / ?action=appt opens that action straight away
   const initialAction = useSearchParams().get("action");
-  const [modal, setModal] = useState<null | "note" | "message" | "appt" | "edit">(
-    initialAction === "message" ? "message" : initialAction === "appt" ? "appt" : null,
+  const [modal, setModal] = useState<null | "note" | "message" | "appt" | "edit" | "deal">(
+    initialAction === "message" ? "message" : initialAction === "appt" ? "appt" : initialAction === "deal" ? "deal" : null,
   );
   const [busy, setBusy] = useState(false);
 
@@ -74,6 +75,7 @@ export function LeadDetailClient({ id }: { id: string }) {
     { Icon: MessageSquare, label: "Message", onClick: () => setModal("message") },
     { Icon: StickyNote, label: "Note", onClick: () => setModal("note") },
     { Icon: Calendar, label: "Book appt", onClick: () => setModal("appt") },
+    { Icon: CircleDollarSign, label: "Deal", onClick: () => setModal("deal") },
   ];
   async function logQuick(type: string, content: string) {
     await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type, content }) }).catch(() => {});
@@ -159,6 +161,7 @@ export function LeadDetailClient({ id }: { id: string }) {
       {modal === "message" && <MessageModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} />}
       {modal === "appt" && <ApptModal id={id} onClose={() => setModal(null)} onDone={reload} />}
       {modal === "edit" && <EditModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} />}
+      {modal === "deal" && <DealSheet id={id} leadName={l.name} onClose={() => setModal(null)} onSaved={reload} />}
     </div>
   );
 }
