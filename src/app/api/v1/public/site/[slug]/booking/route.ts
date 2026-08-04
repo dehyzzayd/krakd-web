@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
+import { notifyAppointment } from "@/lib/server/appointmentNotify";
 import { computeSlots, parseDuration, type Hour, type Busy } from "@/lib/server/slots";
 import type { Prisma } from "@prisma/client";
 
@@ -107,6 +108,10 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug
   const ownerEmail = dealer?.users[0]?.email;
   if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: "Website booking", vehicle: label, contact: d.phone ?? d.email ?? "", leadId: lead.id });
   void deliverAdf(lead.dealershipId, lead.id).catch(() => {});
+  // confirm the booking with the customer (best-effort)
+  void notifyAppointment(appt.id, "confirmation").then((r) => {
+    if (r.sms || r.email) return prisma.appointment.update({ where: { id: appt.id }, data: { confirmationSentAt: new Date() } });
+  }).catch(() => {});
 
   return json({ ok: true, id: appt.id, start: start.toISOString(), durationMin }, 201);
 });

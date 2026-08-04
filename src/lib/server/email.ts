@@ -52,6 +52,19 @@ export async function sendLeadMessageEmail(p: { to: string; fromName: string; bo
   }
 }
 
+/** Appointment confirmation / reminder to the customer. */
+export async function sendAppointmentEmail(p: { to: string; subject: string; body: string; dealershipName: string }): Promise<boolean> {
+  const recipient = override || p.to;
+  if (!resend) { console.log(`[email disabled] would send appt "${p.subject}" to ${recipient}`); return false; }
+  const safe = p.body.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
+  const html = shell(p.subject, `<p style="font-size:14px;line-height:1.6;color:#374151">${safe}</p><p style="margin-top:14px;font-size:12px;color:#6b7280">— ${p.dealershipName}</p>`);
+  try {
+    const { error } = await resend.emails.send({ from, to: recipient, subject: p.subject, html, text: p.body });
+    if (error) { console.warn(`resend appt error to ${recipient}: ${error.message}`); return false; }
+    return true;
+  } catch (e) { console.error("appt email failed:", e); return false; }
+}
+
 export async function sendOtpEmail(p: { to: string; code: string }) {
   await send(
     p.to,

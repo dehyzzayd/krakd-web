@@ -457,6 +457,8 @@ model Appointment {
   location      String?
   notes         String?
   createdByAi   Boolean           @default(false)
+  confirmationSentAt DateTime?
+  reminderSentAt DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 

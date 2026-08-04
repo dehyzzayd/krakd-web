@@ -162,7 +162,7 @@ export default function CalendarPage() {
                 <div><p className="text-[11px] text-n500">When</p><p className="mt-0.5 font-medium text-n900">{sel.day} · {sel.time}</p></div>
                 <div><p className="text-[11px] text-n500">With</p><p className="mt-0.5 font-medium text-n900">{sel.owner}</p></div>
               </div>
-              <div className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n600">Reminder scheduled 1 hour before. AI will confirm the morning of.</div>
+              <div className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n600">Krakd sends {sel.name.split(" ")[0]} a confirmation at booking and a reminder the morning of — by text and email.</div>
             </div>
             <div className="flex items-center gap-2 border-t border-[#e4e7ec] px-5 py-3">
               <button onClick={() => { setApptEdit({ id: sel.id }); setSel(null); }} className="h-9 rounded-lg px-3 text-[13px] font-medium text-n600 hover:text-n900">Reschedule</button>

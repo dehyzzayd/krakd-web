@@ -107,7 +107,7 @@ export function EditAppointmentSheet({ open, onClose, onCreated, apptId }: { ope
         <Labeled label="Note"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Optional note for the team…" className={cn(fieldCls, "h-auto resize-none py-2")} /></Labeled>
 
         {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
-        <div className="rounded-lg bg-brand-soft/50 px-3 py-2.5 text-[12.5px] text-n600">Krakd AI will text a reminder 1 hour before and confirm the morning of.</div>
+        <div className="rounded-lg bg-brand-soft/50 px-3 py-2.5 text-[12.5px] text-n600">Krakd sends the customer a confirmation now and a reminder the morning of — by text and email.</div>
       </div>
     </Sheet>
   );

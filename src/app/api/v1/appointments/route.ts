@@ -6,6 +6,7 @@ import { json, route, HttpError } from "@/lib/server/http";
 import { AppointmentType, LeadStatus } from "@prisma/client";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { wallClockToUtc } from "@/lib/server/slots";
+import { notifyAppointment } from "@/lib/server/appointmentNotify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,10 @@ export const POST = route(async (req: NextRequest) => {
     await tx.leadActivity.create({ data: { dealershipId, leadId: d.leadId, type: "APPOINTMENT_SET", actorType: "USER", content: `${d.type} on ${start.toISOString()}` } });
     return a;
   });
+  // confirm with the customer now (best-effort; text needs Twilio, email needs Resend)
+  void notifyAppointment(appt.id, "confirmation").then((r) => {
+    if (r.sms || r.email) return prisma.appointment.update({ where: { id: appt.id }, data: { confirmationSentAt: new Date() } });
+  }).catch(() => {});
   return json({ id: appt.id }, 201);
 });
 
