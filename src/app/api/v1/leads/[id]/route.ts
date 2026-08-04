@@ -88,7 +88,7 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
     }
   }
 
-  await prisma.lead.update({ where: { id }, data });
+  await prisma.lead.update({ where: { id, dealershipId }, data });
   // log a status change to the timeline
   if (status && status !== existing.status) {
     await prisma.leadActivity.create({ data: { dealershipId, leadId: id, type: "STATUS_CHANGE", actorType: "USER", content: `Status set to ${STATUS_LABEL[status] ?? status}` } }).catch(() => {});

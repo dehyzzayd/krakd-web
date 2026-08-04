@@ -57,14 +57,14 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
       const taxCents = Math.round((subtotalCents * taxRate) / 100);
       await tx.quoteLineItem.deleteMany({ where: { quoteId: id } });
       if (rows.length) await tx.quoteLineItem.createMany({ data: rows.map((r) => ({ ...r, quoteId: id })) });
-      await tx.quote.update({ where: { id }, data: { subtotalCents, taxCents, totalCents: subtotalCents + taxCents } });
+      await tx.quote.update({ where: { id, dealershipId }, data: { subtotalCents, taxCents, totalCents: subtotalCents + taxCents } });
     } else if (d.taxRate != null) {
-      const q = await tx.quote.findUnique({ where: { id }, select: { subtotalCents: true } });
+      const q = await tx.quote.findFirst({ where: { id, dealershipId }, select: { subtotalCents: true } });
       const taxCents = Math.round(((q?.subtotalCents ?? 0) * taxRate) / 100);
-      await tx.quote.update({ where: { id }, data: { taxCents, totalCents: (q?.subtotalCents ?? 0) + taxCents } });
+      await tx.quote.update({ where: { id, dealershipId }, data: { taxCents, totalCents: (q?.subtotalCents ?? 0) + taxCents } });
     }
     await tx.quote.update({
-      where: { id },
+      where: { id, dealershipId },
       data: {
         ...(d.clientName != null ? { clientName: d.clientName || "New client" } : {}),
         ...(d.clientEmail != null ? { clientEmail: d.clientEmail || null } : {}),
@@ -85,6 +85,6 @@ export const DELETE = route(async (req: NextRequest, ctx: { params: Promise<{ id
   const { id } = await ctx.params;
   const owned = await prisma.quote.findFirst({ where: { id, dealershipId }, select: { id: true } });
   if (!owned) throw new HttpError(404, "Quote not found");
-  await prisma.quote.delete({ where: { id } });
+  await prisma.quote.delete({ where: { id, dealershipId } });
   return json({ ok: true });
 });

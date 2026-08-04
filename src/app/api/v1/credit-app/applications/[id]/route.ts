@@ -26,6 +26,6 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const owned = await prisma.creditApplication.findFirst({ where: { id, dealershipId }, select: { id: true } });
   if (!owned) throw new HttpError(404, "Application not found");
-  const r = await prisma.creditApplication.update({ where: { id }, data: { status: parsed.data.status } });
+  const r = await prisma.creditApplication.update({ where: { id, dealershipId }, data: { status: parsed.data.status } });
   return json({ status: r.status });
 });

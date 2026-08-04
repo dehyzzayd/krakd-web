@@ -48,7 +48,7 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ slu
   const clash = busy.some((b) => start.getTime() < b.end.getTime() + BUFFER_MIN * 60_000 && end.getTime() > b.start.getTime() - BUFFER_MIN * 60_000);
   if (clash) throw new HttpError(409, "That slot was just taken. Please pick another.");
 
-  await prisma.appointment.update({ where: { id }, data: { scheduledStart: start, scheduledEnd: end } });
+  await prisma.appointment.update({ where: { id, dealershipId: c.dealershipId }, data: { scheduledStart: start, scheduledEnd: end } });
   return json({ ok: true, start: start.toISOString() });
 });
 

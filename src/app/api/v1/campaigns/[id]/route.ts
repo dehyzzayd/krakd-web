@@ -34,6 +34,6 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const existing = await prisma.campaign.findFirst({ where: { id, dealershipId } });
   if (!existing) throw new HttpError(404, "Campaign not found");
-  const campaign = await prisma.campaign.update({ where: { id }, data: parsed.data });
+  const campaign = await prisma.campaign.update({ where: { id, dealershipId }, data: parsed.data });
   return json(campaign);
 });

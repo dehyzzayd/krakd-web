@@ -57,7 +57,7 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
 
   const { photoUrls, attributes, ...d } = parsed.data;
   await prisma.vehicle.update({
-    where: { id },
+    where: { id, dealershipId },
     data: {
       ...d,
       ...(attributes ? { attributes: attributes as Prisma.InputJsonValue } : {}),

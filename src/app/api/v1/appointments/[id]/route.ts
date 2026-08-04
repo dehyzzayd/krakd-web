@@ -68,7 +68,7 @@ export const PATCH = route(async (req: NextRequest, ctx: { params: Promise<{ id:
   }
 
   const appt = await prisma.$transaction(async (tx) => {
-    const a = await tx.appointment.update({ where: { id }, data });
+    const a = await tx.appointment.update({ where: { id, dealershipId }, data });
     if (existing.leadId && (reschedule || d.status)) {
       const verb = d.status === "CANCELED" ? "Appointment canceled" : "Appointment rescheduled";
       await tx.leadActivity.create({ data: { dealershipId, leadId: existing.leadId, type: "NOTE", actorType: "USER", content: `${verb} — ${a.type} on ${new Date(a.scheduledStart).toISOString()}` } });
@@ -84,6 +84,6 @@ export const DELETE = route(async (req: NextRequest, ctx: { params: Promise<{ id
   const { id } = await ctx.params;
   const existing = await prisma.appointment.findFirst({ where: { id, dealershipId }, select: { id: true } });
   if (!existing) throw new HttpError(404, "Appointment not found");
-  await prisma.appointment.delete({ where: { id } });
+  await prisma.appointment.delete({ where: { id, dealershipId } });
   return json({ ok: true });
 });

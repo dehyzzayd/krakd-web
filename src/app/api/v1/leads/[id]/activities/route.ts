@@ -25,7 +25,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ id: 
 
   await prisma.$transaction([
     prisma.leadActivity.create({ data: { dealershipId, leadId: id, type: parsed.data.type, actorType: "USER", content: parsed.data.content } }),
-    prisma.lead.update({ where: { id }, data: { lastActivityAt: new Date() } }),
+    prisma.lead.update({ where: { id, dealershipId }, data: { lastActivityAt: new Date() } }),
   ]);
   return json({ ok: true }, 201);
 });
