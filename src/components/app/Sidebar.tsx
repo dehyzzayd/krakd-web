@@ -93,7 +93,7 @@ export function Sidebar() {
         "lg:static lg:h-full lg:translate-x-0 lg:shadow-none lg:transition-[width]", // desktop: in-flow, fills the shell, never scrolls with the page
         collapsed ? "lg:w-[68px]" : "lg:w-[248px]",
       )}>
-      <div className={cn("flex h-14 items-center border-b border-n200", collapsed ? "justify-center px-0" : "px-4")}>
+      <div className={cn("flex h-16 items-center border-b border-n200", collapsed ? "justify-center px-0" : "px-4")}>
         <Link href="/dashboard" aria-label="Krakd" className={cn(collapsed && "flex h-9 w-9 items-center justify-center rounded-lg hover:bg-n100")}>
           {collapsed ? <span className="whitespace-nowrap text-[18px] font-semibold leading-none tracking-[-0.04em] text-ink">K<span className="text-accent">.</span></span> : <Logo />}
         </Link>

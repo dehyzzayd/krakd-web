@@ -104,7 +104,7 @@ export default function Home() {
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[760px] bg-cover bg-top sm:h-[860px] lg:h-[940px]"
-        style={{ backgroundImage: "url(/hero-bg.png)" }}
+        style={{ backgroundImage: "url(/hero-bg.webp)", backgroundColor: "#173a5e" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-canvas" />
       </div>

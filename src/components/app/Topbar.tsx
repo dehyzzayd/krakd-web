@@ -19,7 +19,7 @@ export function Topbar({
   const { toggle, setMobileOpen } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#e4e7ec] bg-n50/85 px-4 backdrop-blur sm:px-5">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-[#e4e7ec] bg-n50/85 px-4 backdrop-blur sm:px-6">
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"

@@ -15,7 +15,8 @@ export function AuthShell({
       <aside
         className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex xl:p-16"
         style={{
-          backgroundImage: "url(/hero-bg.png)",
+          backgroundImage: "url(/hero-bg.webp)",
+          backgroundColor: "#173a5e",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
