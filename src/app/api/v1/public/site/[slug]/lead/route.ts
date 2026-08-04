@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
+import { webConsentRecord } from "@/lib/consent";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -16,6 +17,7 @@ const leadSchema = z.object({
   email: z.string().optional(),
   message: z.string().max(1000).optional(),
   vehicleId: z.string().uuid().optional(),
+  consent: z.boolean().optional(), // TCPA/CAN-SPAM express consent checkbox
 }).refine((d) => d.phone?.trim() || d.email?.trim(), { message: "Add a phone or email so we can reach you" });
 
 /* POST /api/v1/public/site/[slug]/lead → website form → CRM lead (source = Website, retains vehicle) */
@@ -28,6 +30,8 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
   const parsed = leadSchema.safeParse(await _req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
+  const ip = (_req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;
+  const consent = d.consent ? { sms: webConsentRecord(ip), email: webConsentRecord(ip) } : {};
 
   // only attach a vehicle-of-interest that actually belongs to this dealer
   let vehicleId: string | undefined;
@@ -47,6 +51,7 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
       source: "Website",
       temperature: "WARM",
       ownerType: "AI", // Krakd AI follows up on new website leads
+      consent: consent as unknown as Prisma.InputJsonValue,
     },
   });
 

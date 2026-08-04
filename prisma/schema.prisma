@@ -373,6 +373,7 @@ model Lead {
   hasTradeIn    Boolean         @default(false)
   financing     Boolean         @default(false)
   deal          Json            @default("{}") // desking worksheet: price/trade/tax/term/apr + trade vehicle
+  consent       Json            @default("{}") // TCPA/CAN-SPAM audit: { sms|email: { status, at, source, disclosure, capturedBy, ip, method, note } }
   nextAction    String?
   nextActionAt  DateTime?
   lastActivityAt DateTime       @default(now())

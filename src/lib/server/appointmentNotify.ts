@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { sendSms } from "./sms";
 import { sendAppointmentEmail } from "./email";
+import { hasConsent } from "@/lib/consent";
 
 const first = (arr: unknown) => (Array.isArray(arr) && arr[0] ? (arr[0] as { value?: string }).value ?? "" : "");
 const TYPE_LABEL: Record<string, string> = {
@@ -13,7 +14,7 @@ const TYPE_LABEL: Record<string, string> = {
 export async function notifyAppointment(apptId: string, kind: "confirmation" | "reminder"): Promise<{ sms: boolean; email: boolean }> {
   const a = await prisma.appointment.findUnique({
     where: { id: apptId },
-    include: { lead: { select: { firstName: true, phones: true, emails: true } }, dealership: { select: { name: true, timezone: true } } },
+    include: { lead: { select: { firstName: true, phones: true, emails: true, consent: true } }, dealership: { select: { name: true, timezone: true } } },
   });
   if (!a) return { sms: false, email: false };
 
@@ -27,8 +28,9 @@ export async function notifyAppointment(apptId: string, kind: "confirmation" | "
     : `Reminder: your ${typeLabel} with ${dealer} is coming up — ${when}. See you then!`;
   const subject = kind === "confirmation" ? `Your ${typeLabel} is booked` : `Reminder: your ${typeLabel} with ${dealer}`;
 
-  const phone = first(a.lead.phones);
-  const email = first(a.lead.emails);
+  // only reach out on channels the customer consented to (TCPA/CAN-SPAM)
+  const phone = hasConsent(a.lead.consent, "sms") ? first(a.lead.phones) : "";
+  const email = hasConsent(a.lead.consent, "email") ? first(a.lead.emails) : "";
   const [sms, mail] = await Promise.all([
     phone ? sendSms(phone, body).then((r) => r.sent).catch(() => false) : Promise.resolve(false),
     email ? sendAppointmentEmail({ to: email, subject, body, dealershipName: dealer }).catch(() => false) : Promise.resolve(false),

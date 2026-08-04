@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendSms } from "@/lib/server/sms";
 import { sendLeadMessageEmail } from "@/lib/server/email";
+import { hasConsent } from "@/lib/consent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,12 +29,20 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ id: 
 
   const lead = await prisma.lead.findFirst({
     where: { id, dealershipId },
-    select: { id: true, firstName: true, phones: true, emails: true, dealership: { select: { name: true } } },
+    select: { id: true, firstName: true, phones: true, emails: true, consent: true, dealership: { select: { name: true } } },
   });
   if (!lead) throw new HttpError(404, "Lead not found");
 
   const to = channel === "SMS" ? first(lead.phones) : first(lead.emails);
   if (!to) throw new HttpError(400, channel === "SMS" ? "This lead has no phone number." : "This lead has no email address.");
+
+  // COMPLIANCE GATE — never send without a consent record on file for this channel
+  const consentChannel = channel === "SMS" ? "sms" : "email";
+  if (!hasConsent(lead.consent, consentChannel)) {
+    throw new HttpError(403, channel === "SMS"
+      ? "No texting consent on file for this contact. Record consent before sending — this keeps you TCPA-compliant."
+      : "No email consent on file for this contact. Record consent before sending.");
+  }
 
   const result = channel === "SMS"
     ? await sendSms(to, content)

@@ -5,6 +5,7 @@ import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
 import { notifyAppointment } from "@/lib/server/appointmentNotify";
+import { webConsentRecord } from "@/lib/consent";
 import { computeSlots, parseDuration, type Hour, type Busy } from "@/lib/server/slots";
 import type { Prisma } from "@prisma/client";
 
@@ -64,6 +65,7 @@ const bookSchema = z.object({
   email: z.string().optional(),
   note: z.string().max(1000).optional(),
   listingId: z.string().uuid().optional(),
+  consent: z.boolean().optional(),
 }).refine((d) => d.phone?.trim() || d.email?.trim(), { message: "Add a phone or email so we can confirm" });
 
 /* POST → book a slot: creates a Lead + Appointment; returns a manage id */
@@ -73,6 +75,9 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug
   const parsed = bookSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
+
+  if (!d.consent) throw new HttpError(400, "Please agree to be contacted so we can confirm and remind you about your appointment.");
+  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;
 
   const start = new Date(d.start);
   if (isNaN(start.getTime()) || start.getTime() < Date.now()) throw new HttpError(400, "That time is no longer available.");
@@ -97,6 +102,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug
       emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
       phones: (d.phone ? [{ value: d.phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue,
       source: "Website booking", temperature: "HOT", ownerType: "AI",
+      consent: { sms: webConsentRecord(ip), email: webConsentRecord(ip) } as unknown as Prisma.InputJsonValue,
     },
   });
   const appt = await prisma.appointment.create({

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
+import { webConsentRecord } from "@/lib/consent";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -47,6 +48,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ toke
   if (!firstName || !lastName || !phone) throw new HttpError(400, "Name and phone are required.");
   const email = String(a.email ?? "").trim();
   const dealershipId = c.dealership.id;
+  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;
 
   const app = await prisma.$transaction(async (tx) => {
     const lead = await tx.lead.create({
@@ -55,6 +57,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ toke
         emails: (email ? [{ value: email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
         phones: [{ value: phone, type: "mobile" }] as unknown as Prisma.InputJsonValue,
         financing: true, status: "NEW",
+        consent: { sms: webConsentRecord(ip), email: webConsentRecord(ip) } as unknown as Prisma.InputJsonValue,
       },
     });
     const created = await tx.creditApplication.create({

@@ -10,7 +10,8 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { Sheet } from "@/components/app/Sheet";
 import { DealSheet } from "@/components/app/DealSheet";
 import { vertical as verticalDef } from "@/components/site/verticals";
-import { Phone, MessageSquare, Calendar, StickyNote, Pencil, Sparkles, Check, Copy, CircleDollarSign, ChevronRight, Flag } from "lucide-react";
+import { Phone, MessageSquare, Calendar, StickyNote, Pencil, Sparkles, Check, Copy, CircleDollarSign, ChevronRight, Flag, ShieldCheck } from "lucide-react";
+import { ConsentSheet } from "@/components/app/ConsentSheet";
 
 type Activity = { id: string; type: string; kind: string; content: string; actor: string; when: string };
 type Lead = {
@@ -55,7 +56,7 @@ export function LeadDetailClient({ id }: { id: string }) {
   const { data: l, loading, error, reload } = useApi<Lead>(`/leads/${id}`);
   // deep-link from the leads list: ?action=message / ?action=appt opens that action straight away
   const initialAction = useSearchParams().get("action");
-  const [modal, setModal] = useState<null | "note" | "message" | "appt" | "edit" | "deal">(
+  const [modal, setModal] = useState<null | "note" | "message" | "appt" | "edit" | "deal" | "consent">(
     initialAction === "message" ? "message" : initialAction === "appt" ? "appt" : initialAction === "deal" ? "deal" : null,
   );
   const [busy, setBusy] = useState(false);
@@ -76,6 +77,7 @@ export function LeadDetailClient({ id }: { id: string }) {
     { Icon: StickyNote, label: "Note", onClick: () => setModal("note") },
     { Icon: Calendar, label: "Book appt", onClick: () => setModal("appt") },
     { Icon: CircleDollarSign, label: "Deal", onClick: () => setModal("deal") },
+    { Icon: ShieldCheck, label: "Consent", onClick: () => setModal("consent") },
   ];
   async function logQuick(type: string, content: string) {
     await apiFetch(`/leads/${id}/activities`, { method: "POST", body: JSON.stringify({ type, content }) }).catch(() => {});
@@ -158,10 +160,11 @@ export function LeadDetailClient({ id }: { id: string }) {
       </div>
 
       {modal === "note" && <NoteModal id={id} onClose={() => setModal(null)} onDone={reload} />}
-      {modal === "message" && <MessageModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} />}
+      {modal === "message" && <MessageModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} onRecordConsent={() => setModal("consent")} />}
       {modal === "appt" && <ApptModal id={id} onClose={() => setModal(null)} onDone={reload} />}
       {modal === "edit" && <EditModal id={id} lead={l} onClose={() => setModal(null)} onDone={reload} />}
       {modal === "deal" && <DealSheet id={id} leadName={l.name} onClose={() => setModal(null)} onSaved={reload} />}
+      {modal === "consent" && <ConsentSheet id={id} leadName={l.name} onClose={() => setModal(null)} onSaved={reload} />}
     </div>
   );
 }
@@ -295,14 +298,15 @@ function NoteModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
   );
 }
 
-function MessageModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; onClose: () => void; onDone: () => void }) {
+function MessageModal({ id, lead, onClose, onDone, onRecordConsent }: { id: string; lead: Lead; onClose: () => void; onDone: () => void; onRecordConsent: () => void }) {
   const [channel, setChannel] = useState<"SMS" | "EMAIL">(lead.phone ? "SMS" : "EMAIL");
   const [text, setText] = useState(""); const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
   const to = channel === "SMS" ? lead.phone : lead.email;
   const save = async () => {
     if (!text.trim() || !to) return;
-    setBusy(true); setNote(null);
+    setBusy(true); setNote(null); setBlocked(false);
     try {
       const r = await apiFetch<{ sent: boolean; reason: string | null }>(`/leads/${id}/message`, { method: "POST", body: JSON.stringify({ channel, content: text }) });
       if (r.sent) { onDone(); onClose(); return; }
@@ -310,7 +314,9 @@ function MessageModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; o
       setNote(`${r.reason ?? "Not connected"} — saved to the timeline, but not delivered yet.`);
       onDone();
     } catch (e) {
-      setNote(e instanceof ApiError ? e.message : "Couldn't send.");
+      const msg = e instanceof ApiError ? e.message : "Couldn't send.";
+      if (e instanceof ApiError && e.status === 403) setBlocked(true);
+      setNote(msg);
     } finally { setBusy(false); }
   };
   return (
@@ -324,6 +330,7 @@ function MessageModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; o
         {!to && <p className="text-[12px] font-medium text-warn">This lead has no {channel === "SMS" ? "phone number" : "email"} on file.</p>}
         <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder={channel === "SMS" ? "Type your text…" : "Type your email…"} className={cn(field, "h-auto resize-none py-2")} />
         {note && <p className="text-[12px] font-medium text-warn">{note}</p>}
+        {blocked && <button onClick={onRecordConsent} className="inline-flex items-center gap-1.5 rounded-md border border-brand/30 bg-brand-soft px-3 py-1.5 text-[12px] font-semibold text-brand transition hover:bg-brand-soft/70"><ShieldCheck className="h-3.5 w-3.5" />Record consent</button>}
       </div>
     </Sheet>
   );

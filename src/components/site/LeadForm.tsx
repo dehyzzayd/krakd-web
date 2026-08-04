@@ -13,6 +13,7 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
     message: vehicle ? `I'm interested in ${vehicle.title || [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}.` : financing ? "I'd like to get pre-qualified." : "",
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -28,7 +29,7 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
     try {
       const res = await fetch(`/api/v1/public/site/${slug}/lead`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, vehicleId: vehicle?.id }),
+        body: JSON.stringify({ ...f, vehicleId: vehicle?.id, consent }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.message ?? "Something went wrong."); }
       setDone(true);
@@ -53,6 +54,10 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
       <input placeholder="Phone" value={f.phone} onChange={(e) => set("phone", e.target.value)} className={field} />
       <input placeholder="Email" value={f.email} onChange={(e) => set("email", e.target.value)} className={field} />
       <textarea placeholder="Message" value={f.message} onChange={(e) => set("message", e.target.value)} rows={3} className={`${field} resize-none`} />
+      <label className="flex items-start gap-2 text-[11.5px] leading-relaxed text-[#64748b]">
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-black/20" style={{ accentColor: accent }} />
+        <span>I agree to be contacted by phone, text and email about my enquiry, including by automated means. Consent is not a condition of purchase; message/data rates may apply; reply STOP to opt out. See the privacy policy.</span>
+      </label>
       {err && <p className="text-[12.5px] font-medium text-[#dc2626]">{err}</p>}
       <button onClick={submit} disabled={busy} className="w-full rounded-lg py-3 text-[14px] font-semibold text-white disabled:opacity-60" style={{ background: accent }}>{busy ? "Sending…" : financing ? "Request financing" : "Send message"}</button>
     </div>

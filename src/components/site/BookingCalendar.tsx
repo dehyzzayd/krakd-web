@@ -38,6 +38,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
   const [selSlot, setSelSlot] = useState<string | null>(null);
   const [step, setStep] = useState<"pick" | "details">("pick");
   const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", note: "" });
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [doneId, setDoneId] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
     if (!reschedule) {
       if (!f.firstName.trim()) { setErr("Enter your name."); return; }
       if (!f.phone.trim() && !f.email.trim()) { setErr("Add a phone or email so we can confirm."); return; }
+      if (!consent) { setErr("Please agree to be contacted so we can confirm and remind you."); return; }
     }
     setBusy(true);
     try {
@@ -83,7 +85,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
         const j = await r.json(); if (!r.ok) throw new Error(j.error || "Could not reschedule.");
         setDoneId(reschedule.id);
       } else {
-        const r = await fetch(`/api/v1/public/site/${slug}/booking`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ start: selSlot, ...f, listingId }) });
+        const r = await fetch(`/api/v1/public/site/${slug}/booking`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ start: selSlot, ...f, listingId, consent }) });
         const j = await r.json(); if (!r.ok) throw new Error(j.error || "Could not book that time.");
         setDoneId(j.id);
       }
@@ -161,6 +163,12 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
                     <textarea value={f.note} onChange={(e) => set("note", e.target.value)} rows={3} placeholder="Anything we should know? (optional)" className={`${FIELD} h-auto resize-y py-2`} />
                   </div>
                 </>
+              )}
+              {!reschedule && (
+                <label className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-[#64748b]">
+                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-black/20" style={{ accentColor: accent }} />
+                  <span>I agree to receive confirmation and reminder messages about this appointment by text and email. Message/data rates may apply; reply STOP to opt out.</span>
+                </label>
               )}
               {err && <p className="mt-2 text-[13px] font-medium text-[#dc2626]">{err}</p>}
               <button onClick={confirm} disabled={busy} className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg text-[14px] font-semibold text-white transition disabled:opacity-50" style={{ background: accent }}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{reschedule ? "Confirm new time" : `Book ${book}`}</button>
