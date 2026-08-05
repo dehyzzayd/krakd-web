@@ -7,7 +7,8 @@ import { authApi } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Section, Field, Row, Switch, LinkField, inputCls } from "./controls";
-import { MessageCircle, Link2, Phone, ScrollText, Check, Loader2 } from "lucide-react";
+import { MessageCircle, Link2, Phone, ScrollText, Check, Loader2, Code2 } from "lucide-react";
+import { useToast } from "@/components/app/Toast";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -23,6 +24,8 @@ type Settings = {
 export function ChatbotTab() {
   const { data } = useApi<Settings>("/ai/settings");
   const { data: me } = useApi<{ vertical?: string }>("/auth/me");
+  const { data: site } = useApi<{ slug?: string; status?: string }>("/website");
+  const toast = useToast();
   const def = verticalDef(me?.vertical);
   const auto = (me?.vertical ?? "AUTOMOTIVE") === "AUTOMOTIVE";
   const bookLabel = def.bookingLabel;                        // "Test drive" | "Viewing"
@@ -117,6 +120,23 @@ export function ChatbotTab() {
         <Section icon={ScrollText} title="House rules" desc="Guardrails injected on every conversation.">
           <textarea value={rules} onChange={(e) => setRules(e.target.value)} rows={3} className={cn(inputCls, "resize-none")} placeholder="e.g. Always mention our 7-day exchange policy…" />
           <p className="mt-1.5 text-[11.5px] text-n400">Treated as data — the agent still won&apos;t state a spec, price, or link that isn&apos;t real.</p>
+        </Section>
+
+        {/* website chat widget */}
+        <Section icon={Code2} title="Install on your website" desc="Drop one line of code on any site to add the Krakd chat bubble.">
+          {site?.slug && site?.status === "PUBLISHED" ? (() => {
+            const origin = typeof window !== "undefined" ? window.location.origin : "";
+            const snippet = `<script src="${origin}/widget.js" data-slug="${site.slug}" async></script>`;
+            return (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-n200 bg-n900 p-3"><code className="block whitespace-pre-wrap break-all text-[11.5px] leading-relaxed text-n100">{snippet}</code></div>
+                <button type="button" onClick={() => { navigator.clipboard?.writeText(snippet); toast.success("Embed code copied"); }} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-n200 bg-white px-3.5 text-[12.5px] font-semibold text-n700 transition hover:bg-n100"><Code2 className="h-3.5 w-3.5" />Copy embed code</button>
+                <p className="text-[11.5px] leading-relaxed text-n400">Paste it before <code className="text-n500">&lt;/body&gt;</code> on your site. The bubble captures name + contact (with consent) into your CRM and Krakd AI follows up instantly. Works on any site — Krakd, WordPress, Wix, custom.</p>
+              </div>
+            );
+          })() : (
+            <p className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n500">Publish your Krakd website first to get your chat-widget embed code.</p>
+          )}
         </Section>
       </div>
 
