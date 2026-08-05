@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Search, SlidersHorizontal, ArrowUpDown, Download, Plus, List as ListIcon, LayoutGrid,
-  MoreVertical, Eye, Pencil, Tag, PackageX, Camera, Check,
+  MoreVertical, Eye, Pencil, Tag, PackageX, Camera, Check, Printer,
 } from "lucide-react";
 import { Topbar } from "@/components/app/Topbar";
 import { ErrorBanner } from "@/components/app/AppKit";
@@ -15,7 +15,7 @@ import { SkeletonKpis, SkeletonRows } from "@/components/app/Skeleton";
 import { useToast } from "@/components/app/Toast";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError, API_URL, getToken } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef, type ListingView } from "@/components/site/verticals";
 
@@ -23,10 +23,20 @@ type V = {
   id: string; year: number | null; make: string; model: string; trim: string; body: string; stock: string; vin: string;
   title: string | null; subtitle: string | null; attributes: Record<string, unknown>;
   price: number; cost: number; mileage: number; status: string; color: string; drivetrain: string; fuel: string;
-  days: number; image: string | null; photos: number;
+  days: number; image: string | null; photos: number; soldAt?: string | null;
 };
 type Stats = { unitsLive: number; retailValue: number; avgFrontGross: number; avgDays: number; agingPct: number };
-type InvData = { items: V[]; stats: Stats; vertical: string };
+type InvData = { items: V[]; sold: V[]; stats: Stats; vertical: string };
+
+async function openSticker(id: string) {
+  try {
+    const res = await fetch(`${API_URL}/inventory/${id}/sticker`, { headers: getToken() ? { authorization: `Bearer ${getToken()}` } : {} });
+    if (!res.ok) throw new Error();
+    const url = URL.createObjectURL(await res.blob());
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  } catch { alert("Could not open the window sticker."); }
+}
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -57,7 +67,8 @@ function RowMenu({ v, noun, auto, openHref, onAdjustPrice, onWholesale }: { v: V
     { icon: auto ? Eye : Pencil, label: auto ? "View details" : `Edit ${noun}`, href: openHref, primary: true },
     ...(auto ? [{ icon: Pencil, label: `Edit ${noun}`, href: `/dashboard/inventory/${v.id}/edit` }] : []),
     { icon: Tag, label: "Adjust price", onClick: onAdjustPrice },
-    ...(auto && v.status !== "WHOLESALE" ? [{ icon: PackageX, label: "Move to wholesale", danger: true, onClick: onWholesale }] : []),
+    ...(auto ? [{ icon: Printer, label: "Window sticker", onClick: () => openSticker(v.id) }] : []),
+    ...(auto && v.status !== "WHOLESALE" && v.status !== "SOLD" ? [{ icon: PackageX, label: "Move to wholesale", danger: true, onClick: onWholesale }] : []),
   ];
   return (
     <div className="relative" ref={ref}>
@@ -126,9 +137,11 @@ export default function InventoryPage() {
   const subOf = (v: V) => def.subtitleOf(v as unknown as ListingView);
   // automotive has a rich internal detail page; other verticals go straight to the (vertical-aware) editor
   const openHref = (v: V) => (auto ? `/dashboard/inventory/${v.id}` : `/dashboard/inventory/${v.id}/edit`);
-  const TABS: [string, string][] = [["all", "All"], ...dash.statuses.map((s) => [s.value, s.label] as [string, string])];
+  const TABS: [string, string][] = [["all", "All"], ...dash.statuses.map((s) => [s.value, s.label] as [string, string]), ["SOLD", "Sold"]];
 
-  const rows = data?.items ?? [];
+  const liveRows = data?.items ?? [];
+  const soldRows = data?.sold ?? [];
+  const rows = tab === "SOLD" ? soldRows : liveRows;
   const s = data?.stats;
   const list = useMemo(() => {
     const out = rows.filter((v) => {
@@ -218,7 +231,7 @@ export default function InventoryPage() {
 
         <div className="pt-5">
           <div className="rounded-2xl border border-n200 bg-white sh-card">
-            <div className="border-b border-n200 p-4"><div className="flex flex-wrap items-center gap-2">{TABS.map(([k, label]) => { const on = tab === k; const count = k === "all" ? rows.length : rows.filter((v) => v.status === k).length; return <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition", on ? "bg-brand text-white" : "text-n500 hover:bg-n100")}>{label}<span className={cn("grid h-4 min-w-5 place-items-center rounded-full px-1.5 text-[10px]", on ? "bg-white text-brand" : "bg-n100 text-n500")}>{count}</span></button>; })}</div></div>
+            <div className="border-b border-n200 p-4"><div className="flex flex-wrap items-center gap-2">{TABS.map(([k, label]) => { const on = tab === k; const count = k === "all" ? liveRows.length : k === "SOLD" ? soldRows.length : liveRows.filter((v) => v.status === k).length; return <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition", on ? "bg-brand text-white" : "text-n500 hover:bg-n100")}>{label}<span className={cn("grid h-4 min-w-5 place-items-center rounded-full px-1.5 text-[10px]", on ? "bg-white text-brand" : "bg-n100 text-n500")}>{count}</span></button>; })}</div></div>
 
             {loading ? (
               <SkeletonRows rows={8} cols={6} />

@@ -63,12 +63,13 @@ export const POST = route(async (req: NextRequest) => {
 export const GET = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
 
-  const [dealer, rows] = await Promise.all([
+  const [dealer, rows, soldRows] = await Promise.all([
     prisma.dealership.findUnique({ where: { id: dealershipId }, select: { vertical: true } }),
     prisma.vehicle.findMany({ where: { dealershipId, status: { not: "SOLD" } }, orderBy: { createdAt: "desc" }, take: 300 }),
+    prisma.vehicle.findMany({ where: { dealershipId, status: "SOLD" }, orderBy: [{ soldAt: "desc" }, { createdAt: "desc" }], take: 150 }),
   ]);
 
-  const items = rows.map((v) => {
+  const map = (v: (typeof rows)[number]) => {
     const photos = Array.isArray(v.photoUrls) ? (v.photoUrls as string[]) : [];
     return {
       id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim ?? "", body: v.bodyType ?? "",
@@ -77,8 +78,11 @@ export const GET = route(async (req: NextRequest) => {
       mileage: v.mileage, status: v.status, color: v.exteriorColor ?? "", drivetrain: v.drivetrain ?? "", fuel: v.fuel ?? "",
       days: days(v.listedAt), image: photos[0] ?? null, photos: photos.length,
       marketAvg: v.marketAvgCents ? Math.round(v.marketAvgCents / 100) : null,
+      soldAt: v.soldAt?.toISOString() ?? null,
     };
-  });
+  };
+  const items = rows.map(map);
+  const sold = soldRows.map(map);
 
   const units = items.length || 1;
   const retailValue = items.reduce((s, v) => s + v.price, 0);
@@ -89,6 +93,7 @@ export const GET = route(async (req: NextRequest) => {
   return json({
     vertical: dealer?.vertical ?? "AUTOMOTIVE",
     items,
+    sold,
     stats: {
       unitsLive: items.length,
       retailValue,
