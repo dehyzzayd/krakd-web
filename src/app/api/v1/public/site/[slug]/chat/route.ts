@@ -17,7 +17,7 @@ export async function OPTIONS() {
 }
 
 const schema = z.object({
-  conversationId: z.string().uuid().optional(),
+  conversationId: z.string().uuid().nullable().optional(),
   message: z.string().trim().min(1).max(1000),
   hp: z.string().optional(), // honeypot
 });
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
 
     const origin = process.env.APP_BASE_URL || req.nextUrl.origin;
     const ip = clientIp(req);
-    const r = await chatReply(w.dealershipId, d.conversationId, d.message, origin, ip);
+    const r = await chatReply(w.dealershipId, d.conversationId ?? undefined, d.message, origin, ip);
     return reply({ conversationId: r.conversationId, reply: r.reply }, 200);
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500;
