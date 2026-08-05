@@ -537,6 +537,7 @@ model AiConversation {
   channel      AiChannel            @default(WEB)
   status       AiConversationStatus @default(ACTIVE)
   externalRef  String?
+  state        Json                 @default("{}") // widget capture state: { stage, name, phone, email, interest, leadId }
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
 

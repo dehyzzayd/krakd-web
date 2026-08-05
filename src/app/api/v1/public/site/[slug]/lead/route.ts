@@ -40,6 +40,7 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
   if (d.hp?.trim()) return json({ ok: true }, 201); // honeypot tripped — silently drop
+  if (!d.consent) throw new HttpError(400, "Please agree to be contacted so we can follow up.");
   const ip = (_req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;
   const consent = d.consent ? { sms: webConsentRecord(ip), email: webConsentRecord(ip) } : {};
 

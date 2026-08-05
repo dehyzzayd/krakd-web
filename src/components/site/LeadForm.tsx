@@ -26,6 +26,7 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
     if (!f.phone.trim() && !f.email.trim()) { setErr("Add a phone or email so we can reach you."); return; }
     if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) { setErr("That email doesn't look right — please check it."); return; }
     if (f.phone.trim() && f.phone.replace(/\D/g, "").length < 10) { setErr("Enter a valid phone number (at least 10 digits)."); return; }
+    if (!consent) { setErr("Please tick the box to agree to be contacted."); return; }
     if (preview) { setDone(true); return; }
     setBusy(true);
     try {
