@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Sheet } from "./Sheet";
+import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { Contact } from "@/lib/crm";
 import { Mail, Phone, Plus, Trash2, ChevronDown } from "lucide-react";
@@ -29,6 +30,7 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
   const save = async () => {
     setErr(null);
     if (!first.trim()) { setErr("Enter a first name."); return; }
@@ -43,6 +45,7 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
       } else {
         await apiFetch("/leads", { method: "POST", body: JSON.stringify({ firstName: first, lastName: last || undefined, emails: cleanEmails, phones: cleanPhones, source: source || undefined }) });
       }
+      toast.success(editing ? "Contact updated" : "Contact added");
       onCreated?.();
       onClose();
     } catch (e) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
+import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
 import { computeDeal, type Deal } from "@/lib/deal";
 
@@ -40,6 +41,7 @@ export function DealSheet({ id, leadName, onClose, onSaved }: { id: string; lead
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
     apiFetch<{ deal: Deal }>(`/leads/${id}/deal`).then(({ deal: d }) => {
@@ -60,7 +62,7 @@ export function DealSheet({ id, leadName, onClose, onSaved }: { id: string; lead
 
   const save = async () => {
     setBusy(true); setErr(null);
-    try { await apiFetch(`/leads/${id}/deal`, { method: "PUT", body: JSON.stringify(deal) }); onSaved(); onClose(); }
+    try { await apiFetch(`/leads/${id}/deal`, { method: "PUT", body: JSON.stringify(deal) }); toast.success("Deal saved"); onSaved(); onClose(); }
     catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save the deal."); }
     finally { setBusy(false); }
   };

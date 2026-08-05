@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { Check, Phone, User as UserIcon } from "lucide-react";
+import { SkeletonRows } from "@/components/app/Skeleton";
 
 type Item = { id: string; name: string; phone: string; action: string; dueAt: string; bucket: string; assigned: string | null; status: string };
 type Data = { items: Item[]; counts: { overdue: number; today: number; upcoming: number } };
@@ -52,7 +53,7 @@ export default function FollowupsPage() {
         </div>
 
         {loading ? (
-          <Card className="p-12 text-center text-[13px] text-n400">Loading…</Card>
+          <Card><SkeletonRows rows={7} cols={4} /></Card>
         ) : items.length === 0 ? (
           <Card className="px-4 py-16 text-center"><p className="text-[14px] font-semibold text-n800">You&apos;re all caught up</p><p className="mx-auto mt-1 max-w-[42ch] text-[12.5px] text-n500">Set a next action on any lead and it shows up here until it&apos;s done.</p></Card>
         ) : (

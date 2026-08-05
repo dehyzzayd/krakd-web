@@ -7,6 +7,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { Building2, MapPin, Clock, Palette, Loader2, Check, Upload } from "lucide-react";
 import { IntegrationsPanel } from "@/components/app/IntegrationsPanel";
+import { useToast } from "@/components/app/Toast";
 
 const INDUSTRIES = [
   { id: "AUTOMOTIVE", label: "Automotive" }, { id: "REAL_ESTATE", label: "Real estate" },
@@ -47,6 +48,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!data) return;
@@ -81,6 +83,7 @@ export default function SettingsPage() {
       }) });
       // switching industry reskins the whole workspace (sidebar, terminology) — reload so it takes effect everywhere
       if (verticalChanged) { window.location.reload(); return; }
+      toast.success("Settings saved");
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save settings."); }
     finally { setSaving(false); }

@@ -12,6 +12,7 @@ import { DealSheet } from "@/components/app/DealSheet";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Phone, MessageSquare, Calendar, StickyNote, Pencil, Sparkles, Check, Copy, CircleDollarSign, ChevronRight, Flag, ShieldCheck } from "lucide-react";
 import { ConsentSheet } from "@/components/app/ConsentSheet";
+import { useToast } from "@/components/app/Toast";
 
 type Activity = { id: string; type: string; kind: string; content: string; actor: string; when: string };
 type Lead = {
@@ -61,10 +62,11 @@ export function LeadDetailClient({ id }: { id: string }) {
   );
   const [busy, setBusy] = useState(false);
 
+  const toast = useToast();
   const patch = async (body: Record<string, unknown>) => {
     setBusy(true);
-    try { await apiFetch(`/leads/${id}`, { method: "PATCH", body: JSON.stringify(body) }); reload(); }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Update failed."); }
+    try { await apiFetch(`/leads/${id}`, { method: "PATCH", body: JSON.stringify(body) }); toast.success("Lead updated"); reload(); }
+    catch (e) { toast.error(e instanceof ApiError ? e.message : "Update failed."); }
     finally { setBusy(false); }
   };
 

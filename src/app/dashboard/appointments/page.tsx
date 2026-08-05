@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { EditAppointmentSheet } from "@/components/app/EditAppointmentSheet";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { useToast } from "@/components/app/Toast";
 
 type Appt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; typeKey: string; status: string; time: string; date: number; month: number; year: number; day: string; owner: string };
 type ApiAppt = { id: string; leadId: string | null; name: string; vehicle: string; type: string; typeKey: string; statusKey: string; owner: string; start: string };
@@ -50,11 +51,12 @@ export default function CalendarPage() {
   const [sel, setSel] = useState<Appt | null>(null);
   const [canceling, setCanceling] = useState(false);
 
+  const toast = useToast();
   const setStatus = async (a: Appt, status: "CANCELED" | "COMPLETED" | "CONFIRMED", confirmMsg?: string) => {
     if (confirmMsg && !confirm(confirmMsg)) return;
     setCanceling(true);
-    try { await apiFetch(`/appointments/${a.id}`, { method: "PATCH", body: JSON.stringify({ status }) }); reload(); setSel(null); }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Could not update the appointment."); }
+    try { await apiFetch(`/appointments/${a.id}`, { method: "PATCH", body: JSON.stringify({ status }) }); toast.success(status === "CANCELED" ? "Appointment canceled" : "Appointment completed"); reload(); setSel(null); }
+    catch (e) { toast.error(e instanceof ApiError ? e.message : "Could not update the appointment."); }
     finally { setCanceling(false); }
   };
   const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];

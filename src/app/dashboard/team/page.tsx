@@ -8,6 +8,8 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { InviteTeammateSheet } from "@/components/app/InviteTeammateSheet";
 import { UserPlus, MoreVertical } from "lucide-react";
+import { SkeletonRows } from "@/components/app/Skeleton";
+import { useToast } from "@/components/app/Toast";
 
 type Member = { id: string; name: string; email: string; role: string; status: string; lastActive: string | null; assignedLeads: number };
 
@@ -27,16 +29,17 @@ export default function TeamPage() {
   const canManage = me?.role === "OWNER" || me?.role === "MANAGER";
   const members = data?.members ?? [];
 
+  const toast = useToast();
   const patch = async (id: string, body: Record<string, unknown>) => {
     setBusy(true); setMenuFor(null);
-    try { await apiFetch(`/team/${id}`, { method: "PATCH", body: JSON.stringify(body) }); reload(); }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Could not update."); }
+    try { await apiFetch(`/team/${id}`, { method: "PATCH", body: JSON.stringify(body) }); toast.success("Team updated"); reload(); }
+    catch (e) { toast.error(e instanceof ApiError ? e.message : "Could not update."); }
     finally { setBusy(false); }
   };
 
   return (
     <>
-      <Topbar title="Team" action={canManage ? { label: "Invite teammate", onClick: () => setInviting(true) } : undefined} />
+      <Topbar title="Team" />
       <AppMain>
         {error && <ErrorBanner onRetry={reload} />}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -46,7 +49,7 @@ export default function TeamPage() {
 
         <Card>
           {loading ? (
-            <div className="p-12 text-center text-[13px] text-n400">Loading…</div>
+            <SkeletonRows rows={5} cols={5} />
           ) : members.length === 0 ? (
             <div className="px-4 py-16 text-center"><p className="text-[14px] font-semibold text-n800">No teammates yet</p><p className="mx-auto mt-1 max-w-[42ch] text-[12.5px] text-n500">Invite your salespeople and managers so you can assign and route leads.</p></div>
           ) : (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Sheet } from "./Sheet";
+import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
 
 const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -17,6 +18,7 @@ export function InviteTeammateSheet({ open, onClose, onInvited }: { open: boolea
   const [role, setRole] = useState<"STAFF" | "MANAGER">("STAFF");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
 
   const save = async () => {
     setErr(null);
@@ -24,6 +26,7 @@ export function InviteTeammateSheet({ open, onClose, onInvited }: { open: boolea
     setBusy(true);
     try {
       await apiFetch("/team", { method: "POST", body: JSON.stringify({ firstName: first, lastName: last, email, role }) });
+      toast.success(`Invite sent to ${first}`);
       onInvited(); onClose();
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not send the invite."); }
     finally { setBusy(false); }

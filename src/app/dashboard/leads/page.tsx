@@ -13,6 +13,8 @@ import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/useApi";
 import { API_URL, getToken, apiFetch, ApiError } from "@/lib/api";
 import { AddLeadSheet } from "@/components/app/AddLeadSheet";
+import { SkeletonKpis, SkeletonRows } from "@/components/app/Skeleton";
+import { useToast } from "@/components/app/Toast";
 
 type Member = { id: string; name: string; role: string; status: string };
 
@@ -20,11 +22,12 @@ function AssignCell({ leadId, current, members, onDone }: { leadId: string; curr
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const toast = useToast();
   useEffect(() => { const f = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", f); return () => document.removeEventListener("mousedown", f); }, []);
   const assign = async (id: string | null) => {
     setBusy(true);
-    try { await apiFetch(`/leads/${leadId}`, { method: "PATCH", body: JSON.stringify({ assignedToId: id }) }); onDone(); }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Could not assign."); }
+    try { await apiFetch(`/leads/${leadId}`, { method: "PATCH", body: JSON.stringify({ assignedToId: id }) }); toast.success(id ? "Lead assigned" : "Lead unassigned"); onDone(); }
+    catch (e) { toast.error(e instanceof ApiError ? e.message : "Could not assign."); }
     finally { setBusy(false); setOpen(false); }
   };
   return (
@@ -167,9 +170,11 @@ export default function LeadsPage() {
           <button onClick={() => setAdding(true)} className="btn-brand inline-flex h-9 items-center gap-2 rounded-lg px-4 text-[13px] font-semibold transition"><Plus className="h-4 w-4" />Add a Lead</button>
         </div>
 
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-          {kpis.map((k) => <Kpi key={k.label} {...k} />)}
-        </div>
+        {loading ? <SkeletonKpis count={6} /> : (
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+            {kpis.map((k) => <Kpi key={k.label} {...k} />)}
+          </div>
+        )}
 
         <div className="pt-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -224,7 +229,7 @@ export default function LeadsPage() {
             </div></div>
 
             {loading ? (
-              <div className="p-12 text-center text-[13px] text-n400">Loading…</div>
+              <SkeletonRows rows={8} cols={6} />
             ) : filtered.length === 0 ? (
               <div className="px-4 py-16 text-center">
                 <p className="text-[14px] font-semibold text-n800">{rows.length === 0 ? "No leads yet" : "No leads match your filters"}</p>

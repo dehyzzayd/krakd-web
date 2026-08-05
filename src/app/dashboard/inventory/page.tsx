@@ -11,6 +11,8 @@ import { Topbar } from "@/components/app/Topbar";
 import { ErrorBanner } from "@/components/app/AppKit";
 import { BulkImportSheet } from "@/components/app/BulkImportSheet";
 import { Sheet } from "@/components/app/Sheet";
+import { SkeletonKpis, SkeletonRows } from "@/components/app/Skeleton";
+import { useToast } from "@/components/app/Toast";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -74,11 +76,12 @@ function PriceSheet({ v, label, onClose, onSaved }: { v: V; label: string; onClo
   const [price, setPrice] = useState(String(v.price));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
   const save = async () => {
     const n = Math.round(parseFloat(price.replace(/[^0-9.]/g, "")));
     if (!isFinite(n) || n < 0) { setErr("Enter a valid price."); return; }
     setBusy(true); setErr(null);
-    try { await apiFetch(`/inventory/${v.id}`, { method: "PATCH", body: JSON.stringify({ priceCents: n * 100 }) }); onSaved(); onClose(); }
+    try { await apiFetch(`/inventory/${v.id}`, { method: "PATCH", body: JSON.stringify({ priceCents: n * 100 }) }); toast.success("Price updated"); onSaved(); onClose(); }
     catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
     finally { setBusy(false); }
   };
@@ -109,9 +112,10 @@ export default function InventoryPage() {
   const [ageFilter, setAgeFilter] = useState("");   // "" | fresh | aging | stale
   const [menu, setMenu] = useState<"" | "sort" | "filter">("");
 
-  const mutate = async (id: string, body: Record<string, unknown>) => {
-    try { await apiFetch(`/inventory/${id}`, { method: "PATCH", body: JSON.stringify(body) }); reload(); }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Update failed."); }
+  const toast = useToast();
+  const mutate = async (id: string, body: Record<string, unknown>, msg = "Inventory updated") => {
+    try { await apiFetch(`/inventory/${id}`, { method: "PATCH", body: JSON.stringify(body) }); toast.success(msg); reload(); }
+    catch (e) { toast.error(e instanceof ApiError ? e.message : "Update failed."); }
   };
 
   const def = verticalDef(data?.vertical);
@@ -142,7 +146,7 @@ export default function InventoryPage() {
     return out;
   }, [rows, tab, q, ageFilter, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const wholesale = (v: V) => { if (confirm(`Move ${nameOf(v)} to wholesale? It will be removed from your retail lot.`)) mutate(v.id, { status: "WHOLESALE" }); };
+  const wholesale = (v: V) => { if (confirm(`Move ${nameOf(v)} to wholesale? It will be removed from your retail lot.`)) mutate(v.id, { status: "WHOLESALE" }, "Moved to wholesale"); };
 
   const exportFeed = () => {
     const esc = (val: unknown) => `"${String(val ?? "").replace(/"/g, '""')}"`;
@@ -172,13 +176,13 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
+        {loading ? <SkeletonKpis count={5} /> : <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
           <Kpi label="Units live" value={s?.unitsLive ?? 0} sub={auto ? "in stock" : "live now"} />
           <Kpi label={dash.valueLabel} value={`$${((s?.retailValue ?? 0) / 1000).toFixed(0)}k`} sub={auto ? "total on lot" : "total value"} />
           <Kpi label={dash.daysLabel} value={`${s?.avgDays ?? 0}d`} sub={auto ? "turn velocity" : "time to sell"} />
           <Kpi label="Aging · 45d+" value={`${s?.agingPct ?? 0}%`} sub="needs action" tone={(s?.agingPct ?? 0) > 12 ? "danger" : "default"} />
           {dash.showGross && <Kpi label="Avg front gross" value={money(s?.avgFrontGross ?? 0)} sub="per unit" tone="success" />}
-        </div>
+        </div>}
 
         <div className="flex flex-col justify-between gap-3 pt-5 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +221,7 @@ export default function InventoryPage() {
             <div className="border-b border-n200 p-4"><div className="flex flex-wrap items-center gap-2">{TABS.map(([k, label]) => { const on = tab === k; const count = k === "all" ? rows.length : rows.filter((v) => v.status === k).length; return <button key={k} onClick={() => setTab(k)} className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition", on ? "bg-brand text-white" : "text-n500 hover:bg-n100")}>{label}<span className={cn("grid h-4 min-w-5 place-items-center rounded-full px-1.5 text-[10px]", on ? "bg-white text-brand" : "bg-n100 text-n500")}>{count}</span></button>; })}</div></div>
 
             {loading ? (
-              <div className="p-12 text-center text-[13px] text-n400">Loading…</div>
+              <SkeletonRows rows={8} cols={6} />
             ) : list.length === 0 ? (
               <div className="px-4 py-16 text-center">
                 <p className="text-[14px] font-semibold text-n800">{rows.length === 0 ? dash.emptyTitle : `No ${dash.units} match`}</p>

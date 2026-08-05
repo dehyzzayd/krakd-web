@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
+import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
 import { ATTESTATION_METHODS, type ConsentRecord } from "@/lib/consent";
 import { ShieldCheck, ShieldAlert } from "lucide-react";
@@ -30,6 +31,7 @@ export function ConsentSheet({ id, leadName, onClose, onSaved }: { id: string; l
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => { apiFetch<{ consent: ConsentRecord }>(`/leads/${id}/consent`).then((r) => setConsent(r.consent ?? {})).catch(() => {}); }, [id]);
 
@@ -37,7 +39,7 @@ export function ConsentSheet({ id, leadName, onClose, onSaved }: { id: string; l
     setBusy(true); setErr(null);
     try {
       const r = await apiFetch<{ consent: ConsentRecord }>(`/leads/${id}/consent`, { method: "PUT", body: JSON.stringify({ channel, status, method: status === "granted" ? method : undefined, note: note || undefined }) });
-      setConsent(r.consent ?? {}); onSaved();
+      setConsent(r.consent ?? {}); toast.success(status === "granted" ? "Consent recorded" : "Consent revoked"); onSaved();
     } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
     finally { setBusy(false); }
   };

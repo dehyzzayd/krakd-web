@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
+import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
 
 type Veh = { id: string; year: number; make: string; model: string; trim: string; price: number };
@@ -21,6 +22,7 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
   const [members, setMembers] = useState<{ id: string; name: string; status: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +37,7 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
     try {
       const { vehicleId, assignedToId, ...rest } = f;
       await apiFetch("/leads", { method: "POST", body: JSON.stringify({ ...rest, ...(vehicleId ? { vehicleId } : {}), ...(assignedToId ? { assignedToId } : {}) }) });
+      toast.success("Lead added");
       onCreated();
       onClose();
     } catch (e) {
