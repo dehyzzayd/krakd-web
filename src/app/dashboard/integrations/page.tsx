@@ -9,10 +9,10 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/app/Toast";
 import { INTEGRATIONS, CATEGORY_LABEL, byId, type IntegrationDef, type IntegrationsRecord, type ProviderConfig } from "@/lib/integrations";
-import { Check, Users, CreditCard, Car, Clock } from "lucide-react";
+import { Check, Users, CreditCard, Clock } from "lucide-react";
 
 type Sub = { status: "active" | "scheduled_cancel" | "expired"; priceCents: number; periodEnd: string; beta: boolean } | undefined;
-const CAT_ICON = { crm: Users, credit: CreditCard, inventory: Car } as const;
+const CAT_ICON = { crm: Users, credit: CreditCard } as const;
 const money = (cents: number) => `$${Math.round(cents / 100)}`;
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -112,6 +112,19 @@ function ConnectSheet({ def, config, onClose, onSaved }: { def: IntegrationDef; 
   );
 }
 
+function LogoMark({ def }: { def: IntegrationDef }) {
+  const [err, setErr] = useState(false);
+  if (def.logo && !err) {
+    return (
+      <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-n200 bg-white p-1.5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={def.logo} alt={def.name} className="max-h-full max-w-full object-contain" onError={() => setErr(true)} />
+      </span>
+    );
+  }
+  return <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[14px] font-bold text-white" style={{ background: tile(def.name) }}>{initials(def.name)}</span>;
+}
+
 function IntegrationCard({ def, config, onOpen }: { def: IntegrationDef; config: ProviderConfig; onOpen: () => void }) {
   const paid = def.priceCents != null;
   const sub = config.subscription as Sub;
@@ -124,7 +137,7 @@ function IntegrationCard({ def, config, onOpen }: { def: IntegrationDef; config:
   return (
     <Card className="flex flex-col p-5">
       <div className="mb-3 flex items-center gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[14px] font-bold text-white" style={{ background: tile(def.name) }}>{initials(def.name)}</span>
+        <LogoMark def={def} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-n900">{def.name}</p>
           {paid && <span className="text-[11.5px] font-semibold text-brand">{def.trialDays ? `${def.trialDays}-day trial · ` : ""}{money(def.priceCents!)}/mo</span>}
@@ -142,7 +155,7 @@ export default function IntegrationsMarketplace() {
   const { data, reload } = useApi<{ integrations: IntegrationsRecord }>("/integrations");
   const [open, setOpen] = useState<string | null>(null);
   const rec = data?.integrations ?? {};
-  const cats = useMemo(() => (["crm", "credit", "inventory"] as const).map((c) => ({ c, items: INTEGRATIONS.filter((i) => i.category === c) })), []);
+  const cats = useMemo(() => (["crm", "credit"] as const).map((c) => ({ c, items: INTEGRATIONS.filter((i) => i.category === c) })).filter((x) => x.items.length), []);
   const openDef = open ? byId(open) : null;
 
   return (
