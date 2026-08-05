@@ -106,7 +106,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug
     },
   });
   const appt = await prisma.appointment.create({
-    data: { dealershipId: c.dealershipId, leadId: lead.id, vehicleId: listingId, type: "SERVICE", status: "SCHEDULED", scheduledStart: start, scheduledEnd: end, notes: d.note?.trim() ? `Website booking: ${d.note.trim()}` : "Booked online via website" },
+    data: { dealershipId: c.dealershipId, leadId: lead.id, vehicleId: listingId, type: "SERVICE", status: "SCHEDULED", scheduledStart: start, scheduledEnd: end, createdByAi: true, notes: d.note?.trim() ? `Website booking: ${d.note.trim()}` : "Booked online via website" },
   });
 
   const dealer = await prisma.dealership.findUnique({ where: { id: c.dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });

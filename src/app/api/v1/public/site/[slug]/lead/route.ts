@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
+import { aiFirstTouch } from "@/lib/server/ai";
 import { webConsentRecord } from "@/lib/consent";
 import type { Prisma } from "@prisma/client";
 
@@ -75,6 +76,7 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
   const ownerEmail = dealer?.users[0]?.email;
   if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: "Website", vehicle: vehicleLabel, contact: d.phone ?? d.email ?? "", leadId: lead.id });
   void deliverAdf(lead.dealershipId, lead.id).catch(() => {});
+  void aiFirstTouch(lead.dealershipId, lead.id).catch(() => {}); // Krakd AI opens the conversation
 
   return json({ ok: true }, 201);
 });
