@@ -17,6 +17,7 @@ const leadSchema = z.object({
   email: z.string().optional(),
   message: z.string().max(1000).optional(),
   vehicleId: z.string().uuid().optional(),
+  campaignId: z.string().uuid().optional(), // attribution: ?kc= from the ad landing URL
   consent: z.boolean().optional(), // TCPA/CAN-SPAM express consent checkbox
 }).refine((d) => d.phone?.trim() || d.email?.trim(), { message: "Add a phone or email so we can reach you" });
 
@@ -41,9 +42,16 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
     if (v) { vehicleId = v.id; vehicleLabel = `${v.year} ${v.make} ${v.model}`; }
   }
 
+  // attribute to a campaign only if the id is real and belongs to this dealer
+  let campaignId: string | undefined;
+  if (d.campaignId) {
+    const cmp = await prisma.campaign.findFirst({ where: { id: d.campaignId, dealershipId }, select: { id: true } });
+    if (cmp) campaignId = cmp.id;
+  }
+
   const lead = await prisma.lead.create({
     data: {
-      dealershipId, vehicleId,
+      dealershipId, vehicleId, campaignId,
       firstName: d.firstName,
       lastName: d.lastName,
       emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,

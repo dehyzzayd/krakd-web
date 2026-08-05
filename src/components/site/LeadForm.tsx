@@ -27,9 +27,10 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
     if (preview) { setDone(true); return; }
     setBusy(true);
     try {
+      const campaignId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("kc") || undefined : undefined;
       const res = await fetch(`/api/v1/public/site/${slug}/lead`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, vehicleId: vehicle?.id, consent }),
+        body: JSON.stringify({ ...f, vehicleId: vehicle?.id, consent, campaignId }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.message ?? "Something went wrong."); }
       setDone(true);

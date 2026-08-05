@@ -23,6 +23,7 @@ const patchSchema = z.object({
   headline: z.string().max(255).optional(),
   description: z.string().max(255).optional(),
   cta: z.string().max(40).optional(),
+  spentCents: z.number().int().min(0).max(1_000_000_00).optional(), // dealer-recorded actual spend
 });
 
 /* PATCH /api/v1/campaigns/[id] — rename, edit creative, submit for review, pause/resume, end.

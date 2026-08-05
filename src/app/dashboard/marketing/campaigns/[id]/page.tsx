@@ -9,12 +9,13 @@ import { useApi } from "@/lib/useApi";
 import { apiFetch } from "@/lib/api";
 import { AdPreview } from "@/components/app/AdPreview";
 import { AreaChart, FunnelChart } from "@/components/app/Charts";
-import { TrendingUp, Lightbulb } from "lucide-react";
+import { useToast } from "@/components/app/Toast";
+import { TrendingUp, Lightbulb, Copy } from "lucide-react";
 
 type Metrics = { cpmCents: number; ctr: number; cpcCents: number; cplCents: number; costPerSoldCents: number; roas: number; grossCents: number };
 type Stage = { key: string; value: number; rate: number | null; costEachCents: number };
 type Insight = { tone: "ok" | "warn" | "info" | "brand"; title: string; detail: string };
-type Analytics = { series: { date: string; spendCents: number; impressions: number; clicks: number; leads: number }[]; metrics: Metrics; funnel: Stage[]; insights: Insight[]; sold: number; appts: number };
+type Analytics = { series: { date: string; spendCents: number; impressions: number; clicks: number; leads: number }[]; metrics: Metrics; funnel: Stage[]; insights: Insight[]; sold: number; appts: number; leadCount: number };
 const shortDate = (s: string) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 const INSIGHT_TONE: Record<string, string> = { ok: "bg-ok-soft text-ok", warn: "bg-warn-soft text-warn", info: "bg-n100 text-n600", brand: "bg-brand-soft text-brand" };
 
@@ -45,13 +46,25 @@ export default function CampaignDetail() {
   const { data, loading, error, reload } = useApi<Campaign>(`/campaigns/${id}`);
   const { data: an } = useApi<Analytics>(`/campaigns/${id}/analytics`);
   const { data: ov } = useApi<{ dealershipName?: string }>("/overview");
+  const { data: site } = useApi<{ slug?: string; status?: string }>("/website");
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [spend, setSpend] = useState("");
+  const [savingSpend, setSavingSpend] = useState(false);
 
   const patch = async (status: string) => {
     setBusy(true);
-    try { await apiFetch(`/campaigns/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); reload(); }
+    try { await apiFetch(`/campaigns/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); toast.success("Campaign updated"); reload(); }
     finally { setBusy(false); }
   };
+  const saveSpend = async () => {
+    const cents = Math.round((parseFloat(spend.replace(/[^0-9.]/g, "")) || 0) * 100);
+    setSavingSpend(true);
+    try { await apiFetch(`/campaigns/${id}`, { method: "PATCH", body: JSON.stringify({ spentCents: cents }) }); toast.success("Spend updated"); setSpend(""); reload(); }
+    catch { toast.error("Could not save spend."); }
+    finally { setSavingSpend(false); }
+  };
+  const trackUrl = site?.slug && typeof window !== "undefined" ? `${window.location.origin}/site/${site.slug}?kc=${id}` : null;
 
   if (error) return (
     <>
@@ -149,30 +162,50 @@ export default function CampaignDetail() {
               ))}
             </div>
 
+            {/* attribution + real spend */}
+            <Card className="p-5">
+              <p className="mb-1 text-[13px] font-semibold text-n900">Attribution &amp; spend</p>
+              <p className="mb-3 text-[12px] text-n500">Put this tracked link in your ad — every lead it drives is credited to this campaign automatically.</p>
+              {trackUrl ? (
+                <div className="flex items-center gap-2">
+                  <input readOnly value={trackUrl} className="tnum h-9 flex-1 rounded-md border border-n200 bg-n50 px-3 text-[12.5px] text-n700 outline-none" />
+                  <button onClick={() => { navigator.clipboard?.writeText(trackUrl); toast.success("Link copied"); }} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-n200 bg-white px-3 text-[12.5px] font-semibold text-n700 transition hover:bg-n100"><Copy className="h-3.5 w-3.5" />Copy</button>
+                </div>
+              ) : <p className="text-[12px] text-n400">Publish your website to get a tracked campaign link.</p>}
+              <div className="mt-4 flex items-end gap-2">
+                <label className="block flex-1">
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-n500">Actual spend to date</span>
+                  <div className="flex h-9 items-center rounded-md border border-n200 bg-white px-2.5 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20"><span className="text-[13px] font-semibold text-n400">$</span><input value={spend} onChange={(e) => setSpend(e.target.value)} inputMode="numeric" placeholder={String(Math.round(c.spentCents / 100))} className="tnum w-full bg-transparent px-1.5 text-[13px] font-semibold text-n900 outline-none" /></div>
+                </label>
+                <button onClick={saveSpend} disabled={savingSpend} className="btn-brand h-9 rounded-md px-4 text-[12.5px] font-semibold disabled:opacity-60">{savingSpend ? "Saving…" : "Save spend"}</button>
+              </div>
+              <p className="mt-2 text-[11.5px] text-n400">Recording real spend turns on real cost-per-lead and ROAS below. Currently recorded: {money(c.spentCents)}.</p>
+            </Card>
+
             {/* performance */}
             <div>
               <p className="mb-2 text-[13px] font-semibold text-n900">Performance</p>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {[["Impressions", c.impressions.toLocaleString()], ["Clicks", c.clicks.toLocaleString()], ["Leads", `${c.leadCount}`], ["Spent", money(c.spentCents)]].map(([l, v]) => (
+                {[["Leads", `${an?.leadCount ?? c.leadCount}`], ["Sold", `${an?.sold ?? 0}`], ["Spent", money(c.spentCents)], ["Cost / lead", (an?.leadCount ?? 0) && c.spentCents ? money(an!.metrics.cplCents) : "—"]].map(([l, v]) => (
                   <Card key={l} className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.04em] text-n500">{l}</p><p className="tnum mt-1.5 text-[20px] font-semibold text-n900">{v}</p></Card>
                 ))}
               </div>
               {c.status === "DRAFT" && <p className="mt-2 text-[12px] text-n500">Performance starts reporting once the campaign is reviewed and goes live.</p>}
             </div>
 
-            {/* analytics — trend, efficiency metrics, matchback, insights */}
-            {an && c.impressions > 0 && (
+            {/* analytics — real leads-over-time, efficiency metrics, matchback, insights */}
+            {an && ((an.leadCount ?? 0) > 0 || c.spentCents > 0) && (
               <>
                 <Card className="p-5">
                   <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Delivery · last 30 days</p></div>
-                    <div className="flex items-center gap-4 text-[11.5px] text-n500"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#ff5a16" }} />Spend</span><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#0ea5e9" }} />Leads</span></div>
+                    <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Leads · last 30 days</p></div>
+                    <div className="flex items-center gap-4 text-[11.5px] text-n500"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#ff5a16" }} />Leads</span></div>
                   </div>
-                  <AreaChart data={an.series.map((d) => ({ label: shortDate(d.date), a: d.spendCents, b: d.leads }))} aName="Spend" bName="Leads" fmtA={money} fmtB={(n) => `${n}`} />
+                  <AreaChart data={an.series.map((d) => ({ label: shortDate(d.date), a: d.leads, b: 0 }))} aName="Leads" bName="" fmtA={(n) => `${n}`} fmtB={(n) => `${n}`} />
                 </Card>
 
                 <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
-                  {[["CPM", money(an.metrics.cpmCents)], ["CTR", `${an.metrics.ctr.toFixed(2)}%`], ["CPC", c.clicks ? money(an.metrics.cpcCents) : "—"], ["Cost / lead", c.leadCount ? money(an.metrics.cplCents) : "—"], ["Cost / sold", an.metrics.costPerSoldCents ? money(an.metrics.costPerSoldCents) : "—"], ["ROAS", an.metrics.roas ? `${an.metrics.roas.toFixed(1)}×` : "—"]].map(([l, v]) => (
+                  {[["CPM", c.impressions ? money(an.metrics.cpmCents) : "—"], ["CTR", c.impressions ? `${an.metrics.ctr.toFixed(2)}%` : "—"], ["CPC", c.clicks ? money(an.metrics.cpcCents) : "—"], ["Cost / lead", (an.leadCount ?? 0) && c.spentCents ? money(an.metrics.cplCents) : "—"], ["Cost / sold", an.metrics.costPerSoldCents ? money(an.metrics.costPerSoldCents) : "—"], ["ROAS", an.metrics.roas ? `${an.metrics.roas.toFixed(1)}×` : "—"]].map(([l, v]) => (
                     <Card key={l} className="p-3.5"><p className="text-[11px] font-medium uppercase tracking-[0.04em] text-n500">{l}</p><p className="tnum mt-1.5 text-[17px] font-semibold text-n900">{v}</p></Card>
                   ))}
                 </div>
@@ -180,7 +213,7 @@ export default function CampaignDetail() {
                 <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
                   <Card className="p-5">
                     <p className="text-[13px] font-semibold text-n900">Sales matchback</p>
-                    <p className="mb-4 mt-0.5 text-[12px] text-n500">Impression → sold vehicle, with cost at each step.</p>
+                    <p className="mb-4 mt-0.5 text-[12px] text-n500">Attributed lead → sold vehicle, with cost at each step.</p>
                     <FunnelChart stages={an.funnel.map((s) => ({ key: s.key, value: s.value, rate: s.rate, cost: s.value ? `${money(s.costEachCents)}/ea` : "—" }))} />
                   </Card>
                   <Card className="p-5">

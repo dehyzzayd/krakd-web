@@ -39,9 +39,9 @@ export default function MarketingOverview() {
   const anyConnected = data && Object.values(data.connections).some(Boolean);
 
   const KPIS: [string, string][] = [
-    ["Ad spend · MTD", money(t?.spendCents ?? 0)],
-    ["Impressions", (t?.impressions ?? 0).toLocaleString()],
-    ["Leads", `${t?.leads ?? 0}`],
+    ["Ad spend (recorded)", money(t?.spendCents ?? 0)],
+    ["Attributed leads", `${t?.leads ?? 0}`],
+    ["Sold", `${data?.sold ?? 0}`],
     ["Cost per lead", cpl ? money(cpl) : "—"],
   ];
 
@@ -51,7 +51,7 @@ export default function MarketingOverview() {
       <AppMain>
         {error && <ErrorBanner onRetry={reload} />}
         <p className="mb-3 text-[13.5px] text-n600">Build campaigns from your inventory, set a budget, and track the leads they drive — all in one place.</p>
-        <div className="mb-4 rounded-lg border border-n200 bg-n50 px-3.5 py-2.5 text-[12px] leading-relaxed text-n600"><b className="text-n800">Preview:</b> Ad-account connections and live delivery metrics (spend, impressions, ROAS) are in preview — connecting an account doesn&apos;t spend real budget yet. Campaign building and lead capture are fully live.</div>
+        <div className="mb-4 rounded-lg border border-n200 bg-n50 px-3.5 py-2.5 text-[12px] leading-relaxed text-n600"><b className="text-n800">These numbers are real:</b> leads and sales are attributed from the tracked campaign links your ads use, and cost/ROI comes from the spend you record on each campaign. Automatic ad-account sync (live impressions &amp; spend) is still in preview.</div>
 
         {/* live KPIs */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -60,17 +60,16 @@ export default function MarketingOverview() {
           ))}
         </div>
 
-        {/* 30-day performance trend */}
-        {t && t.count > 0 && (data?.daily?.some((d) => d.spendCents > 0)) && (
+        {/* 30-day leads trend (real, from attributed lead timestamps) */}
+        {t && (data?.daily?.some((d) => d.leads > 0)) && (
           <Card className="mt-3 p-5">
             <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Performance · last 30 days</p></div>
+              <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand" /><p className="text-[13px] font-semibold text-n900">Attributed leads · last 30 days</p></div>
               <div className="flex items-center gap-4 text-[11.5px] text-n500">
-                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#ff5a16" }} />Spend</span>
-                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#0ea5e9" }} />Leads</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#ff5a16" }} />Leads</span>
               </div>
             </div>
-            <AreaChart data={(data?.daily ?? []).map((d) => ({ label: shortDate(d.date), a: d.spendCents, b: d.leads }))} aName="Spend" bName="Leads" fmtA={money} fmtB={(n) => `${n}`} />
+            <AreaChart data={(data?.daily ?? []).map((d) => ({ label: shortDate(d.date), a: d.leads, b: 0 }))} aName="Leads" bName="" fmtA={(n) => `${n}`} fmtB={(n) => `${n}`} />
           </Card>
         )}
 
