@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { AI_CONFIG } from "@/lib/krakdai";
 import { authApi, apiFetch } from "@/lib/api";
+import { formatUSPhone } from "@/lib/phone";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Section, Field, Row, Switch, LinkField, inputCls } from "./controls";
@@ -123,7 +124,7 @@ export function ChatbotTab() {
             </div>
           </div>
           <div className="mt-4"><Field label="Forward live calls to" hint="When a buyer asks for a person, Krakd rings this line.">
-            <input value={forward} onChange={(e) => setForward(e.target.value)} className={cn(inputCls, "tnum")} /></Field></div>
+            <input value={forward} inputMode="tel" onChange={(e) => setForward(formatUSPhone(e.target.value))} className={cn(inputCls, "tnum")} /></Field></div>
         </Section>
 
         {/* rules */}

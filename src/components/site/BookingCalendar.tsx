@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Check, Clock, Globe, CalendarDays, Loader2, ArrowLeft, CalendarPlus } from "lucide-react";
 import type { SiteConfig } from "@/lib/server/site";
+import { formatUSPhone } from "@/lib/phone";
 import { accentOf } from "@/lib/server/site";
 import { siteTheme } from "./theme";
 import { vertical as verticalDef } from "./verticals";
@@ -159,7 +160,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
                       <input value={f.firstName} onChange={(e) => set("firstName", e.target.value)} placeholder="First name" className={FIELD} />
                       <input value={f.lastName} onChange={(e) => set("lastName", e.target.value)} placeholder="Last name" className={FIELD} />
                     </div>
-                    <input value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="Phone" className={FIELD} />
+                    <input value={f.phone} inputMode="tel" onChange={(e) => set("phone", formatUSPhone(e.target.value))} placeholder="Phone" className={FIELD} />
                     <input value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="Email" className={FIELD} />
                     <textarea value={f.note} onChange={(e) => set("note", e.target.value)} rows={3} placeholder="Anything we should know? (optional)" className={`${FIELD} h-auto resize-y py-2`} />
                     <input type="text" name="company" value={hp} onChange={(e) => setHp(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />

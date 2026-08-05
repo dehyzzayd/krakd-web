@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
+import { formatUSPhone } from "@/lib/phone";
 import { Card } from "@/components/app/AppKit";
 import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
@@ -319,7 +320,7 @@ export function ContactPanel({ w, reload }: { w: Web; reload: () => void }) {
     <div className="space-y-5">
       <Card className="p-5"><h3 className="mb-4 text-[14px] font-semibold text-n900">Contact</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <L label="Phone"><input value={f.phone} onChange={(e) => set("phone", e.target.value)} className={cn(field, "tnum")} /></L>
+          <L label="Phone"><input value={f.phone} inputMode="tel" onChange={(e) => set("phone", formatUSPhone(e.target.value))} className={cn(field, "tnum")} /></L>
           <L label="Email"><input value={f.email} onChange={(e) => set("email", e.target.value)} className={field} /></L>
           <L label="Address"><input value={f.address} onChange={(e) => set("address", e.target.value)} className={field} /></L>
           <div className="grid grid-cols-3 gap-2"><L label="City"><input value={f.city} onChange={(e) => set("city", e.target.value)} className={field} /></L><L label="State"><input value={f.state} onChange={(e) => set("state", e.target.value)} className={field} /></L><L label="ZIP"><input value={f.zip} onChange={(e) => set("zip", e.target.value)} className={cn(field, "tnum")} /></L></div>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CATALOG, fieldConf, type CField, type CreditConfig } from "@/lib/creditApp";
+import { formatUSPhone } from "@/lib/phone";
 import { ShieldCheck, Loader2, Check, Lock } from "lucide-react";
 
 type Business = { name: string; brandColor: string | null; logoUrl: string | null; phone: string | null };
@@ -16,7 +17,9 @@ function FieldInput({ f, value, onChange, disabled, req }: { f: CField; value: s
         ? <select {...common}><option value="">Select…</option>{f.options?.map((o) => <option key={o} value={o}>{o}</option>)}</select>
         : f.type === "money"
           ? <div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#94a3b8]">$</span><input {...common} inputMode="decimal" onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))} className={`${input} pl-6`} placeholder="0" /></div>
-          : <input {...common} type={f.type === "date" ? "date" : f.type === "number" ? "text" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"} inputMode={f.type === "number" ? "numeric" : undefined} placeholder={f.type === "ssn" ? "•••-••-••••" : ""} />}
+          : f.type === "tel"
+            ? <input {...common} type="tel" inputMode="tel" onChange={(e) => onChange(formatUSPhone(e.target.value))} placeholder="(555) 123-4567" />
+            : <input {...common} type={f.type === "date" ? "date" : f.type === "number" ? "text" : f.type === "email" ? "email" : "text"} inputMode={f.type === "number" ? "numeric" : undefined} placeholder={f.type === "ssn" ? "•••-••-••••" : ""} />}
     </label>
   );
 }

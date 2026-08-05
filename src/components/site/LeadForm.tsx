@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SiteVehicle } from "@/lib/server/site";
+import { formatUSPhone } from "@/lib/phone";
 
 const field = "w-full rounded-lg border border-black/12 bg-white px-3 py-2.5 text-[14px] outline-none focus:border-black/30";
 
@@ -53,7 +54,7 @@ export function LeadForm({ slug, accent, vehicle, financing, preview, compact }:
         <input placeholder="First name" value={f.firstName} onChange={(e) => set("firstName", e.target.value)} className={field} />
         <input placeholder="Last name" value={f.lastName} onChange={(e) => set("lastName", e.target.value)} className={field} />
       </div>
-      <input placeholder="Phone" value={f.phone} onChange={(e) => set("phone", e.target.value)} className={field} />
+      <input placeholder="Phone" inputMode="tel" value={f.phone} onChange={(e) => set("phone", formatUSPhone(e.target.value))} className={field} />
       <input placeholder="Email" value={f.email} onChange={(e) => set("email", e.target.value)} className={field} />
       <textarea placeholder="Message" value={f.message} onChange={(e) => set("message", e.target.value)} rows={3} className={`${field} resize-none`} />
       <input type="text" name="company" value={hp} onChange={(e) => setHp(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />

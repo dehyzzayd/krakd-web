@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { Topbar } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
 import { apiFetch, ApiError } from "@/lib/api";
+import { formatUSPhone } from "@/lib/phone";
 import { Sheet } from "@/components/app/Sheet";
 import { DealSheet } from "@/components/app/DealSheet";
 import { vertical as verticalDef } from "@/components/site/verticals";
@@ -428,7 +429,7 @@ function EditModal({ id, lead, onClose, onDone }: { id: string; lead: Lead; onCl
           <L label="First name"><input value={f.firstName} onChange={(e) => set("firstName", e.target.value)} className={field} /></L>
           <L label="Last name"><input value={f.lastName} onChange={(e) => set("lastName", e.target.value)} className={field} /></L>
         </div>
-        <L label="Phone"><input value={f.phone} onChange={(e) => set("phone", e.target.value)} className={field} /></L>
+        <L label="Phone"><input value={f.phone} inputMode="tel" onChange={(e) => set("phone", formatUSPhone(e.target.value))} className={field} /></L>
         <L label="Email"><input value={f.email} onChange={(e) => set("email", e.target.value)} className={field} /></L>
         <L label="Source"><input value={f.source} onChange={(e) => set("source", e.target.value)} className={field} /></L>
         <div className="flex gap-4 pt-1">

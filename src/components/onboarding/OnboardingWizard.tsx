@@ -6,6 +6,7 @@ import { authApi, setSession, ApiError } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
 import { Field } from "@/components/auth/AuthScaffold";
 import { VEHICLE_TYPES } from "./VehicleIcons";
+import { formatUSPhone } from "@/lib/phone";
 import { Car, Home, UtensilsCrossed, Scissors, ShoppingBag, LayoutGrid, Stethoscope, HardHat, type LucideIcon } from "lucide-react";
 
 /* ─────────────────────────────── data ─────────────────────────────── */
@@ -52,14 +53,6 @@ const EMPTY: Form = {
   street: "", unit: "", city: "", state: "", zip: "", phone: "",
 };
 
-function formatUSPhone(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 10);
-  const a = d.slice(0, 3), b = d.slice(3, 6), c = d.slice(6, 10);
-  if (d.length > 6) return `(${a}) ${b}-${c}`;
-  if (d.length > 3) return `(${a}) ${b}`;
-  if (d.length > 0) return `(${a}`;
-  return "";
-}
 
 function priceFor(id: string, cycle: "monthly" | "annual") {
   const p = PLANS.find((x) => x.id === id)!;

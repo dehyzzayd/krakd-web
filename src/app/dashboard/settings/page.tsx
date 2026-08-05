@@ -8,6 +8,7 @@ import { useApi } from "@/lib/useApi";
 import { Building2, MapPin, Clock, Palette, Loader2, Check, Upload } from "lucide-react";
 import { IntegrationsPanel } from "@/components/app/IntegrationsPanel";
 import { useToast } from "@/components/app/Toast";
+import { formatUSPhone } from "@/lib/phone";
 
 const INDUSTRIES = [
   { id: "AUTOMOTIVE", label: "Automotive" }, { id: "REAL_ESTATE", label: "Real estate" },
@@ -108,7 +109,7 @@ export default function SettingsPage() {
               <L label="Industry">
                 <select value={f.vertical} onChange={(e) => set("vertical", e.target.value)} className={input}>{INDUSTRIES.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</select>
               </L>
-              <L label="Phone"><input value={f.phone ?? ""} onChange={(e) => set("phone", e.target.value)} className={cn(input, "tnum")} placeholder="(512) 555-0100" /></L>
+              <L label="Phone"><input value={f.phone ?? ""} inputMode="tel" onChange={(e) => set("phone", formatUSPhone(e.target.value))} className={cn(input, "tnum")} placeholder="(512) 555-0100" /></L>
               <L label="Email"><input value={f.email ?? ""} onChange={(e) => set("email", e.target.value)} className={input} placeholder="hello@business.com" /></L>
             </div>
             {industryChanged && <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-[12px] text-warn">Changing your industry reskins the whole workspace (listings, terminology, website). The page will refresh when you save.</p>}

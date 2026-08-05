@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { Sheet } from "./Sheet";
 import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
+import { formatUSPhone } from "@/lib/phone";
 
 type Veh = { id: string; year: number; make: string; model: string; trim: string; price: number };
 
@@ -58,7 +59,7 @@ export function AddLeadSheet({ open, onClose, onCreated }: { open: boolean; onCl
           <Labeled label="First name"><input value={f.firstName} onChange={(e) => set("firstName", e.target.value)} className={fieldCls} /></Labeled>
           <Labeled label="Last name"><input value={f.lastName} onChange={(e) => set("lastName", e.target.value)} className={fieldCls} /></Labeled>
         </div>
-        <Labeled label="Phone"><input value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="(512) 555-0100" className={cn(fieldCls, "tnum")} /></Labeled>
+        <Labeled label="Phone"><input value={f.phone} inputMode="tel" onChange={(e) => set("phone", formatUSPhone(e.target.value))} placeholder="(512) 555-0100" className={cn(fieldCls, "tnum")} /></Labeled>
         <Labeled label="Email"><input value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="buyer@email.com" className={fieldCls} /></Labeled>
         <Labeled label="Interested in">
           {vehicles.length > 0 ? (

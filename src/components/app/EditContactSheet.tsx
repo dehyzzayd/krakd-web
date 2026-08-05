@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sheet } from "./Sheet";
 import { useToast } from "./Toast";
 import { apiFetch, ApiError } from "@/lib/api";
+import { formatUSPhone } from "@/lib/phone";
 import type { Contact } from "@/lib/crm";
 import { Mail, Phone, Plus, Trash2, ChevronDown } from "lucide-react";
 
@@ -99,7 +100,7 @@ export function EditContactSheet({ open, onClose, contact, onCreated }: { open: 
               <div key={i} className="flex items-center gap-2 rounded-lg border border-n200 bg-white p-3 transition hover:border-brand/30">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ok-soft text-ok"><Phone className="h-4 w-4" /></span>
                 <span className="flex h-8 items-center gap-1 rounded-md border border-n200 px-2 text-[13px]">🇺🇸<ChevronDown className="h-3 w-3 text-n400" /></span>
-                <input value={ph.value} onChange={(e) => setPhone(i, { value: e.target.value })} placeholder="Phone number" className="h-8 flex-1 bg-transparent px-1 text-[13px] outline-none" />
+                <input value={ph.value} inputMode="tel" onChange={(e) => setPhone(i, { value: formatUSPhone(e.target.value) })} placeholder="Phone number" className="h-8 flex-1 bg-transparent px-1 text-[13px] outline-none" />
                 <select value={ph.type} onChange={(e) => setPhone(i, { type: e.target.value })} className={miniSel}><option value="mobile">Mobile</option><option value="work">Work</option><option value="home">Home</option></select>
                 {phones.length > 1 && <button onClick={() => setPhones((p) => p.filter((_, j) => j !== i))} className="grid h-8 w-8 place-items-center rounded-md text-n400 transition hover:text-err"><Trash2 className="h-4 w-4" /></button>}
               </div>
