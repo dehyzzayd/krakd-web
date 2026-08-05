@@ -65,6 +65,17 @@ export async function sendAppointmentEmail(p: { to: string; subject: string; bod
   } catch (e) { console.error("appt email failed:", e); return false; }
 }
 
+/** Generic document email (e.g. a credit-app PDF to a lender/CRM intake). */
+export async function sendDocEmail(p: { to: string; subject: string; text: string; filename: string; content: Buffer }): Promise<boolean> {
+  const recipient = override || p.to;
+  if (!resend) { console.log(`[email disabled] would send doc "${p.subject}" to ${recipient}`); return false; }
+  try {
+    const { error } = await resend.emails.send({ from, to: recipient, subject: p.subject, text: p.text, attachments: [{ filename: p.filename, content: p.content }] });
+    if (error) { console.warn(`resend doc error to ${recipient}: ${error.message}`); return false; }
+    return true;
+  } catch (e) { console.error("doc email failed:", e); return false; }
+}
+
 export async function sendOtpEmail(p: { to: string; code: string }) {
   await send(
     p.to,

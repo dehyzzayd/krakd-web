@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { Logo } from "@/components/layout/Logo";
 import { useSidebar } from "./SidebarContext";
 import { vertical as verticalDef } from "@/components/site/verticals";
-import { Settings as SettingsIcon, FileText, Users as UsersIcon, BarChart3 } from "lucide-react";
+import { Settings as SettingsIcon, FileText, Users as UsersIcon, BarChart3, Plug } from "lucide-react";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import {
@@ -46,6 +46,7 @@ const NAV: Entry[] = [
     ],
   },
   { type: "item", href: "/dashboard/reports", label: "Reports", Icon: (p: { className?: string }) => <BarChart3 className={p.className} /> },
+  { type: "item", href: "/dashboard/integrations", label: "Integrations", Icon: (p: { className?: string }) => <Plug className={p.className} /> },
   { type: "item", href: "/dashboard/team", label: "Team", Icon: (p: { className?: string }) => <UsersIcon className={p.className} /> },
   { type: "item", href: "/dashboard/settings", label: "Settings", Icon: (p: { className?: string }) => <SettingsIcon className={p.className} /> },
 ];

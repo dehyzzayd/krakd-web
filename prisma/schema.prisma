@@ -65,6 +65,7 @@ model Dealership {
   adConnections Json             @default("{}") // connected ad accounts: { facebook, instagram, google }
   feedConfig    Json             @default("{}") // FTP inventory feed: { enabled, protocol, host, port, username, password, path, lastRunAt, lastResult }
   adfConfig     Json             @default("{}") // ADF lead delivery: { enabled, emails: string[] } — emails leads as ADF XML to a CRM/provider
+  integrations  Json             @default("{}") // marketplace integrations: { [providerId]: { enabled, connectedAt, ...fields } }
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
