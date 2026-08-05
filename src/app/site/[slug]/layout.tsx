@@ -14,11 +14,13 @@ export default async function SiteLayout({ children, params }: { children: React
   // chat widget is on by default for a published site; a dealer can turn it off
   // via the "Website" channel in Krakd AI settings (channels.website === false)
   let chatOn = true;
+  let welcome = "";
   const w = await prisma.website.findUnique({ where: { slug }, select: { dealershipId: true } });
   if (w) {
-    const ai = await prisma.aiSettings.findUnique({ where: { dealershipId: w.dealershipId }, select: { channels: true } });
+    const ai = await prisma.aiSettings.findUnique({ where: { dealershipId: w.dealershipId }, select: { channels: true, welcomeMessage: true } });
     const ch = (ai?.channels ?? {}) as { website?: boolean };
     chatOn = ch.website !== false;
+    welcome = ai?.welcomeMessage ?? "";
   }
 
   const bg = config.template === "PREMIUM" ? "#f4f0e8" : config.template === "AURORA" ? "#161227" : config.template === "QUIET" ? "#f5f3ee" : "#ffffff";
@@ -28,7 +30,7 @@ export default async function SiteLayout({ children, params }: { children: React
       <main>{children}</main>
       <SiteFooter config={config} />
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-      {chatOn && <script src="/widget.js" data-slug={slug} data-color={accentOf(config.primaryColor)} async />}
+      {chatOn && <script src="/widget.js" data-slug={slug} data-color={accentOf(config.primaryColor)} data-name={config.dealershipName} data-welcome={welcome} async />}
     </div>
   );
 }

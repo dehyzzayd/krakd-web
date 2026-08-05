@@ -7,6 +7,7 @@
   var HOST = new URL(script.src).origin;
   var COLOR = script.getAttribute("data-color") || "#2b6ba4";
   var NAME = script.getAttribute("data-name") || "Chat with us";
+  var WELCOME = (script.getAttribute("data-welcome") || "").trim();
   if (window.__krakdWidget) return; window.__krakdWidget = true;
 
   var css = ""
@@ -85,7 +86,8 @@
 
   function greet() {
     if (greeted) return; greeted = true;
-    addBubble("bot", "👋 Hi! Welcome to " + esc(NAME) + ". How can I help — are you interested in a specific vehicle, financing, or our hours &amp; location?");
+    var hi = WELCOME || ("Hey! 👋 Thanks for checking out " + NAME + " — what caught your eye?");
+    addBubble("bot", esc(hi));
     setTimeout(function () { text.focus(); }, 120);
   }
 

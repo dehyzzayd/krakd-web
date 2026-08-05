@@ -105,23 +105,23 @@ async function guidedReply(dealershipId: string, c: Ctx, s: ChatState, userText:
   if (stage === "intent") {
     s.interest = userText.slice(0, 300);
     s.stage = "name";
-    return withFaq("Happy to help with that! Can I grab your name so I can get you looked after?");
+    return withFaq("Happy to help you out. Who am I chatting with?");
   }
   if (stage === "name") {
     s.name = userText.replace(/^(hi|hey|hello|i'?m|it'?s|my name is)\s+/i, "").trim().slice(0, 80) || userText.trim().slice(0, 80);
     s.stage = "contact";
-    return withFaq(`Thanks ${firstName(s.name)}! What's the best phone or email to reach you?`);
+    return withFaq(`Great to meet you, ${firstName(s.name)}. What's the best number or email to reach you? I'll make sure someone looks after you personally.`);
   }
   if (stage === "contact") {
     const phone = normPhone(userText);
     const email = (userText.match(/[^\s@]+@[^\s@]+\.[^\s@]+/) || [])[0] || null;
-    if (!phone && !email) return withFaq("I didn't catch a phone number or email there — what's the best way to reach you?");
+    if (!phone && !email) return withFaq("Sorry — I didn't quite catch a number or email in there. What's the best way to get hold of you?");
     s.phone = phone ?? s.phone; s.email = email ?? s.email;
     s.leadId = await createChatLead(dealershipId, c, s, ip);
     s.stage = "open";
-    return withFaq(`Perfect — got it, ${firstName(s.name)}. Someone from ${c.name} will reach out to you shortly. Anything else I can help with in the meantime?`);
+    return withFaq(`Perfect, thanks ${firstName(s.name)} — I'll have someone from ${c.name} reach out to you really soon. Anything else you're curious about while you're here?`);
   }
-  return faq ?? "Got it — I've passed that to the team and they'll follow up shortly. Anything else I can help you with?";
+  return faq ?? "Good question — let me get the exact answer from the team and we'll get right back to you. Anything else on your mind?";
 }
 
 /* ── LLM agent path: grounded, tool-calling conversational agent ── */
@@ -132,27 +132,48 @@ async function inventoryLines(dealershipId: string): Promise<string[]> {
     where: { dealershipId, status: "AVAILABLE" },
     orderBy: [{ listedAt: "desc" }, { createdAt: "desc" }],
     take: 40,
-    select: { year: true, make: true, model: true, trim: true, priceCents: true, mileage: true, exteriorColor: true },
+    select: { year: true, make: true, model: true, trim: true, priceCents: true, mileage: true, exteriorColor: true, drivetrain: true, fuel: true, transmission: true, stockNumber: true },
   });
   return vs.map((v) => {
     const label = [v.year, v.make, v.model, v.trim].filter(Boolean).join(" ").trim() || "Vehicle";
-    const price = v.priceCents ? `$${Math.round(v.priceCents / 100).toLocaleString("en-US")}` : "call for price";
+    const price = v.priceCents ? money(v.priceCents) : "call for price";
     const miles = v.mileage ? `${v.mileage.toLocaleString("en-US")} mi` : "";
-    return [label, price, miles, v.exteriorColor].filter(Boolean).join(" · ");
+    const specs = [v.exteriorColor, v.transmission, v.drivetrain, v.fuel].filter(Boolean).join(" · ");
+    return [label, price, miles, specs, v.stockNumber ? `stk ${v.stockNumber}` : ""].filter(Boolean).join(" · ");
   });
 }
 
 function buildSystemPrompt(c: Ctx, ai: AiCfg, inv: string[], captured: boolean): string {
   const p: string[] = [];
-  p.push(`You are the online sales concierge for ${c.name}, an automotive dealership, chatting with a visitor on the website. Tone: ${ai.persona}. Reply in 1–3 short, natural sentences — like texting, never an essay. Use the visitor's first name once you know it.`);
-  p.push(`GROUNDING (critical): only state facts that appear in CONTEXT below. Never invent or guess vehicles, prices, mileage, specs, availability, financing terms, addresses, hours, or links. If it isn't in CONTEXT, say you'll have the team confirm — do not make anything up. Only ever share the exact links in CONTEXT.`);
-  if (!ai.financeEnabled) p.push(`Do not discuss financing or pre-qualification.`);
+
+  p.push(`You are a real member of the sales team at ${c.name}, an automotive dealership, chatting with a visitor on the website right now. You are warm, sharp, and genuinely likeable — a top salesperson people actually enjoy talking to. Personality to lean into: ${ai.persona}.`);
+
+  p.push(`HOW YOU TALK — this is everything:
+• Text like a real person messaging from their phone. Short. 1–2 sentences, sometimes just a few words. Never a paragraph, never an essay.
+• Use contractions, everyday words, a relaxed rhythm. A single emoji occasionally is fine when it fits — never more than one, and not every message.
+• Match the visitor's energy and length. If they're brief, you're brief. If they're excited, get excited with them. Mirror the words they use.
+• Sound human, not scripted. Vary how you phrase things. React naturally ("oh nice choice", "yeah that one's sharp", "totally get that").
+• NEVER do these robot tells: "How may I assist you", "I'm here to help", "Is there anything else I can help you with?", "Feel free to", "As an AI", "I'd be happy to assist", numbered or bulleted lists, restating their question back, corporate filler, or over-apologizing. If you catch yourself about to sound like a help desk, rewrite it the way a person would text it.`);
+
+  p.push(`HOW YOU SELL — you're a closer, not an FAQ bot:
+• Your #1 job is to get them onto the lot for a visit or test drive — that's where cars get sold. Every conversation gently moves toward "come see it" or "let's set a time".
+• Build a little rapport before you push anything. Ask ONE easy question at a time — what they'll be using it for, their timeline, whether they've got something to trade, what they're driving now.
+• Answer their question, then always take the lead with a small next step ("want to swing by this week and take it out?").
+• Read the room: if they're just browsing, zero pressure — be the helpful friend and plant a seed. If they're hot, guide them to the finish line.
+• Only create urgency when it's real (a genuinely popular or one-of-a-kind unit). Never fabricate scarcity or pressure.`);
+
+  p.push(`GROUNDING (never break this): only state facts that appear in CONTEXT below. Never invent or guess a vehicle, price, mileage, spec, availability, payment, rate, address, hour, or link. If you don't have it, don't make it up — say you'll get the exact answer from the team, and use that as a natural reason to grab their contact so someone can follow up. Only ever share the exact links in CONTEXT.`);
+
+  if (!ai.financeEnabled) p.push(`Do not bring up financing or pre-qualification.`);
   if (!ai.tradeInEnabled) p.push(`Do not offer trade-in valuations.`);
-  if (ai.houseRules?.trim()) p.push(`Dealer house rules (follow strictly): ${ai.houseRules.trim()}`);
+  if (ai.houseRules?.trim()) p.push(`House rules from the dealership (follow these strictly): ${ai.houseRules.trim()}`);
+
+  p.push(`IF THEY ASK WHETHER YOU'RE A BOT OR A REAL PERSON: stay natural and don't announce that you're an AI out of the blue. You genuinely are part of the ${c.name} team. If someone asks directly and seriously, be honest and offer to connect them with a salesperson right away — never lie if pressed.`);
+
   if (captured) {
-    p.push(`You already have this visitor's contact details — do NOT ask for them again. Just keep helping.`);
+    p.push(`You already have this visitor's contact info — do NOT ask for it again. Just keep being helpful and keep nudging toward a visit.`);
   } else {
-    p.push(`GOAL: be genuinely helpful AND capture the lead. Naturally get the visitor's first name, then ask for the best phone or email. As soon as you have a name and either a phone or an email, call the capture_lead function with what you have, then confirm a team member will follow up.`);
+    p.push(`CAPTURING THEM (do it smoothly, never like a form): get their first name early and casually ("who am I chatting with?"). Then earn their number or email by offering something worth it — sending more photos, holding the vehicle for them, texting a quick out-the-door number, or locking in a time to come see it. The moment you have a name plus a phone or email, quietly call the capture_lead function with whatever you've got, then keep the conversation going naturally. Never demand contact up front and never read out legal or consent text.`);
   }
   const ctx: string[] = [`Dealership: ${c.name}.`];
   if (c.current) ctx.push(`The visitor is CURRENTLY VIEWING this exact unit — when they say "this", "this one", "this unit", "it", or "the price/mileage" without naming a vehicle, they mean THIS one: ${describeVehicle(c.current)}. Answer questions about it from these details only.`);
@@ -200,7 +221,8 @@ async function agentTurn(dealershipId: string, convoId: string, c: Ctx, ai: AiCf
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", temperature: 0.4, messages, ...(tools ? { tools } : {}) }),
+    // higher temp + penalties → warmer, more human phrasing that doesn't repeat itself
+    body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", temperature: 0.75, frequency_penalty: 0.4, presence_penalty: 0.3, messages, ...(tools ? { tools } : {}) }),
   });
   if (!res.ok) throw new Error(`openai ${res.status}`);
   const j = await res.json();
