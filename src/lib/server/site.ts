@@ -57,6 +57,8 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
   const w = await prisma.website.findUnique({ where: { slug } });
   if (!w || w.status !== "PUBLISHED") return null;
   const dealer = await prisma.dealership.findUnique({ where: { id: w.dealershipId }, select: { name: true, vertical: true } });
+  // if the dealer has a Krakd call-tracking number, show it on the site so calls are intercepted/recorded
+  const ai = await prisma.aiSettings.findUnique({ where: { dealershipId: w.dealershipId }, select: { aiPhone: true } });
   return {
     slug: w.slug,
     dealershipName: dealer?.name ?? "Dealership",
@@ -68,7 +70,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     whyUs: (Array.isArray(w.whyUs) ? w.whyUs : []) as SiteConfig["whyUs"],
     staff: (Array.isArray(w.staff) ? w.staff : []) as SiteConfig["staff"],
     reviews: (Array.isArray(w.reviews) ? w.reviews : []) as SiteConfig["reviews"],
-    phone: w.phone, email: w.email, address: w.address, city: w.city, state: w.state, zip: w.zip,
+    phone: ai?.aiPhone || w.phone, email: w.email, address: w.address, city: w.city, state: w.state, zip: w.zip,
     hours: (Array.isArray(w.hours) ? w.hours : []) as SiteConfig["hours"],
     socials: (w.socials ?? {}) as Record<string, string>,
     sections: (w.sections ?? {}) as Record<string, boolean>,

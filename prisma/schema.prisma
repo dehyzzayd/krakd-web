@@ -594,8 +594,9 @@ model AiSettings {
   creditAppUrl  String?
   appointmentUrl String?
   testDriveUrl  String?
-  aiPhone       String?            // Krakd-provisioned line
-  forwardPhone  String?
+  aiPhone       String?            // Krakd-provisioned call-tracking number (E.164), shown on the site
+  aiPhoneSid    String?            // Twilio IncomingPhoneNumber SID for the provisioned number
+  forwardPhone  String?            // where tracked calls ring through to (falls back to Dealership.phone)
   languages     Json               @default("[\"English\"]")
   channels      Json               @default("{\"website\":true,\"fbmp\":true,\"sms\":true,\"email\":false}")
   createdAt     DateTime           @default(now())

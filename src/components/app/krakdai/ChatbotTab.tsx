@@ -26,6 +26,7 @@ export function ChatbotTab() {
   const { data } = useApi<Settings>("/ai/settings");
   const { data: me } = useApi<{ vertical?: string }>("/auth/me");
   const { data: site } = useApi<{ slug?: string; status?: string }>("/website");
+  const { data: tel } = useApi<{ configured: boolean; number: string | null; forward: string | null; dealerPhone: string | null }>("/telephony");
   const toast = useToast();
   const def = verticalDef(me?.vertical);
   const auto = (me?.vertical ?? "AUTOMOTIVE") === "AUTOMOTIVE";
@@ -37,6 +38,8 @@ export function ChatbotTab() {
   const [testDrive, setTestDrive] = useState(AI_CONFIG.testDrive);
   const [creditApp, setCreditApp] = useState(AI_CONFIG.finance);
   const [forward, setForward] = useState("(512) 555-0100");
+  const [trackNum, setTrackNum] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
   const [rules, setRules] = useState(AI_CONFIG.custom);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -61,6 +64,17 @@ export function ChatbotTab() {
     const chw = (data as unknown as { channels?: { website?: boolean } }).channels;
     if (chw) setWidgetOn(chw.website !== false);
   }, [data]);
+
+  useEffect(() => { if (tel) { setTrackNum(tel.number); if (tel.forward) setForward(tel.forward); } }, [tel]);
+
+  const provision = async () => {
+    setProvisioning(true);
+    try {
+      const res = await apiFetch<{ number: string }>("/telephony", { method: "POST", body: JSON.stringify({}) });
+      setTrackNum(res.number); toast.success("Your call-tracking number is live");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't activate a number right now."); }
+    finally { setProvisioning(false); }
+  };
 
   const toggleWidget = async (v: boolean) => {
     const cur = ((data as unknown as { channels?: Record<string, boolean> })?.channels) ?? {};
@@ -115,16 +129,24 @@ export function ChatbotTab() {
           </div>
         </Section>
 
-        {/* phone */}
-        <Section icon={Phone} title="AI phone line" desc="The number Krakd provides for your agent to text and call leads.">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/25 bg-brand-soft/40 p-4">
-            <div>
-              <div className="flex items-center gap-2"><span className="tnum text-[18px] font-bold text-n900">{AI_CONFIG.phone}</span><span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Provided by Krakd</span></div>
-              <p className="mt-0.5 text-[12px] text-n600">Local Austin number · SMS &amp; voice · included in your plan</p>
+        {/* call tracking */}
+        <Section icon={Phone} title="Call tracking number" desc="A Krakd number for your website & ads. Calls to it ring your phone — and are recorded, transcribed, and logged to the lead.">
+          {trackNum ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/25 bg-brand-soft/40 p-4">
+              <div>
+                <div className="flex items-center gap-2"><span className="tnum text-[18px] font-bold text-n900">{formatUSPhone(trackNum)}</span><span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Provided by Krakd</span></div>
+                <p className="mt-0.5 text-[12px] text-n600">Put this on your site &amp; ads. Every call forwards to your line, gets recorded &amp; transcribed, and attaches to the lead automatically.</p>
+              </div>
             </div>
-          </div>
-          <div className="mt-4"><Field label="Forward live calls to" hint="When a buyer asks for a person, Krakd rings this line.">
-            <input value={forward} inputMode="tel" onChange={(e) => setForward(formatUSPhone(e.target.value))} className={cn(inputCls, "tnum")} /></Field></div>
+          ) : tel?.configured ? (
+            <button type="button" onClick={provision} disabled={provisioning} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
+              {provisioning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Get my tracking number
+            </button>
+          ) : (
+            <p className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n500">Call tracking activates the moment telephony is connected for your account. Set your forward number below so it&apos;s ready to go.</p>
+          )}
+          <div className="mt-4"><Field label="Forward calls to" hint="Tracked calls ring this line. Defaults to your business phone.">
+            <input value={forward} inputMode="tel" onChange={(e) => setForward(formatUSPhone(e.target.value))} className={cn(inputCls, "tnum")} placeholder={tel?.dealerPhone ? formatUSPhone(tel.dealerPhone) : "(512) 555-0100"} /></Field></div>
         </Section>
 
         {/* rules */}
@@ -162,7 +184,7 @@ export function ChatbotTab() {
           <div className="rounded-2xl border border-n200 bg-white p-4 sh-card">
             <p className="text-[13px] font-semibold text-n900">Agent summary</p>
             <div className="mt-3 space-y-2 text-[12.5px]">
-              {([["Tone", tone], ["Languages", `${langs.length}`], [bookLabel, testDrive ? "On" : "Off"], ...(showCredit ? [["Credit app", creditApp ? "On" : "Off"]] : []), ["Phone line", "Active"]] as [string, string][]).map(([k, v]) => (
+              {([["Tone", tone], ["Languages", `${langs.length}`], [bookLabel, testDrive ? "On" : "Off"], ...(showCredit ? [["Credit app", creditApp ? "On" : "Off"]] : []), ["Call tracking", trackNum ? "Live" : "Off"]] as [string, string][]).map(([k, v]) => (
                 <div key={k} className="flex justify-between"><span className="text-n500">{k}</span><span className="font-semibold text-n900">{v}</span></div>
               ))}
             </div>

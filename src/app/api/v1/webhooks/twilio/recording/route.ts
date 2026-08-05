@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { verifyTwilioSignature, submitTranscription } from "@/lib/server/calls";
-import { normPhone } from "@/lib/server/leadPipeline";
+import { normPhone, nextAssignee, contactKeys } from "@/lib/server/leadPipeline";
+import { formatUSPhone } from "@/lib/phone";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,18 +31,38 @@ export async function POST(req: NextRequest) {
   const from = params.From || null, to = params.To || null;
   const direction = (params.Direction || "").includes("outbound") ? "outbound" : "inbound";
 
-  // match a lead by either party's phone
+  // the customer is the other party (caller on inbound, callee on outbound)
+  const customerRaw = direction === "inbound" ? from : to;
   const customer = normPhone(direction === "inbound" ? from : to) || normPhone(direction === "inbound" ? to : from);
-  const lead = customer ? await prisma.lead.findFirst({ where: { dealershipId, primaryPhone: customer }, select: { id: true } }) : null;
+  const existing = sid ? await prisma.call.findFirst({ where: { provider: sid, dealershipId }, select: { id: true } }) : null;
+
+  // match an existing lead by phone…
+  let lead = customer ? await prisma.lead.findFirst({ where: { dealershipId, primaryPhone: customer }, select: { id: true } }) : null;
+  // …or, for a fresh inbound caller, CREATE one so every tracked call lands on the leads page.
+  let createdLead = false;
+  if (!lead && !existing && direction === "inbound" && customer) {
+    const assignedToId = await nextAssignee(dealershipId);
+    const created = await prisma.lead.create({
+      data: {
+        dealershipId,
+        firstName: formatUSPhone(customerRaw || customer) || "Inbound caller",
+        phones: [{ value: customerRaw || customer, type: "mobile" }] as unknown as Prisma.InputJsonValue,
+        ...contactKeys(undefined, customerRaw || customer),
+        source: "Inbound call", temperature: "WARM",
+        ...(assignedToId ? { assignedToId, ownerType: "HUMAN" as const } : { ownerType: "AI" as const }),
+      },
+      select: { id: true },
+    });
+    lead = created; createdLead = true;
+  }
 
   const durationSec = parseInt(params.RecordingDuration || "0") || 0;
-  const existing = sid ? await prisma.call.findFirst({ where: { provider: sid, dealershipId }, select: { id: true } }) : null;
   const call = existing
     ? await prisma.call.update({ where: { id: existing.id }, data: { recordingUrl, durationSec, status: params.CallStatus || "completed" } })
     : await prisma.call.create({ data: { dealershipId, leadId: lead?.id ?? null, direction, fromNumber: from, toNumber: to, status: params.CallStatus || "completed", durationSec, recordingUrl, provider: sid } });
 
   if (recordingUrl) void submitTranscription(call.id).catch(() => {});
-  if (lead?.id && !existing) void prisma.leadActivity.create({ data: { dealershipId, leadId: lead.id, type: "CALL", actorType: "SYSTEM", content: `Call recorded (${durationSec}s)` } }).catch(() => {});
+  if (lead?.id && !existing) void prisma.leadActivity.create({ data: { dealershipId, leadId: lead.id, type: "CALL", actorType: "SYSTEM", content: `${createdLead ? "New inbound call" : "Call recorded"} (${durationSec}s)` } }).catch(() => {});
 
   return new Response("OK", { status: 200 });
 }
