@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
-import { Loader2, Check, Mail, Server, RefreshCw } from "lucide-react";
+import { useToast } from "./Toast";
+import { Loader2, Check, Mail, Server, RefreshCw, Rss, Copy } from "lucide-react";
 
 const input = "h-10 w-full rounded-lg border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
@@ -101,12 +102,52 @@ function FeedCard() {
   );
 }
 
+function SyndicationCard() {
+  const [site, setSite] = useState<{ slug?: string; status?: string } | null>(null);
+  const toast = useToast();
+  useEffect(() => { apiFetch<{ slug?: string; status?: string }>("/website").then(setSite).catch(() => {}); }, []);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const published = site?.status === "PUBLISHED" && !!site?.slug;
+  const generic = published ? `${origin}/api/v1/public/site/${site!.slug}/feed` : "";
+  const meta = published ? `${generic}?format=meta` : "";
+  const copy = (url: string) => { navigator.clipboard?.writeText(url); toast.success("Feed URL copied"); };
+
+  const Row = ({ label, hint, url }: { label: string; hint: string; url: string }) => (
+    <div className="rounded-lg border border-n200 p-3">
+      <div className="flex items-center justify-between"><p className="text-[12.5px] font-semibold text-n900">{label}</p><span className="text-[11px] text-n400">{hint}</span></div>
+      <div className="mt-2 flex items-center gap-2">
+        <input readOnly value={url} className="tnum h-9 flex-1 rounded-md border border-n200 bg-n50 px-2.5 text-[12px] text-n700 outline-none" />
+        <button onClick={() => copy(url)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-n200 bg-white px-3 text-[12.5px] font-semibold text-n700 transition hover:bg-n100"><Copy className="h-3.5 w-3.5" />Copy</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+      <div className="mb-3 flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand"><Rss className="h-4.5 w-4.5" /></span>
+        <div className="flex-1"><h4 className="text-[14px] font-semibold text-n900">Marketplace syndication</h4><p className="text-[12px] text-n500">Push your live inventory to Facebook, Google and other marketplaces.</p></div>
+      </div>
+      {published ? (
+        <div className="space-y-2.5">
+          <Row label="Facebook / Meta catalog" hint="Automotive Inventory Ads" url={meta} />
+          <Row label="Generic marketplace feed" hint="AutoTrader · Cars.com · CSV" url={generic} />
+          <p className="text-[11.5px] leading-relaxed text-n400">Paste a link into the marketplace&apos;s data-feed / catalog setting. It re-pulls automatically, so listings stay in sync as you add, price and sell units. Only available (live) units are included.</p>
+        </div>
+      ) : (
+        <p className="rounded-lg bg-n50 px-3 py-2.5 text-[12px] text-n500">Publish your Krakd website first — syndication feeds run off your public site so listings link back to it.</p>
+      )}
+    </div>
+  );
+}
+
 export function IntegrationsPanel() {
   return (
     <div className="space-y-4">
-      <div><h3 className="text-[14px] font-semibold text-n900">Integrations</h3><p className="text-[12.5px] text-n500">Connect Krakd to your CRM and inventory feed.</p></div>
+      <div><h3 className="text-[14px] font-semibold text-n900">Integrations</h3><p className="text-[12.5px] text-n500">Connect Krakd to your CRM, inventory feed and marketplaces.</p></div>
       <AdfCard />
       <FeedCard />
+      <SyndicationCard />
     </div>
   );
 }
