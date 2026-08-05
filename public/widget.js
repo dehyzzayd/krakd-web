@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var script = document.currentScript;
+  var script = document.currentScript || document.querySelector("script[data-slug],script[data-krakd]");
   if (!script) return;
   var slug = script.getAttribute("data-slug") || script.getAttribute("data-krakd");
   if (!slug) { console.error("[Krakd] widget missing data-slug"); return; }

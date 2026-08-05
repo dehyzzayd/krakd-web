@@ -31,14 +31,15 @@ const patchSchema = z.object({
   aiPhone: z.string().optional(),
   forwardPhone: z.string().optional(),
   languages: z.array(z.string()).optional(),
+  channels: z.object({ website: z.boolean().optional(), fbmp: z.boolean().optional(), sms: z.boolean().optional(), email: z.boolean().optional() }).optional(),
 });
 
 export const PATCH = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
   const parsed = patchSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
-  const { languages, ...rest } = parsed.data;
-  const data = { ...rest, ...(languages ? { languages: languages as unknown as Prisma.InputJsonValue } : {}) };
+  const { languages, channels, ...rest } = parsed.data;
+  const data = { ...rest, ...(languages ? { languages: languages as unknown as Prisma.InputJsonValue } : {}), ...(channels ? { channels: channels as unknown as Prisma.InputJsonValue } : {}) };
   const s = await prisma.aiSettings.upsert({ where: { dealershipId }, create: { dealershipId, ...data }, update: data });
   return json(s);
 });

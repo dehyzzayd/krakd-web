@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { AI_CONFIG } from "@/lib/krakdai";
-import { authApi } from "@/lib/api";
+import { authApi, apiFetch } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { vertical as verticalDef } from "@/components/site/verticals";
 import { Section, Field, Row, Switch, LinkField, inputCls } from "./controls";
@@ -39,6 +39,7 @@ export function ChatbotTab() {
   const [rules, setRules] = useState(AI_CONFIG.custom);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [widgetOn, setWidgetOn] = useState(true);
   const toggleLang = (l: string) => setLangs((p) => p.includes(l) ? p.filter((x) => x !== l) : [...p, l]);
   const setLink = (k: keyof typeof links, v: string) => setLinks((p) => ({ ...p, [k]: v }));
 
@@ -56,7 +57,16 @@ export function ChatbotTab() {
       testDrive: data.testDriveUrl ?? p.testDrive,
       creditApp: data.creditAppUrl ?? p.creditApp,
     }));
+    const chw = (data as unknown as { channels?: { website?: boolean } }).channels;
+    if (chw) setWidgetOn(chw.website !== false);
   }, [data]);
+
+  const toggleWidget = async (v: boolean) => {
+    const cur = ((data as unknown as { channels?: Record<string, boolean> })?.channels) ?? {};
+    setWidgetOn(v);
+    try { await apiFetch("/ai/settings", { method: "PATCH", body: JSON.stringify({ channels: { ...cur, website: v } }) }); toast.success(v ? "Chat widget turned on" : "Chat widget turned off"); }
+    catch { setWidgetOn(!v); toast.error("Could not update."); }
+  };
 
   async function save() {
     setSaving(true); setSaved(false);
@@ -123,19 +133,24 @@ export function ChatbotTab() {
         </Section>
 
         {/* website chat widget */}
-        <Section icon={Code2} title="Install on your website" desc="Drop one line of code on any site to add the Krakd chat bubble.">
+        <Section icon={Code2} title="Chat widget" desc="A chat bubble that captures leads into your CRM — on your Krakd site and anywhere else.">
+          <div className="flex items-center justify-between rounded-lg border border-n200 p-3">
+            <div><p className="text-[12.5px] font-semibold text-n900">Show on my Krakd website</p><p className="text-[11.5px] text-n500">{site?.status === "PUBLISHED" ? "Live on your published site." : "Turns on automatically once your site is published."}</p></div>
+            <Switch on={widgetOn} onChange={toggleWidget} />
+          </div>
           {site?.slug && site?.status === "PUBLISHED" ? (() => {
             const origin = typeof window !== "undefined" ? window.location.origin : "";
             const snippet = `<script src="${origin}/widget.js" data-slug="${site.slug}" async></script>`;
             return (
-              <div className="space-y-2">
+              <div className="mt-4 space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-n500">Add to another site</p>
                 <div className="rounded-lg border border-n200 bg-n900 p-3"><code className="block whitespace-pre-wrap break-all text-[11.5px] leading-relaxed text-n100">{snippet}</code></div>
                 <button type="button" onClick={() => { navigator.clipboard?.writeText(snippet); toast.success("Embed code copied"); }} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-n200 bg-white px-3.5 text-[12.5px] font-semibold text-n700 transition hover:bg-n100"><Code2 className="h-3.5 w-3.5" />Copy embed code</button>
-                <p className="text-[11.5px] leading-relaxed text-n400">Paste it before <code className="text-n500">&lt;/body&gt;</code> on your site. The bubble captures name + contact (with consent) into your CRM and Krakd AI follows up instantly. Works on any site — Krakd, WordPress, Wix, custom.</p>
+                <p className="text-[11.5px] leading-relaxed text-n400">Paste before <code className="text-n500">&lt;/body&gt;</code> on WordPress, Wix, or any custom site — captures name + contact (with consent) and Krakd AI follows up instantly.</p>
               </div>
             );
           })() : (
-            <p className="rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n500">Publish your Krakd website first to get your chat-widget embed code.</p>
+            <p className="mt-3 rounded-lg bg-n50 px-3 py-2.5 text-[12.5px] text-n500">Publish your Krakd website to get the embed code for other sites.</p>
           )}
         </Section>
       </div>
