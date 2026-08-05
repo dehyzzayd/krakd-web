@@ -16,14 +16,43 @@ import { openAiConfigured } from "./calls";
  *    same dedup / spam / auto-assign pipeline and record TCPA consent. */
 
 type ChatState = { stage?: "intent" | "name" | "contact" | "open"; name?: string; phone?: string; email?: string; interest?: string; leadId?: string; consentDisclosed?: boolean };
-type Ctx = { name: string; phone: string | null; addressLine1: string | null; city: string | null; state: string | null; hours: unknown; slug: string | null; creditToken: string | null; origin: string };
+type VehicleInfo = { label: string; mileage: number; priceCents: number; exteriorColor: string | null; interiorColor: string | null; trim: string | null; vin: string | null; stockNumber: string | null; drivetrain: string | null; fuel: string | null; transmission: string | null };
+type Ctx = { name: string; phone: string | null; addressLine1: string | null; city: string | null; state: string | null; hours: unknown; slug: string | null; creditToken: string | null; origin: string; current: VehicleInfo | null };
 
 const CONSENT_LINE = "By sharing your contact you agree to be contacted by phone, text & email about your enquiry — message/data rates may apply, reply STOP to opt out.";
 const firstName = (n?: string) => (n ?? "").trim().split(/\s+/)[0] || "there";
+const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+
+/** Full, factual one-liner about a specific unit — only from stored fields, nothing invented. */
+function describeVehicle(v: VehicleInfo): string {
+  const bits: string[] = [v.label];
+  if (v.priceCents) bits.push(`priced ${money(v.priceCents)}`);
+  bits.push(v.mileage ? `${v.mileage.toLocaleString("en-US")} miles` : "mileage not listed");
+  if (v.exteriorColor) bits.push(`${v.exteriorColor} exterior`);
+  if (v.interiorColor) bits.push(`${v.interiorColor} interior`);
+  if (v.transmission) bits.push(v.transmission);
+  if (v.drivetrain) bits.push(v.drivetrain);
+  if (v.fuel) bits.push(v.fuel);
+  if (v.stockNumber) bits.push(`stock #${v.stockNumber}`);
+  if (v.vin) bits.push(`VIN ${v.vin}`);
+  return bits.join(", ");
+}
 
 /** Answer a common question from the dealer's real data (never invents specs/prices). */
 function faqAnswer(text: string, c: Ctx): string | null {
   const t = text.toLowerCase();
+  const v = c.current;
+  // ── questions about the specific unit the visitor is viewing (real DB values only) ──
+  if (v) {
+    if (/\b(mileage|miles|odometer|kilomet|\bkms?\b)\b/.test(t)) return v.mileage ? `The ${v.label} has ${v.mileage.toLocaleString("en-US")} miles on it.` : `The mileage on the ${v.label} isn't listed — I can have the team confirm it for you.`;
+    if (/\b(price|cost|how much|asking|msrp)\b/.test(t)) return v.priceCents ? `The ${v.label} is listed at ${money(v.priceCents)}.` : `I don't have a price posted on the ${v.label} — I can have someone confirm it.`;
+    if (/\bcolou?r\b/.test(t)) { const parts = [v.exteriorColor && `${v.exteriorColor} on the outside`, v.interiorColor && `${v.interiorColor} inside`].filter(Boolean); return parts.length ? `The ${v.label} is ${parts.join(", ")}.` : `The color isn't listed on the ${v.label} — I can check for you.`; }
+    if (/\bvin\b/.test(t)) return v.vin ? `The VIN for the ${v.label} is ${v.vin}.` : `The VIN isn't posted here — I can have the team send it over.`;
+    if (/\bstock\b/.test(t)) return v.stockNumber ? `That's stock #${v.stockNumber}.` : `I don't have a stock number on this one handy — I can grab it for you.`;
+    if (/\b(transmission|drivetrain|awd|4wd|fwd|rwd|fuel|gas|diesel|electric|hybrid|automatic|manual)\b/.test(t)) { const specs = [v.transmission, v.drivetrain, v.fuel].filter(Boolean).join(", "); return specs ? `The ${v.label} is ${specs}.` : `I don't have those details listed on the ${v.label} — I can have the team confirm.`; }
+  } else if (/\b(mileage|miles|odometer|vin|stock number|what colou?r)\b/.test(t)) {
+    return "Which vehicle are you asking about? If you tell me the year/make/model I can pull up the details.";
+  }
   if (/\b(hours?|open|closed?|what time)\b/.test(t)) {
     const h = Array.isArray(c.hours) ? (c.hours as { day: string; open: string; close: string }[]) : [];
     if (h.length) return "Here are our hours — " + h.map((d) => `${d.day} ${d.open}${d.close ? `–${d.close}` : ""}`).join(", ") + ".";
@@ -127,6 +156,7 @@ function buildSystemPrompt(c: Ctx, ai: AiCfg, inv: string[], captured: boolean):
     p.push(`GOAL: be genuinely helpful AND capture the lead. Naturally get the visitor's first name, then ask for the best phone or email. The FIRST time you ask for a phone or email, include this sentence verbatim: "${CONSENT_LINE}" As soon as you have a name and either a phone or an email, call the capture_lead function with what you have, then confirm a team member will follow up.`);
   }
   const ctx: string[] = [`Dealership: ${c.name}.`];
+  if (c.current) ctx.push(`The visitor is CURRENTLY VIEWING this exact unit — when they say "this", "this one", "this unit", "it", or "the price/mileage" without naming a vehicle, they mean THIS one: ${describeVehicle(c.current)}. Answer questions about it from these details only.`);
   if (c.phone) ctx.push(`Phone: ${c.phone}.`);
   const loc = [c.addressLine1, c.city, c.state].filter(Boolean).join(", ");
   if (loc) ctx.push(`Address: ${loc}.`);
@@ -198,12 +228,20 @@ async function agentTurn(dealershipId: string, convoId: string, c: Ctx, ai: AiCf
   return reply.slice(0, 1500);
 }
 
-export async function chatReply(dealershipId: string, conversationId: string | undefined, userText: string, origin: string, ip?: string): Promise<{ conversationId: string; reply: string }> {
-  const dealer = await prisma.dealership.findUnique({
-    where: { id: dealershipId },
-    select: { name: true, phone: true, addressLine1: true, city: true, state: true, hours: true, website: { select: { slug: true } }, creditAppConfig: { select: { publicToken: true } }, aiSettings: { select: { persona: true, houseRules: true, financeEnabled: true, tradeInEnabled: true } } },
-  });
-  const c: Ctx = { name: dealer?.name ?? "us", phone: dealer?.phone ?? null, addressLine1: dealer?.addressLine1 ?? null, city: dealer?.city ?? null, state: dealer?.state ?? null, hours: dealer?.hours, slug: dealer?.website?.slug ?? null, creditToken: dealer?.creditAppConfig?.publicToken ?? null, origin };
+export async function chatReply(dealershipId: string, conversationId: string | undefined, userText: string, origin: string, ip?: string, vehicleId?: string): Promise<{ conversationId: string; reply: string }> {
+  const [dealer, veh] = await Promise.all([
+    prisma.dealership.findUnique({
+      where: { id: dealershipId },
+      select: { name: true, phone: true, addressLine1: true, city: true, state: true, hours: true, website: { select: { slug: true } }, creditAppConfig: { select: { publicToken: true } }, aiSettings: { select: { persona: true, houseRules: true, financeEnabled: true, tradeInEnabled: true } } },
+    }),
+    vehicleId
+      ? prisma.vehicle.findFirst({ where: { id: vehicleId, dealershipId }, select: { year: true, make: true, model: true, trim: true, mileage: true, priceCents: true, exteriorColor: true, interiorColor: true, vin: true, stockNumber: true, drivetrain: true, fuel: true, transmission: true } })
+      : Promise.resolve(null),
+  ]);
+  const current: VehicleInfo | null = veh
+    ? { label: [veh.year, veh.make, veh.model, veh.trim].filter(Boolean).join(" ").trim() || "this vehicle", mileage: veh.mileage, priceCents: veh.priceCents, exteriorColor: veh.exteriorColor, interiorColor: veh.interiorColor, trim: veh.trim, vin: veh.vin, stockNumber: veh.stockNumber, drivetrain: veh.drivetrain, fuel: veh.fuel, transmission: veh.transmission }
+    : null;
+  const c: Ctx = { name: dealer?.name ?? "us", phone: dealer?.phone ?? null, addressLine1: dealer?.addressLine1 ?? null, city: dealer?.city ?? null, state: dealer?.state ?? null, hours: dealer?.hours, slug: dealer?.website?.slug ?? null, creditToken: dealer?.creditAppConfig?.publicToken ?? null, origin, current };
   const ai: AiCfg = {
     persona: dealer?.aiSettings?.persona ?? "Warm & professional",
     houseRules: dealer?.aiSettings?.houseRules ?? null,
@@ -214,6 +252,7 @@ export async function chatReply(dealershipId: string, conversationId: string | u
   let convo = conversationId ? await prisma.aiConversation.findFirst({ where: { id: conversationId, dealershipId } }) : null;
   if (!convo) convo = await prisma.aiConversation.create({ data: { dealershipId, channel: "WEB", status: "ACTIVE", state: { stage: "intent" } as unknown as Prisma.InputJsonValue } });
   const s = (convo.state ?? {}) as ChatState;
+  if (current && !s.interest) s.interest = current.label; // they're on a unit's page → that's the interest
   await prisma.aiMessage.create({ data: { conversationId: convo.id, role: "BUYER", content: userText.slice(0, 1000) } }).catch(() => {});
 
   let reply: string;

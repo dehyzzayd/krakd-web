@@ -96,6 +96,12 @@
   text.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } });
   send.addEventListener("click", submit);
 
+  // which vehicle is the visitor looking at? (so "this unit" resolves to the real car)
+  function currentVehicleId() {
+    var m = location.pathname.match(/\/inventory\/([0-9a-fA-F-]{36})/);
+    return m ? m[1] : null;
+  }
+
   function submit() {
     var msg = text.value.trim();
     if (!msg || busy) return;
@@ -105,7 +111,7 @@
     busy = true; send.disabled = true; showTyping();
     fetch(HOST + "/api/v1/public/site/" + encodeURIComponent(slug) + "/chat", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ conversationId: convoId, message: msg, hp: hp }),
+      body: JSON.stringify({ conversationId: convoId, message: msg, vehicleId: currentVehicleId(), hp: hp }),
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         hideTyping();
