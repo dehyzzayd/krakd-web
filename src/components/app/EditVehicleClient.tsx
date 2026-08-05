@@ -26,5 +26,5 @@ export function EditVehicleClient({ id }: { id: string }) {
     cost: data.cost, price: data.price, photos: data.photoCount,
   } as unknown as Vehicle;
 
-  return <VehicleForm vehicle={vehicle} initialPhotos={photos} initialCategory={data.category ?? "CAR"} initialSpecs={(data.attributes ?? {}) as Record<string, string | boolean>} />;
+  return <VehicleForm vehicle={vehicle} initialPhotos={photos} initialCategory={data.category ?? "CAR"} initialSpecs={(data.attributes ?? {}) as Record<string, string | boolean>} initialTitle={data.title ?? ""} />;
 }
