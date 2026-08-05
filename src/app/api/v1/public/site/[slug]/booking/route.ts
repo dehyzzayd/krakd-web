@@ -7,6 +7,7 @@ import { deliverAdf } from "@/lib/server/adfDelivery";
 import { notifyAppointment } from "@/lib/server/appointmentNotify";
 import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
 import { webConsentRecord } from "@/lib/consent";
+import { contactKeys } from "@/lib/server/leadPipeline";
 import { computeSlots, parseDuration, type Hour, type Busy } from "@/lib/server/slots";
 import type { Prisma } from "@prisma/client";
 
@@ -102,6 +103,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug
       firstName: d.firstName, lastName: d.lastName,
       emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
       phones: (d.phone ? [{ value: d.phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue,
+      ...contactKeys(d.email, d.phone),
       source: "Website booking", temperature: "HOT", ownerType: "AI",
       consent: { sms: webConsentRecord(ip), email: webConsentRecord(ip) } as unknown as Prisma.InputJsonValue,
     },

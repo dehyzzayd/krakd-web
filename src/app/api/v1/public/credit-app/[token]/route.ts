@@ -6,6 +6,7 @@ import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
 import { pushLeadToIntegrations, deliverCreditAppToIntegrations } from "@/lib/server/integrationDelivery";
 import { webConsentRecord } from "@/lib/consent";
+import { contactKeys } from "@/lib/server/leadPipeline";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -57,6 +58,7 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ toke
         dealershipId, firstName, lastName, source: "Credit Application",
         emails: (email ? [{ value: email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
         phones: [{ value: phone, type: "mobile" }] as unknown as Prisma.InputJsonValue,
+        ...contactKeys(email, phone),
         financing: true, status: "NEW",
         consent: { sms: webConsentRecord(ip), email: webConsentRecord(ip) } as unknown as Prisma.InputJsonValue,
       },

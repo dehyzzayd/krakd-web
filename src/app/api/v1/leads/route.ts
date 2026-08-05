@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { sendLeadNotification } from "@/lib/server/email";
 import { deliverAdf } from "@/lib/server/adfDelivery";
 import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
+import { contactKeys, nextAssignee } from "@/lib/server/leadPipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,9 @@ export const POST = route(async (req: NextRequest) => {
     const u = await prisma.user.findFirst({ where: { id: d.assignedToId, dealershipId, role: { not: "PLATFORM_ADMIN" } }, select: { id: true } });
     if (!u) throw new HttpError(400, "That teammate isn't on your team");
   }
+  // auto-assign if the dealer didn't pick someone and routing is on
+  const assignedToId = d.assignedToId ?? (await nextAssignee(dealershipId));
+  const km = contactKeys(d.email ?? d.emails?.[0]?.value, d.phone ?? d.phones?.[0]?.value);
 
   const lead = await prisma.lead.create({
     data: {
@@ -55,9 +59,10 @@ export const POST = route(async (req: NextRequest) => {
       lastName: d.lastName,
       emails: ((d.emails?.filter((e) => e.value.trim())) ?? (d.email ? [{ value: d.email, type: "personal" }] : [])) as unknown as Prisma.InputJsonValue,
       phones: ((d.phones?.filter((p) => p.value.trim())) ?? (d.phone ? [{ value: d.phone, type: "mobile" }] : [])) as unknown as Prisma.InputJsonValue,
+      ...km,
       source: d.source,
       temperature: d.temperature ?? "WARM",
-      ...(d.assignedToId ? { assignedToId: d.assignedToId, ownerType: "HUMAN" as const } : {}),
+      ...(assignedToId ? { assignedToId, ownerType: "HUMAN" as const } : {}),
     },
   });
 
@@ -85,22 +90,24 @@ const TEMP_LABEL: Record<string, string> = { HOT: "Hot", WARM: "Warm", COLD: "Co
 /* GET /api/v1/leads → { items, stats } for the current dealer (empty for new accounts) */
 export const GET = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
-  const where: Prisma.LeadWhereInput = { dealershipId };
+  const showSpam = req.nextUrl.searchParams.get("spam") === "1";
+  const where: Prisma.LeadWhereInput = { dealershipId, isSpam: showSpam };
 
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
   const dayAgo = new Date(Date.now() - 86_400_000);
 
-  const [rows, total, newToday, hotLeads, apptsToday, sold, statusGroups] = await Promise.all([
+  const [rows, total, newToday, hotLeads, apptsToday, sold, statusGroups, spamCount] = await Promise.all([
     prisma.lead.findMany({
       where, orderBy: { createdAt: "desc" }, take: 200,
       include: { vehicle: { select: { year: true, make: true, model: true } }, assignedTo: { select: { firstName: true, lastName: true } } },
     }),
     prisma.lead.count({ where }),
-    prisma.lead.count({ where: { dealershipId, createdAt: { gte: dayAgo } } }),
-    prisma.lead.count({ where: { dealershipId, temperature: "HOT", status: { notIn: ["SOLD", "LOST"] } } }),
+    prisma.lead.count({ where: { dealershipId, isSpam: false, createdAt: { gte: dayAgo } } }),
+    prisma.lead.count({ where: { dealershipId, isSpam: false, temperature: "HOT", status: { notIn: ["SOLD", "LOST"] } } }),
     prisma.appointment.count({ where: { dealershipId, scheduledStart: { gte: startOfDay } } }),
-    prisma.lead.count({ where: { dealershipId, status: "SOLD" } }),
+    prisma.lead.count({ where: { dealershipId, isSpam: false, status: "SOLD" } }),
     prisma.lead.groupBy({ by: ["status"], where, _count: true }),
+    prisma.lead.count({ where: { dealershipId, isSpam: true } }),
   ]);
 
   const active = statusGroups.filter((g) => !["SOLD", "LOST"].includes(g.status)).reduce((s, g) => s + g._count, 0);
@@ -125,6 +132,7 @@ export const GET = route(async (req: NextRequest) => {
     stats: {
       total, active, newToday, needsResponse, apptsToday, hotLeads,
       closeRate: total ? Math.round((sold / total) * 100) : 0,
+      spam: spamCount,
     },
   });
 });

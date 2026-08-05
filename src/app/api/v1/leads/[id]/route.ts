@@ -63,6 +63,7 @@ const patchSchema = z.object({
   assignedToId: z.string().uuid().nullable().optional(),
   hasTradeIn: z.boolean().optional(),
   financing: z.boolean().optional(),
+  isSpam: z.boolean().optional(),
   nextAction: z.string().nullable().optional(),
   nextActionAt: z.string().nullable().optional(),
 });

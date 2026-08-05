@@ -7,6 +7,7 @@ import { deliverAdf } from "@/lib/server/adfDelivery";
 import { aiFirstTouch } from "@/lib/server/ai";
 import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
 import { webConsentRecord } from "@/lib/consent";
+import { findDuplicateLead, scoreSpam, nextAssignee, contactKeys } from "@/lib/server/leadPipeline";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -51,6 +52,22 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
     if (cmp) campaignId = cmp.id;
   }
 
+  // ── DEDUP: a returning enquiry re-engages the existing lead instead of duplicating ──
+  const dup = await findDuplicateLead(dealershipId, d.email, d.phone);
+  if (dup) {
+    await prisma.lead.update({ where: { id: dup.id, dealershipId }, data: { lastActivityAt: new Date(), ...(vehicleId ? { vehicleId } : {}) } });
+    await prisma.leadActivity.create({ data: { dealershipId, leadId: dup.id, type: "NOTE", actorType: "SYSTEM", content: `Returning enquiry via Website${d.message?.trim() ? `: ${d.message.trim()}` : ""}` } }).catch(() => {});
+    const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
+    const ownerEmail = dealer?.users[0]?.email;
+    if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: "Website (returning)", vehicle: vehicleLabel, contact: d.phone ?? d.email ?? "", leadId: dup.id });
+    return json({ ok: true }, 201);
+  }
+
+  // ── SPAM: score cheap signals; flagged leads are stored but kept out of the pipeline ──
+  const spam = scoreSpam({ firstName: d.firstName, lastName: d.lastName, email: d.email, phone: d.phone, message: d.message });
+  // ── AUTO-ASSIGN: round-robin / owner per the dealership's routing setting ──
+  const assignedToId = spam.isSpam ? null : await nextAssignee(dealershipId);
+
   const lead = await prisma.lead.create({
     data: {
       dealershipId, vehicleId, campaignId,
@@ -58,21 +75,25 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
       lastName: d.lastName,
       emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
       phones: (d.phone ? [{ value: d.phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue,
+      ...contactKeys(d.email, d.phone),
       source: "Website",
       temperature: "WARM",
-      ownerType: "AI", // Krakd AI follows up on new website leads
+      isSpam: spam.isSpam,
+      ...(assignedToId ? { assignedToId, ownerType: "HUMAN" as const } : { ownerType: "AI" as const }),
       consent: consent as unknown as Prisma.InputJsonValue,
     },
   });
 
-  // log the inbound message as the first activity, if any
   if (d.message?.trim()) {
-    await prisma.leadActivity.create({
-      data: { dealershipId, leadId: lead.id, type: "NOTE", actorType: "SYSTEM", content: `Website enquiry: ${d.message.trim()}` },
-    }).catch(() => {});
+    await prisma.leadActivity.create({ data: { dealershipId, leadId: lead.id, type: "NOTE", actorType: "SYSTEM", content: `Website enquiry: ${d.message.trim()}` } }).catch(() => {});
   }
 
-  // notify the dealer's owner (best-effort)
+  // spam is a dead-end: no notifications, no outbound, no CRM push
+  if (spam.isSpam) {
+    await prisma.leadActivity.create({ data: { dealershipId, leadId: lead.id, type: "NOTE", actorType: "SYSTEM", content: `Auto-flagged as spam (${spam.reasons.join(", ")})` } }).catch(() => {});
+    return json({ ok: true }, 201);
+  }
+
   const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
   const ownerEmail = dealer?.users[0]?.email;
   if (ownerEmail) void sendLeadNotification({ to: ownerEmail, dealershipName: dealer!.name, leadName: `${d.firstName} ${d.lastName ?? ""}`.trim(), source: "Website", vehicle: vehicleLabel, contact: d.phone ?? d.email ?? "", leadId: lead.id });

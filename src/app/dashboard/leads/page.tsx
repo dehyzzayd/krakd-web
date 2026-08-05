@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search, SlidersHorizontal, ArrowUpDown, Download, Plus, MoreVertical, Check,
   Phone, MessageSquare, Mail, Calendar, FileText, User as UserIcon, CircleDollarSign,
@@ -52,7 +52,7 @@ type Row = {
   id: string; name: string; phone: string; email: string; source: string; vehicle: string;
   statusLabel: string; status: string; temperature: string; assigned: string | null; lastAdded: string;
 };
-type Stats = { total: number; active: number; newToday: number; needsResponse: number; apptsToday: number; hotLeads: number; closeRate: number };
+type Stats = { total: number; active: number; newToday: number; needsResponse: number; apptsToday: number; hotLeads: number; closeRate: number; spam: number };
 type LeadsData = { items: Row[]; stats: Stats };
 
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
@@ -98,10 +98,16 @@ function ActionsMenu({ r }: { r: Row }) {
 }
 
 export default function LeadsPage() {
+  return <Suspense fallback={<><Topbar title="Leads" /><div className="p-12 text-center text-[13px] text-n400">Loading…</div></>}><LeadsPageInner /></Suspense>;
+}
+
+function LeadsPageInner() {
   const router = useRouter();
-  const { data, loading, error, reload } = useApi<LeadsData>("/leads");
+  const spamView = useSearchParams().get("spam") === "1";
+  const { data, loading, error, reload } = useApi<LeadsData>(spamView ? "/leads?spam=1" : "/leads");
   const { data: teamData } = useApi<{ members: Member[] }>("/team");
   const assignable = (teamData?.members ?? []).filter((m) => m.status === "ACTIVE");
+  const unspam = async (id: string) => { try { await apiFetch(`/leads/${id}`, { method: "PATCH", body: JSON.stringify({ isSpam: false }) }); reload(); } catch { /* ignore */ } };
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"All" | "Active" | "Unassigned">("All");
   const [adding, setAdding] = useState(false);
@@ -223,9 +229,12 @@ export default function LeadsPage() {
         <div className="pt-5">
           <div className="rounded-2xl border border-n200 bg-white sh-card">
             <div className="border-b border-n200 p-4"><div className="flex flex-wrap items-center gap-2">
-              {(["All", "Active", "Unassigned"] as const).map((t) => { const on = tab === t; const count = t === "All" ? rows.length : t === "Active" ? rows.filter((r) => !["Sold", "Lost"].includes(r.statusLabel)).length : rows.filter((r) => !r.assigned).length; return (
+              {spamView ? (
+                <Link href="/dashboard/leads" className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-n600 hover:bg-n100">← Back to leads</Link>
+              ) : (["All", "Active", "Unassigned"] as const).map((t) => { const on = tab === t; const count = t === "All" ? rows.length : t === "Active" ? rows.filter((r) => !["Sold", "Lost"].includes(r.statusLabel)).length : rows.filter((r) => !r.assigned).length; return (
                 <button key={t} onClick={() => setTab(t)} className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition", on ? "bg-brand text-white" : "text-n500 hover:bg-n100")}>{t}<span className={cn("grid h-4 min-w-5 place-items-center rounded-full px-1.5 text-[10px]", on ? "bg-white text-brand" : "bg-n100 text-n500")}>{count}</span></button>
               ); })}
+              {!spamView && (s?.spam ?? 0) > 0 && <Link href="/dashboard/leads?spam=1" className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-n500 hover:bg-n100">Spam<span className="grid h-4 min-w-5 place-items-center rounded-full bg-err-soft px-1.5 text-[10px] text-err">{s?.spam}</span></Link>}
             </div></div>
 
             {loading ? (
@@ -252,7 +261,7 @@ export default function LeadsPage() {
                         <td className="p-2"><span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold", TEMP_TONE[r.temperature] ?? "bg-n100 text-n600")}><span className="h-2 w-2 rounded-full" style={{ background: TEMP_DOT[r.temperature] ?? "#9aa0ac" }} />{r.temperature}</span></td>
                         <td className="p-2" onClick={(e) => e.stopPropagation()}><AssignCell leadId={r.id} current={r.assigned} members={assignable} onDone={reload} /></td>
                         <td className="tnum p-2 text-[12.5px] text-n500">{r.lastAdded}</td>
-                        <td className="p-2" onClick={(e) => e.stopPropagation()}><ActionsMenu r={r} /></td>
+                        <td className="p-2" onClick={(e) => e.stopPropagation()}>{spamView ? <button onClick={() => unspam(r.id)} className="rounded-md border border-n200 px-2 py-1 text-[11.5px] font-semibold text-n600 transition hover:bg-n100 hover:text-brand">Not spam</button> : <ActionsMenu r={r} />}</td>
                       </tr>
                     ))}
                   </tbody>

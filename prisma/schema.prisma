@@ -66,6 +66,7 @@ model Dealership {
   feedConfig    Json             @default("{}") // FTP inventory feed: { enabled, protocol, host, port, username, password, path, lastRunAt, lastResult }
   adfConfig     Json             @default("{}") // ADF lead delivery: { enabled, emails: string[] } — emails leads as ADF XML to a CRM/provider
   integrations  Json             @default("{}") // marketplace integrations: { [providerId]: { enabled, connectedAt, ...fields } }
+  leadRouting   Json             @default("{}") // inbound routing: { autoAssign: bool, mode: "round_robin"|"owner", cursor: int }
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -373,6 +374,9 @@ model Lead {
   assignedTo    User?           @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   hasTradeIn    Boolean         @default(false)
   financing     Boolean         @default(false)
+  isSpam        Boolean         @default(false) // routed out of the main pipeline by spam scoring
+  primaryEmail  String?         // normalized (lowercased) for dedup + search
+  primaryPhone  String?         // normalized (digits only) for dedup + search
   deal          Json            @default("{}") // desking worksheet: price/trade/tax/term/apr + trade vehicle
   consent       Json            @default("{}") // TCPA/CAN-SPAM audit: { sms|email: { status, at, source, disclosure, capturedBy, ip, method, note } }
   nextAction    String?
@@ -389,6 +393,8 @@ model Lead {
 
   @@index([dealershipId, status])
   @@index([dealershipId, lastActivityAt])
+  @@index([dealershipId, primaryEmail])
+  @@index([dealershipId, primaryPhone])
   @@map("leads")
 }
 

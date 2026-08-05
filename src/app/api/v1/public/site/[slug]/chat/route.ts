@@ -8,6 +8,7 @@ import { deliverAdf } from "@/lib/server/adfDelivery";
 import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
 import { aiFirstTouch } from "@/lib/server/ai";
 import { webConsentRecord } from "@/lib/consent";
+import { contactKeys, findDuplicateLead, scoreSpam, nextAssignee } from "@/lib/server/leadPipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,19 +44,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
     const consent = d.consent ? { sms: webConsentRecord(ip), email: webConsentRecord(ip) } : {};
     const [first, ...rest] = d.name.trim().split(/\s+/);
 
+    // returning chat visitor → re-engage the existing lead
+    const dup = await findDuplicateLead(dealershipId, d.email, d.phone);
+    if (dup) {
+      await prisma.lead.update({ where: { id: dup.id, dealershipId }, data: { lastActivityAt: new Date() } });
+      await prisma.leadActivity.create({ data: { dealershipId, leadId: dup.id, type: "NOTE", actorType: "SYSTEM", content: `Returning chat${d.message?.trim() ? `: ${d.message.trim()}` : ""}` } }).catch(() => {});
+      return reply({ ok: true, reply: `Welcome back, ${first}! We've got your message.` }, 201);
+    }
+
+    const spam = scoreSpam({ firstName: first, lastName: rest.join(" "), email: d.email, phone: d.phone, message: d.message });
+    const assignedToId = spam.isSpam ? null : await nextAssignee(dealershipId);
+
     const lead = await prisma.lead.create({
       data: {
         dealershipId,
         firstName: first, lastName: rest.join(" ") || null,
         emails: (d.email ? [{ value: d.email, type: "personal" }] : []) as unknown as Prisma.InputJsonValue,
         phones: (d.phone ? [{ value: d.phone, type: "mobile" }] : []) as unknown as Prisma.InputJsonValue,
-        source: "Website chat", temperature: "WARM", ownerType: "AI",
+        ...contactKeys(d.email, d.phone),
+        source: "Website chat", temperature: "WARM", isSpam: spam.isSpam,
+        ...(assignedToId ? { assignedToId, ownerType: "HUMAN" as const } : { ownerType: "AI" as const }),
         consent: consent as unknown as Prisma.InputJsonValue,
       },
     });
     if (d.message?.trim()) {
       await prisma.leadActivity.create({ data: { dealershipId, leadId: lead.id, type: "NOTE", actorType: "SYSTEM", content: `Website chat: ${d.message.trim()}` } }).catch(() => {});
     }
+    if (spam.isSpam) return reply({ ok: true, reply: `Thanks ${first}! We got your message.` }, 201);
 
     const dealer = await prisma.dealership.findUnique({ where: { id: dealershipId }, select: { name: true, users: { where: { role: "OWNER" }, select: { email: true }, take: 1 } } });
     const ownerEmail = dealer?.users[0]?.email;
