@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { Card } from "@/components/app/AppKit";
 import { Sheet } from "@/components/app/Sheet";
@@ -9,10 +9,12 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useToast } from "@/components/app/Toast";
 import { INTEGRATIONS, CATEGORY_LABEL, byId, type IntegrationDef, type IntegrationsRecord, type ProviderConfig } from "@/lib/integrations";
-import { Check, Users, CreditCard, Car } from "lucide-react";
+import { Check, Users, CreditCard, Car, Clock } from "lucide-react";
 
+type Sub = { status: "active" | "scheduled_cancel" | "expired"; priceCents: number; periodEnd: string; beta: boolean } | undefined;
 const CAT_ICON = { crm: Users, credit: CreditCard, inventory: Car } as const;
 const money = (cents: number) => `$${Math.round(cents / 100)}`;
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const tile = (n: string) => ["#2b6ba4", "#1f8a65", "#c08532", "#6b5bab", "#b23b5b", "#0f766e"][(n.charCodeAt(0) + n.length) % 6];
 
@@ -20,38 +22,60 @@ const fieldCls = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[
 
 function ConnectSheet({ def, config, onClose, onSaved }: { def: IntegrationDef; config: ProviderConfig; onClose: () => void; onSaved: () => void }) {
   const connected = !!config.enabled;
+  const paid = def.priceCents != null;
+  const sub = config.subscription as Sub;
+  const subActive = !!sub && (sub.status === "active" || sub.status === "scheduled_cancel");
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(def.fields.map((f) => [f.key, String(config[f.key] ?? "")])));
   const [mode, setMode] = useState<"automatic" | "manual">((config.mode as "automatic" | "manual") ?? "automatic");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const toast = useToast();
 
-  const save = async (enable: boolean) => {
+  const saveConfig = async (enable: boolean) => {
+    const cfg: Record<string, string | boolean> = { enabled: enable, ...vals };
+    if (def.hasMode) cfg.mode = mode;
+    return apiFetch<{ live: boolean }>("/integrations", { method: "PUT", body: JSON.stringify({ id: def.id, config: cfg }) });
+  };
+  const subscribe = (action: "start" | "cancel" | "reactivate") => apiFetch("/integrations/subscribe", { method: "PUT", body: JSON.stringify({ id: def.id, action }) });
+  const run = async (fn: () => Promise<unknown>, msg: string) => {
     setBusy(true); setErr(null);
-    try {
-      const cfg: Record<string, string | boolean> = { enabled: enable, ...vals };
-      if (def.hasMode) cfg.mode = mode;
-      const r = await apiFetch<{ live: boolean }>("/integrations", { method: "PUT", body: JSON.stringify({ id: def.id, config: cfg }) });
-      if (!enable) toast.success(`${def.name} disconnected`);
-      else if (r.live) toast.success(`${def.name} connected`);
-      else toast.success(`${def.name} setup saved — activates at launch`);
-      onSaved(); onClose();
-    } catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
+    try { await fn(); toast.success(msg); onSaved(); onClose(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Could not save."); }
     finally { setBusy(false); }
   };
 
+  const startPaid = () => run(async () => { if (def.fields.length) await saveConfig(true); await subscribe("start"); }, sub?.beta || !def.live ? `${def.name} activated — free during beta` : `Subscribed to ${def.name}`);
+  const cancelPaid = () => run(() => subscribe("cancel"), `${def.name} will cancel at period end`);
+  const reactivatePaid = () => run(() => subscribe("reactivate"), `${def.name} reactivated`);
+  const saveFree = (enable: boolean) => run(() => saveConfig(enable), enable ? (def.live ? `${def.name} connected` : `${def.name} setup saved — activates at launch`) : `${def.name} disconnected`);
+  const savePaidFields = () => run(() => saveConfig(true), "Saved");
+
+  let footer: ReactNode;
+  if (paid && sub?.status === "scheduled_cancel") {
+    footer = <><span className="mr-auto text-[12px] text-warn">Cancels {fmtDate(sub.periodEnd)}</span><button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 hover:bg-n100">Close</button><button onClick={reactivatePaid} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">Reactivate</button></>;
+  } else if (paid && subActive) {
+    footer = <><button onClick={cancelPaid} disabled={busy} className="mr-auto text-[13px] font-semibold text-err hover:underline">Cancel subscription</button><button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 hover:bg-n100">Close</button>{def.fields.length > 0 && <button onClick={savePaidFields} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">Save</button>}</>;
+  } else if (paid) {
+    footer = <><button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 hover:bg-n100">Cancel</button><button onClick={startPaid} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "…" : `Subscribe · ${money(def.priceCents!)}/mo`}</button></>;
+  } else {
+    footer = <>{connected && <button onClick={() => saveFree(false)} disabled={busy} className="mr-auto text-[13px] font-semibold text-err hover:underline">Disconnect</button>}<button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 hover:bg-n100">Cancel</button><button onClick={() => saveFree(true)} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : connected ? "Save" : "Connect"}</button></>;
+  }
+
   return (
-    <Sheet open onClose={onClose} width="max-w-[440px]" title={def.name} subtitle={def.blurb}
-      footer={<>
-        {connected && <button onClick={() => save(false)} disabled={busy} className="mr-auto text-[13px] font-semibold text-err hover:underline">Disconnect</button>}
-        <button onClick={onClose} className="h-9 rounded-md border border-n200 bg-white px-4 text-[13px] font-medium text-n700 transition hover:bg-n100">Cancel</button>
-        <button onClick={() => save(true)} disabled={busy} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : connected ? "Save" : def.priceCents && !def.live ? `Subscribe · ${money(def.priceCents)}/mo` : "Connect"}</button>
-      </>}>
+    <Sheet open onClose={onClose} width="max-w-[440px]" title={def.name} subtitle={def.blurb} footer={footer}>
       <div className="space-y-4">
-        {def.priceCents != null && (
+        {paid && subActive && sub ? (
+          <div className={cn("rounded-lg border px-3 py-2.5", sub.status === "scheduled_cancel" ? "border-warn/30 bg-warn-soft/40" : "border-ok/30 bg-ok-soft/40")}>
+            <div className="flex items-center justify-between">
+              <span className={cn("inline-flex items-center gap-1.5 text-[12.5px] font-semibold", sub.status === "scheduled_cancel" ? "text-warn" : "text-ok")}>{sub.status === "scheduled_cancel" ? <Clock className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}{sub.status === "scheduled_cancel" ? "Cancels soon" : "Active"}</span>
+              <span className="text-[11.5px] text-n500">{sub.status === "scheduled_cancel" ? `Access until ${fmtDate(sub.periodEnd)}` : `Renews ${fmtDate(sub.periodEnd)}`}</span>
+            </div>
+            {sub.beta && <p className="mt-1 text-[11px] text-n500">Free during beta — billing ({money(sub.priceCents)}/mo) begins at launch.</p>}
+          </div>
+        ) : def.priceCents != null && (
           <div className="flex items-center justify-between rounded-lg bg-brand-soft/50 px-3 py-2.5">
             <span className="text-[12.5px] font-medium text-n700">{def.trialDays ? `${def.trialDays}-day free trial, then ` : ""}{money(def.priceCents)}/month</span>
-            {!def.live && <span className="text-[11px] font-semibold text-brand">Billing starts at launch</span>}
+            <span className="text-[11px] font-semibold text-brand">Free during beta</span>
           </div>
         )}
         {def.fields.map((f) => (
@@ -89,19 +113,26 @@ function ConnectSheet({ def, config, onClose, onSaved }: { def: IntegrationDef; 
 }
 
 function IntegrationCard({ def, config, onOpen }: { def: IntegrationDef; config: ProviderConfig; onOpen: () => void }) {
-  const connected = !!config.enabled;
+  const paid = def.priceCents != null;
+  const sub = config.subscription as Sub;
+  const subActive = !!sub && (sub.status === "active" || sub.status === "scheduled_cancel");
+  const connected = paid ? subActive : !!config.enabled;
+  const label = paid
+    ? (sub?.status === "scheduled_cancel" ? "Cancels soon" : subActive ? "Active" : "Subscribe")
+    : (connected ? (def.live ? "Connected" : "Saved") : "Connect");
+  const cls = sub?.status === "scheduled_cancel" ? "border border-warn/30 bg-warn-soft text-warn" : connected ? "border border-ok/30 bg-ok-soft text-ok" : "border border-n200 bg-white text-n700 hover:bg-n100";
   return (
     <Card className="flex flex-col p-5">
       <div className="mb-3 flex items-center gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[14px] font-bold text-white" style={{ background: tile(def.name) }}>{initials(def.name)}</span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-n900">{def.name}</p>
-          {def.priceCents != null && <span className="text-[11.5px] font-semibold text-brand">{def.trialDays ? `${def.trialDays}-day trial · ` : ""}{money(def.priceCents)}/mo</span>}
+          {paid && <span className="text-[11.5px] font-semibold text-brand">{def.trialDays ? `${def.trialDays}-day trial · ` : ""}{money(def.priceCents!)}/mo</span>}
         </div>
       </div>
       <p className="flex-1 text-[12.5px] leading-relaxed text-n500">{def.blurb}</p>
-      <button onClick={onOpen} className={cn("mt-4 inline-flex h-9 items-center justify-center gap-1.5 self-start rounded-md px-4 text-[12.5px] font-semibold transition", connected ? "border border-ok/30 bg-ok-soft text-ok" : "border border-n200 bg-white text-n700 hover:bg-n100")}>
-        {connected ? <><Check className="h-3.5 w-3.5" />{def.live ? "Connected" : "Saved"}</> : "Connect"}
+      <button onClick={onOpen} className={cn("mt-4 inline-flex h-9 items-center justify-center gap-1.5 self-start rounded-md px-4 text-[12.5px] font-semibold transition", cls)}>
+        {connected && <Check className="h-3.5 w-3.5" />}{label}
       </button>
     </Card>
   );

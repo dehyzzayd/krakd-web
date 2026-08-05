@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import { byId, type IntegrationsRecord, type ProviderConfig } from "@/lib/integrations";
+import { effectiveSub, type IntegrationSub } from "@/lib/server/billing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export const GET = route(async (req: NextRequest) => {
     def?.fields.forEach((f) => {
       if (f.type === "password" && out[f.key]) { out[`${f.key}Set`] = true; out[f.key] = ""; }
     });
+    if (out.subscription) out.subscription = effectiveSub(out.subscription as IntegrationSub) as unknown as ProviderConfig[string];
     masked[pid] = out;
   }
   return json({ integrations: masked });
