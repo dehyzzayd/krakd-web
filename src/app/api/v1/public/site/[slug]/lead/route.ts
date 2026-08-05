@@ -8,6 +8,7 @@ import { aiFirstTouch } from "@/lib/server/ai";
 import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
 import { webConsentRecord } from "@/lib/consent";
 import { findDuplicateLead, scoreSpam, nextAssignee, contactKeys } from "@/lib/server/leadPipeline";
+import { rateLimit, clientIp } from "@/lib/server/ratelimit";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -22,6 +23,7 @@ const leadSchema = z.object({
   vehicleId: z.string().uuid().optional(),
   campaignId: z.string().uuid().optional(), // attribution: ?kc= from the ad landing URL
   consent: z.boolean().optional(), // TCPA/CAN-SPAM express consent checkbox
+  hp: z.string().optional(), // honeypot — real users never fill this
 }).refine((d) => d.phone?.trim() || d.email?.trim(), { message: "Add a phone or email so we can reach you" });
 
 /* POST /api/v1/public/site/[slug]/lead → website form → CRM lead (source = Website, retains vehicle) */
@@ -31,9 +33,13 @@ export const POST = route(async (_req: NextRequest, ctx: { params: Promise<{ slu
   if (!w || w.status !== "PUBLISHED") throw new HttpError(404, "Site not found");
   const dealershipId = w.dealershipId;
 
+  const rl = await rateLimit("lead", clientIp(_req), 8, 60);
+  if (!rl.ok) throw new HttpError(429, "Too many submissions — please try again in a minute.");
+
   const parsed = leadSchema.safeParse(await _req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
+  if (d.hp?.trim()) return json({ ok: true }, 201); // honeypot tripped — silently drop
   const ip = (_req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;
   const consent = d.consent ? { sms: webConsentRecord(ip), email: webConsentRecord(ip) } : {};
 

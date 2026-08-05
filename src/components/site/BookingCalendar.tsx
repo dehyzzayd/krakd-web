@@ -39,6 +39,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
   const [step, setStep] = useState<"pick" | "details">("pick");
   const [f, setF] = useState({ firstName: "", lastName: "", phone: "", email: "", note: "" });
   const [consent, setConsent] = useState(false);
+  const [hp, setHp] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [doneId, setDoneId] = useState<string | null>(null);
@@ -85,7 +86,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
         const j = await r.json(); if (!r.ok) throw new Error(j.error || "Could not reschedule.");
         setDoneId(reschedule.id);
       } else {
-        const r = await fetch(`/api/v1/public/site/${slug}/booking`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ start: selSlot, ...f, listingId, consent }) });
+        const r = await fetch(`/api/v1/public/site/${slug}/booking`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ start: selSlot, ...f, listingId, consent, hp }) });
         const j = await r.json(); if (!r.ok) throw new Error(j.error || "Could not book that time.");
         setDoneId(j.id);
       }
@@ -161,6 +162,7 @@ export function BookingCalendar({ slug, config, listingId, reschedule }: { slug:
                     <input value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="Phone" className={FIELD} />
                     <input value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="Email" className={FIELD} />
                     <textarea value={f.note} onChange={(e) => set("note", e.target.value)} rows={3} placeholder="Anything we should know? (optional)" className={`${FIELD} h-auto resize-y py-2`} />
+                    <input type="text" name="company" value={hp} onChange={(e) => setHp(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
                   </div>
                 </>
               )}

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
+import { openJson } from "@/lib/server/crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export const GET = route(async (req: NextRequest, ctx: { params: Promise<{ id: s
   const { id } = await ctx.params;
   const r = await prisma.creditApplication.findFirst({ where: { id, dealershipId } });
   if (!r) throw new HttpError(404, "Application not found");
-  return json({ id: r.id, status: r.status, createdAt: r.createdAt.toISOString(), applicant: r.applicant, coApplicant: r.coApplicant });
+  return json({ id: r.id, status: r.status, createdAt: r.createdAt.toISOString(), applicant: openJson(r.applicant), coApplicant: r.coApplicant ? openJson(r.coApplicant) : null });
 });
 
 const patchSchema = z.object({ status: z.enum(["NEW", "REVIEWING", "APPROVED", "DECLINED"]) });

@@ -9,6 +9,7 @@ import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
 import { aiFirstTouch } from "@/lib/server/ai";
 import { webConsentRecord } from "@/lib/consent";
 import { contactKeys, findDuplicateLead, scoreSpam, nextAssignee } from "@/lib/server/leadPipeline";
+import { rateLimit, clientIp } from "@/lib/server/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ const schema = z.object({
   email: z.string().optional(),
   message: z.string().max(1000).optional(),
   consent: z.boolean().optional(),
+  hp: z.string().optional(), // honeypot
 }).refine((d) => d.phone?.trim() || d.email?.trim(), { message: "Add a phone or email" });
 
 /* POST /api/v1/public/site/[slug]/chat → website chat-widget lead capture (CORS, public) */
@@ -37,9 +39,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
     if (!w || w.status !== "PUBLISHED") throw new HttpError(404, "Site not found");
     const dealershipId = w.dealershipId;
 
+    const rl = await rateLimit("chat", clientIp(req), 10, 60);
+    if (!rl.ok) return reply({ message: "Too many messages — try again shortly." }, 429);
+
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
     const d = parsed.data;
+    if (d.hp?.trim()) return reply({ ok: true, reply: "Thanks!" }, 201); // honeypot
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;
     const consent = d.consent ? { sms: webConsentRecord(ip), email: webConsentRecord(ip) } : {};
     const [first, ...rest] = d.name.trim().split(/\s+/);

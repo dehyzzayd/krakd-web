@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { INTEGRATIONS, type IntegrationsRecord } from "@/lib/integrations";
 import { sendDocEmail } from "./email";
 import { buildCreditPdf } from "./creditPdf";
+import { openJson } from "./crypto";
 
 const first = (arr: unknown) => (Array.isArray(arr) && arr[0] ? (arr[0] as { value?: string }).value ?? "" : "");
 const postJson = (url: string, body: unknown) =>
@@ -42,7 +43,8 @@ export async function deliverCreditAppToIntegrations(dealershipId: string, appId
 
   const app = await prisma.creditApplication.findFirst({ where: { id: appId, dealershipId }, select: { applicant: true, coApplicant: true, createdAt: true } });
   if (!app) return;
-  const applicant = (app.applicant ?? {}) as Record<string, string>;
+  const applicant = openJson<Record<string, string>>(app.applicant ?? {}) ?? {};
+  const coApplicant = app.coApplicant ? openJson<Record<string, string>>(app.coApplicant) : null;
   const applicantName = `${applicant.firstName ?? ""} ${applicant.lastName ?? ""}`.trim() || "Applicant";
 
   // build the PDF once for any email targets
@@ -51,12 +53,12 @@ export async function deliverCreditAppToIntegrations(dealershipId: string, appId
   if (needPdf) {
     try {
       const contact = [dealer?.addressLine1, [dealer?.city, dealer?.state].filter(Boolean).join(", "), dealer?.phone].filter(Boolean).join("  ·  ");
-      const doc = buildCreditPdf({ applicant, coApplicant: (app.coApplicant ?? null) as Record<string, string> | null, createdAt: app.createdAt }, { name: dealer?.name ?? "Dealership", brandColor: dealer?.brandColor ?? null, logoUrl: dealer?.logoUrl ?? null, contact, consentText: "" });
+      const doc = buildCreditPdf({ applicant, coApplicant, createdAt: app.createdAt }, { name: dealer?.name ?? "Dealership", brandColor: dealer?.brandColor ?? null, logoUrl: dealer?.logoUrl ?? null, contact, consentText: "" });
       pdf = Buffer.from(doc.output("arraybuffer"));
     } catch { /* skip pdf */ }
   }
 
-  const jsonPayload = { source: "Krakd", dealership: dealer?.name ?? "", application: { applicant, coApplicant: app.coApplicant ?? null, submittedAt: app.createdAt.toISOString() } };
+  const jsonPayload = { source: "Krakd", dealership: dealer?.name ?? "", application: { applicant, coApplicant, submittedAt: app.createdAt.toISOString() } };
 
   await Promise.all(targets.map(async (i) => {
     const cfg = rec[i.id];

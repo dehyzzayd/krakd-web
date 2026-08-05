@@ -45,6 +45,7 @@
     + '    <input class="kw-field" id="kw-name" placeholder="Your name" />'
     + '    <input class="kw-field" id="kw-contact" placeholder="Phone or email" />'
     + '    <textarea class="kw-field" id="kw-message" placeholder="How can we help?"></textarea>'
+    + '    <input type="text" id="kw-hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />'
     + '    <label class="kw-consent"><input type="checkbox" id="kw-consent" /><span>I agree to be contacted by phone, text and email about my enquiry. Msg/data rates may apply; reply STOP to opt out.</span></label>'
     + '    <button class="kw-send" id="kw-send" style="background:' + COLOR + '" disabled>Send</button>'
     + '  </div>'
@@ -73,7 +74,7 @@
     fetch(HOST + "/api/v1/public/site/" + encodeURIComponent(slug) + "/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: name.value.trim(), email: isEmail ? val : "", phone: isEmail ? "" : val, message: message.value.trim(), consent: consent.checked }),
+      body: JSON.stringify({ name: name.value.trim(), email: isEmail ? val : "", phone: isEmail ? "" : val, message: message.value.trim(), consent: consent.checked, hp: (root.querySelector("#kw-hp") || {}).value || "" }),
     }).then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (data) {
         body.innerHTML = '<div class="kw-ok"><div class="kw-check" style="background:' + COLOR + '">✓</div>'

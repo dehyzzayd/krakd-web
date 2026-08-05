@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { HttpError } from "@/lib/server/http";
 import { buildCreditPdf } from "@/lib/server/creditPdf";
+import { openJson } from "@/lib/server/crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,12 +21,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     const d = r.dealership;
     const contact = [d.addressLine1, [d.city, d.state].filter(Boolean).join(", "), d.phone].filter(Boolean).join("  ·  ");
+    const applicant = openJson<Record<string, string>>(r.applicant ?? {}) ?? {};
+    const coApplicant = r.coApplicant ? openJson<Record<string, string>>(r.coApplicant) : null;
     const doc = buildCreditPdf(
-      { applicant: (r.applicant ?? {}) as Record<string, string>, coApplicant: (r.coApplicant ?? null) as Record<string, string> | null, createdAt: r.createdAt },
+      { applicant, coApplicant, createdAt: r.createdAt },
       { name: d.name, brandColor: d.brandColor, logoUrl: d.logoUrl, contact, consentText: cfg?.consentText ?? "" },
     );
     const bytes = doc.output("arraybuffer");
-    const applicant = (r.applicant ?? {}) as Record<string, string>;
     const name = `${applicant.firstName ?? "credit"}-${applicant.lastName ?? "application"}`.replace(/[^a-z0-9-]/gi, "").toLowerCase();
 
     return new Response(Buffer.from(bytes), {

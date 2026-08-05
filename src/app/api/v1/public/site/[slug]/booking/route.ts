@@ -8,6 +8,7 @@ import { notifyAppointment } from "@/lib/server/appointmentNotify";
 import { pushLeadToIntegrations } from "@/lib/server/integrationDelivery";
 import { webConsentRecord } from "@/lib/consent";
 import { contactKeys } from "@/lib/server/leadPipeline";
+import { rateLimit, clientIp } from "@/lib/server/ratelimit";
 import { computeSlots, parseDuration, type Hour, type Busy } from "@/lib/server/slots";
 import type { Prisma } from "@prisma/client";
 
@@ -68,15 +69,19 @@ const bookSchema = z.object({
   note: z.string().max(1000).optional(),
   listingId: z.string().uuid().optional(),
   consent: z.boolean().optional(),
+  hp: z.string().optional(), // honeypot
 }).refine((d) => d.phone?.trim() || d.email?.trim(), { message: "Add a phone or email so we can confirm" });
 
 /* POST → book a slot: creates a Lead + Appointment; returns a manage id */
 export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ slug: string }> }) => {
   const { slug } = await ctx.params;
   const c = await context(slug);
+  const rl = await rateLimit("booking", clientIp(req), 6, 60);
+  if (!rl.ok) throw new HttpError(429, "Too many attempts — please try again in a minute.");
   const parsed = bookSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const d = parsed.data;
+  if (d.hp?.trim()) return json({ ok: true }, 201); // honeypot
 
   if (!d.consent) throw new HttpError(400, "Please agree to be contacted so we can confirm and remind you about your appointment.");
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || undefined;

@@ -477,6 +477,16 @@ model Appointment {
   @@map("appointments")
 }
 
+model RateLimit {
+  id        String   @id // `${scope}:${ip}:${windowStart}`
+  count     Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("rate_limits")
+}
+
 model Call {
   id               String     @id @default(uuid()) @db.Uuid
   dealershipId     String     @db.Uuid

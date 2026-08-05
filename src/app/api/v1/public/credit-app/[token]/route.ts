@@ -7,6 +7,7 @@ import { deliverAdf } from "@/lib/server/adfDelivery";
 import { pushLeadToIntegrations, deliverCreditAppToIntegrations } from "@/lib/server/integrationDelivery";
 import { webConsentRecord } from "@/lib/consent";
 import { contactKeys } from "@/lib/server/leadPipeline";
+import { sealJson } from "@/lib/server/crypto";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -66,8 +67,8 @@ export const POST = route(async (req: NextRequest, ctx: { params: Promise<{ toke
     const created = await tx.creditApplication.create({
       data: {
         dealershipId, leadId: lead.id,
-        applicant: parsed.data.applicant as unknown as Prisma.InputJsonValue,
-        coApplicant: parsed.data.coApplicant ? (parsed.data.coApplicant as unknown as Prisma.InputJsonValue) : undefined,
+        applicant: sealJson(parsed.data.applicant) as Prisma.InputJsonValue,
+        coApplicant: parsed.data.coApplicant ? (sealJson(parsed.data.coApplicant) as Prisma.InputJsonValue) : undefined,
       },
     });
     await tx.leadActivity.create({ data: { dealershipId, leadId: lead.id, type: "NOTE", actorType: "SYSTEM", content: "Submitted a credit application" } });
