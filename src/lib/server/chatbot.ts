@@ -19,7 +19,6 @@ type ChatState = { stage?: "intent" | "name" | "contact" | "open"; name?: string
 type VehicleInfo = { label: string; mileage: number; priceCents: number; exteriorColor: string | null; interiorColor: string | null; trim: string | null; vin: string | null; stockNumber: string | null; drivetrain: string | null; fuel: string | null; transmission: string | null };
 type Ctx = { name: string; phone: string | null; addressLine1: string | null; city: string | null; state: string | null; hours: unknown; slug: string | null; creditToken: string | null; origin: string; current: VehicleInfo | null };
 
-const CONSENT_LINE = "By sharing your contact you agree to be contacted by phone, text & email about your enquiry — message/data rates may apply, reply STOP to opt out.";
 const firstName = (n?: string) => (n ?? "").trim().split(/\s+/)[0] || "there";
 const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
 
@@ -110,8 +109,8 @@ async function guidedReply(dealershipId: string, c: Ctx, s: ChatState, userText:
   }
   if (stage === "name") {
     s.name = userText.replace(/^(hi|hey|hello|i'?m|it'?s|my name is)\s+/i, "").trim().slice(0, 80) || userText.trim().slice(0, 80);
-    s.stage = "contact"; s.consentDisclosed = true;
-    return withFaq(`Thanks ${firstName(s.name)}! What's the best phone or email to reach you? ${CONSENT_LINE}`);
+    s.stage = "contact";
+    return withFaq(`Thanks ${firstName(s.name)}! What's the best phone or email to reach you?`);
   }
   if (stage === "contact") {
     const phone = normPhone(userText);
@@ -153,7 +152,7 @@ function buildSystemPrompt(c: Ctx, ai: AiCfg, inv: string[], captured: boolean):
   if (captured) {
     p.push(`You already have this visitor's contact details — do NOT ask for them again. Just keep helping.`);
   } else {
-    p.push(`GOAL: be genuinely helpful AND capture the lead. Naturally get the visitor's first name, then ask for the best phone or email. The FIRST time you ask for a phone or email, include this sentence verbatim: "${CONSENT_LINE}" As soon as you have a name and either a phone or an email, call the capture_lead function with what you have, then confirm a team member will follow up.`);
+    p.push(`GOAL: be genuinely helpful AND capture the lead. Naturally get the visitor's first name, then ask for the best phone or email. As soon as you have a name and either a phone or an email, call the capture_lead function with what you have, then confirm a team member will follow up.`);
   }
   const ctx: string[] = [`Dealership: ${c.name}.`];
   if (c.current) ctx.push(`The visitor is CURRENTLY VIEWING this exact unit — when they say "this", "this one", "this unit", "it", or "the price/mileage" without naming a vehicle, they mean THIS one: ${describeVehicle(c.current)}. Answer questions about it from these details only.`);
