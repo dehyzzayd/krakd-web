@@ -21,7 +21,7 @@ async function load(dealershipId: string, id: string) {
   const [l, cfg] = await Promise.all([
     prisma.lead.findFirst({
       where: { id, dealershipId },
-      include: { vehicle: true, assignedTo: { select: { firstName: true, lastName: true } }, activities: { orderBy: { createdAt: "desc" }, take: 50 }, appointments: { orderBy: { scheduledStart: "desc" } }, creditApps: { orderBy: { createdAt: "desc" }, select: { id: true, status: true, createdAt: true } } },
+      include: { vehicle: true, assignedTo: { select: { firstName: true, lastName: true } }, activities: { orderBy: { createdAt: "desc" }, take: 50 }, appointments: { orderBy: { scheduledStart: "desc" } }, calls: { orderBy: { createdAt: "desc" }, take: 20 }, creditApps: { orderBy: { createdAt: "desc" }, select: { id: true, status: true, createdAt: true } } },
     }),
     prisma.creditAppConfig.findUnique({ where: { dealershipId }, select: { publicToken: true } }),
   ]);
@@ -40,6 +40,7 @@ async function load(dealershipId: string, id: string) {
     creditApps: l.creditApps.map((c) => ({ id: c.id, status: c.status, when: `${ago(c.createdAt)} ago` })),
     activities: l.activities.map((a) => ({ id: a.id, type: ACT_LABEL[a.type] ?? a.type, kind: a.type, content: a.content ?? "", actor: a.actorType, when: `${ago(a.createdAt)} ago` })),
     appointments: l.appointments.map((a) => ({ id: a.id, type: a.type, status: a.status, start: a.scheduledStart.toISOString() })),
+    calls: l.calls.map((c) => ({ id: c.id, direction: c.direction, durationSec: c.durationSec, recordingUrl: c.recordingUrl, transcript: c.transcript, analysis: (c.analysis ?? null) as Record<string, unknown> | null, transcriptStatus: c.transcriptStatus, when: `${ago(c.createdAt)} ago` })),
   };
 }
 

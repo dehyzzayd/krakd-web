@@ -78,6 +78,7 @@ model Dealership {
   leads         Lead[]
   activities    LeadActivity[]
   appointments  Appointment[]
+  calls         Call[]
   conversations AiConversation[]
   quotes        Quote[]
   creditAppConfig CreditAppConfig?
@@ -387,6 +388,7 @@ model Lead {
 
   activities    LeadActivity[]
   appointments  Appointment[]
+  calls         Call[]
   conversations AiConversation[]
   quotes        Quote[]
   creditApps    CreditApplication[]
@@ -473,6 +475,31 @@ model Appointment {
 
   @@index([dealershipId, scheduledStart])
   @@map("appointments")
+}
+
+model Call {
+  id               String     @id @default(uuid()) @db.Uuid
+  dealershipId     String     @db.Uuid
+  dealership       Dealership @relation(fields: [dealershipId], references: [id], onDelete: Cascade)
+  leadId           String?    @db.Uuid
+  lead             Lead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  direction        String     @default("inbound") // inbound | outbound
+  fromNumber       String?
+  toNumber         String?
+  status           String     @default("completed")
+  durationSec      Int        @default(0)
+  recordingUrl     String?    @db.Text
+  transcript       String?    @db.Text
+  analysis         Json?      // { summary, preferences, financial, needs, nextSteps }
+  transcriptStatus String     @default("none") // none | processing | done | failed
+  provider         String?    // Twilio Call SID
+  externalRef      String?    // AssemblyAI transcript id
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([dealershipId, createdAt])
+  @@index([leadId])
+  @@map("calls")
 }
 
 // ─────────────────────────────── Krakd AI ───────────────────────────────

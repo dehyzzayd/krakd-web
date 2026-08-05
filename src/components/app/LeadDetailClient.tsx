@@ -21,6 +21,7 @@ type Lead = {
   nextAction: string | null; nextActionAt: string | null; creditAppToken: string | null;
   creditApps: { id: string; status: string; when: string }[];
   activities: Activity[]; appointments: { id: string; type: string; status: string; start: string }[];
+  calls: { id: string; direction: string; durationSec: number; recordingUrl: string | null; transcript: string | null; analysis: Record<string, unknown> | null; transcriptStatus: string; when: string }[];
 };
 
 const PIPELINE = ["NEW", "CONTACTED", "QUALIFIED", "APPOINTMENT", "SOLD"] as const;
@@ -158,6 +159,13 @@ export function LeadDetailClient({ id }: { id: string }) {
               ? <p className="mt-2 text-[12.5px] text-n500">None scheduled yet.</p>
               : <div className="mt-3 space-y-2">{l.appointments.map((a) => <div key={a.id} className="rounded-lg border border-n200 p-2.5 text-[12.5px]"><p className="font-medium capitalize text-n900">{a.type.replace("_", " ").toLowerCase()}</p><p className="tnum text-n500">{new Date(a.start).toLocaleString()}</p></div>)}</div>}
           </div>
+
+          {l.calls.length > 0 && (
+            <div className="rounded-2xl border border-n200 bg-white p-5 sh-card">
+              <h3 className="text-[13px] font-semibold text-n900">Calls</h3>
+              <div className="mt-3 space-y-3">{l.calls.map((c) => <CallItem key={c.id} c={c} onReload={reload} />)}</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -297,6 +305,34 @@ function NoteModal({ id, onClose, onDone }: { id: string; onClose: () => void; o
       footer={<><CancelBtn onClose={onClose} /><button onClick={save} disabled={busy || !text.trim()} className="btn-brand h-9 rounded-md px-4 text-[13px] font-semibold disabled:opacity-60">{busy ? "Saving…" : "Add note"}</button></>}>
       <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={5} placeholder="Log a note about this lead…" className={cn(field, "h-auto resize-none py-2")} />
     </Sheet>
+  );
+}
+
+function CallItem({ c, onReload }: { c: Lead["calls"][number]; onReload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const a = c.analysis as { summary?: string; nextSteps?: string[] } | null;
+  const transcribe = async () => {
+    setBusy(true);
+    try { await apiFetch(`/calls/${c.id}/transcribe`, { method: "POST", body: "{}" }); toast.success("Transcription started"); onReload(); }
+    catch (e) { toast.error(e instanceof ApiError ? e.message : "Could not transcribe."); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="rounded-lg border border-n200 p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[12.5px] font-semibold capitalize text-n900">{c.direction} call · {c.durationSec}s</span>
+        <span className="text-[11.5px] text-n400">{c.when}</span>
+      </div>
+      {c.recordingUrl && <audio controls preload="none" src={c.recordingUrl} className="mt-2 h-8 w-full" />}
+      {a?.summary && <div className="mt-2 rounded-md bg-brand-soft/40 p-2.5 text-[12px] text-n700"><p className="font-semibold text-brand">AI summary</p><p className="mt-0.5">{a.summary}</p>{a.nextSteps?.length ? <ul className="mt-1 list-disc pl-4 text-n600">{a.nextSteps.map((s, i) => <li key={i}>{s}</li>)}</ul> : null}</div>}
+      {c.transcript && <button onClick={() => setOpen((o) => !o)} className="mt-2 text-[11.5px] font-semibold text-brand">{open ? "Hide" : "Show"} transcript</button>}
+      {open && c.transcript && <p className="mt-1 max-h-56 overflow-y-auto whitespace-pre-wrap text-[12px] leading-relaxed text-n600">{c.transcript}</p>}
+      {c.transcriptStatus === "processing" && <p className="mt-2 text-[11.5px] text-n400">Transcribing…</p>}
+      {c.recordingUrl && c.transcriptStatus === "none" && <button onClick={transcribe} disabled={busy} className="mt-2 rounded-md border border-n200 px-2.5 py-1 text-[11.5px] font-semibold text-n700 transition hover:bg-n100 disabled:opacity-60">{busy ? "…" : "Transcribe"}</button>}
+      {c.transcriptStatus === "failed" && <button onClick={transcribe} disabled={busy} className="mt-2 rounded-md border border-n200 px-2.5 py-1 text-[11.5px] font-semibold text-err transition hover:bg-err-soft disabled:opacity-60">Retry transcription</button>}
+    </div>
   );
 }
 
