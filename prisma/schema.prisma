@@ -814,3 +814,58 @@ model AuditLog {
   @@index([dealershipId])
   @@map("audit_logs")
 }
+
+/* ── Krakd internal Outreach CRM (platform-admin only; NOT tenant-scoped) ──
+   The Krakd team's own sales pipeline for prospecting dealerships to sign up. */
+enum OutreachStatus {
+  NEW           // not contacted yet
+  CONTACTED     // reached out
+  INTERESTED    // showed interest
+  DEMO          // demo booked / given
+  NEGOTIATING   // working the deal
+  WON           // signed up
+  LOST          // dead
+}
+
+model OutreachContact {
+  id              String         @id @default(uuid()) @db.Uuid
+  company         String                          // prospect business name
+  contactName     String?                         // the person we deal with
+  title           String?                         // their role
+  email           String?
+  phone           String?
+  website         String?
+  city            String?
+  state           String?
+  category        String?                         // free-form segment, e.g. "Independent lot", "Franchise", "Real estate"
+  status          OutreachStatus @default(NEW)
+  source          String?                         // how we found them
+  valueCents      Int            @default(0)       // potential monthly/deal value
+  ownerId         String?        @db.Uuid          // assigned Krakd rep (User id)
+  ownerName       String?                          // denormalized for display
+  nextFollowUpAt  DateTime?
+  lastContactedAt DateTime?
+  createdById     String?        @db.Uuid
+  notes           OutreachNote[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([updatedAt])
+  @@map("outreach_contacts")
+}
+
+model OutreachNote {
+  id         String          @id @default(uuid()) @db.Uuid
+  contactId  String          @db.Uuid
+  contact    OutreachContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type       String          @default("NOTE")     // NOTE | CALL | EMAIL | MEETING | STATUS
+  content    String
+  authorId   String?         @db.Uuid
+  authorName String?
+  createdAt  DateTime        @default(now())
+
+  @@index([contactId, createdAt])
+  @@map("outreach_notes")
+}

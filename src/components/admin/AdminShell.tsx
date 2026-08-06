@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { apiFetch, getToken, clearSession } from "@/lib/api";
-import { LayoutDashboard, Users, Rocket, Megaphone, Globe, CreditCard, LifeBuoy, ShieldCheck, LogOut, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Users, Rocket, Megaphone, Globe, CreditCard, LifeBuoy, ShieldCheck, LogOut, ClipboardCheck, Target } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Overview", Icon: LayoutDashboard, match: (p: string, q: string) => p === "/admin" },
+  { href: "/admin/outreach", label: "Outreach", Icon: Target, match: (p: string, q: string) => p.startsWith("/admin/outreach") },
   { href: "/admin/clients", label: "Clients", Icon: Users, match: (p: string, q: string) => p.startsWith("/admin/clients") && !q },
   { href: "/admin/campaigns", label: "Ad review", Icon: ClipboardCheck, match: (p: string, q: string) => p.startsWith("/admin/campaigns") },
   { href: "/admin/clients?queue=onboarding", label: "Onboarding", Icon: Rocket, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "onboarding" },
