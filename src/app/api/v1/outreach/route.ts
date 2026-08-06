@@ -41,19 +41,19 @@ export const GET = route(async (req: NextRequest) => {
 
 const createSchema = z.object({
   company: z.string().trim().min(1, "Company name is required"),
-  contactName: z.string().optional(),
-  title: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  website: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  category: z.string().optional(),
+  contactName: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  website: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
   status: z.enum(STATUSES).optional(),
-  source: z.string().optional(),
+  source: z.string().nullable().optional(),
   valueCents: z.coerce.number().int().min(0).optional(),
   ownerId: z.string().uuid().nullable().optional(),
-  nextFollowUpAt: z.string().optional(),
+  nextFollowUpAt: z.string().nullable().optional(),
 });
 
 /* POST /api/v1/outreach → add a prospect */
