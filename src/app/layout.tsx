@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { Oswald, Fraunces } from "next/font/google";
 import "./globals.css";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
+import { Analytics } from "@vercel/analytics/next";
 
 const oswald = Oswald({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-display" });
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["300", "400", "500", "600"], style: ["normal", "italic"], variable: "--font-serif" });
@@ -37,6 +38,7 @@ export default function RootLayout({
     >
       <body className="min-h-dvh antialiased">
         <SmoothScroll>{children}</SmoothScroll>
+        <Analytics />
       </body>
     </html>
   );
