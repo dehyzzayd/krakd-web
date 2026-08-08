@@ -16,11 +16,11 @@ function NodeView({ node, ctx }: { node: BuilderNode; ctx: Ctx }) {
 
   switch (node.type) {
     case "section":
-      return <section className="mx-auto max-w-6xl px-5 py-10">{kids}</section>;
+      return <section className="mx-auto max-w-6xl px-5" style={{ paddingTop: num(p.paddingY, 40), paddingBottom: num(p.paddingY, 40), background: str(p.bg) || undefined }}>{kids}</section>;
     case "columns":
-      return <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${num(p.count, 2)}, minmax(0,1fr))` }}>{kids}</div>;
+      return <div className="grid sm:[grid-template-columns:var(--cols)]" style={{ ["--cols" as string]: `repeat(${Math.max(1, (node.children ?? []).length)}, minmax(0,1fr))`, gap: num(p.gap, 24) }}>{kids}</div>;
     case "column":
-      return <div>{kids}</div>;
+      return <div className="space-y-3">{kids}</div>;
     case "heading":
       return <h2 className="text-[28px] font-bold tracking-tight text-[#0f172a]" style={{ textAlign: (str(p.align) as "left" | "center" | "right") ?? "left" }}>{str(p.text) ?? ""}</h2>;
     case "text":

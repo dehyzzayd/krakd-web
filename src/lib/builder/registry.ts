@@ -30,6 +30,12 @@ export const ELEMENTS: ElementDef[] = [
     ],
   },
   {
+    type: "columns", label: "Columns", icon: "Columns", category: "layout", container: true,
+    defaultProps: { gap: 24 },
+    controls: [{ key: "gap", label: "Gap between columns", type: "number", min: 0, max: 64 }],
+  },
+  { type: "column", label: "Column", icon: "Square", category: "layout", container: true, defaultProps: {}, controls: [] },
+  {
     type: "heading", label: "Heading", icon: "Heading", category: "content",
     defaultProps: { text: "Your heading", align: "left", size: "lg" },
     controls: [

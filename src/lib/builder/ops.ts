@@ -8,7 +8,9 @@ const rid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.r
 
 export function newNode(type: NodeType): BuilderNode {
   const def = elementDef(type);
-  return { id: rid(), type, props: { ...(def?.defaultProps ?? {}) }, children: def?.container ? [] : undefined };
+  const node: BuilderNode = { id: rid(), type, props: { ...(def?.defaultProps ?? {}) }, children: def?.container ? [] : undefined };
+  if (type === "columns") node.children = [newNode("column"), newNode("column")]; // start with 2 columns
+  return node;
 }
 
 export function findNode(nodes: BuilderNode[], id: string): BuilderNode | null {
@@ -75,6 +77,16 @@ export function duplicateNode(nodes: BuilderNode[], id: string): BuilderNode[] {
     return next;
   }
   return nodes.map((n) => (n.children ? { ...n, children: duplicateNode(n.children, id) } : n));
+}
+
+/** Move a node to a new parent (null = root) at a given index — used by drag & drop.
+ *  No-op if the target is the node itself or one of its descendants. */
+export function moveNodeTo(nodes: BuilderNode[], id: string, targetParentId: string | null, index: number): BuilderNode[] {
+  const node = findNode(nodes, id);
+  if (!node) return nodes;
+  if (targetParentId === id || (node.children && findNode(node.children, targetParentId ?? "__none__"))) return nodes; // can't drop into self/descendant
+  const without = removeNode(nodes, id);
+  return insertNode(without, targetParentId, node, index);
 }
 
 /** The parent id of a node (null if top-level, undefined if not found). */
