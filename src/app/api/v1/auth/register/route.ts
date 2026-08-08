@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, issueTokens } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import { sendWelcomeEmail } from "@/lib/server/email";
+import { stripeConfigured } from "@/lib/server/billing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,7 +45,8 @@ export const POST = route(async (req: NextRequest) => {
         phone: dto.phone,
         email,
         vertical: dto.vertical ?? "AUTOMOTIVE",
-        subscription: { create: { priceCents: 14900, status: "ACTIVE" } },
+        // Beta (no Stripe): free + ACTIVE. Live billing: TRIALING until Checkout completes.
+        subscription: { create: { priceCents: 14900, status: stripeConfigured() ? "TRIALING" : "ACTIVE" } },
         aiSettings: { create: {} },
       },
     });
