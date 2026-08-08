@@ -25,6 +25,7 @@ export type SiteConfig = {
   vdpButtonUrl: string | null;
   layout: SectionBlock[];
   tree: BuilderNode[];
+  cardOptions: { finance?: boolean; photoCount?: boolean; specs?: boolean };
 };
 
 /** Composable homepage content sections (Phase 2 builder). Rendered in order after the
@@ -92,6 +93,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     vdpButtonLabel: w.vdpButtonLabel, vdpButtonUrl: w.vdpButtonUrl,
     layout: (Array.isArray(w.layout) ? w.layout : []) as SectionBlock[],
     tree: (Array.isArray(w.tree) ? w.tree : []) as BuilderNode[],
+    cardOptions: (w.cardOptions ?? {}) as SiteConfig["cardOptions"],
   };
 });
 

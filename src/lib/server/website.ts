@@ -61,7 +61,7 @@ export const DRAFTABLE_KEYS = [
   "headline", "intro", "ctaLabel", "aboutText", "financingText", "tradeInText",
   "whyUs", "staff", "reviews", "pages", "nav", "sidebar", "sections",
   "vdpButtonLabel", "vdpButtonUrl", "phone", "email", "address", "city", "state", "zip",
-  "hours", "socials", "layout", "tree",
+  "hours", "socials", "layout", "tree", "cardOptions",
 ] as const;
 
 export type DraftPatch = Partial<Record<(typeof DRAFTABLE_KEYS)[number], unknown>>;

@@ -84,7 +84,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
     const logoFont = contractor ? "var(--font-display), 'Oswald', sans-serif" : "var(--font-serif), Georgia, serif";
     const DISP = { fontFamily: "var(--font-display), 'Oswald', sans-serif", letterSpacing: "0.24em" } as const;
     return (
-      <header className={isHome ? "absolute inset-x-0 top-0 z-30" : "relative z-30 border-b border-black/12"} style={isHome ? undefined : { background: solidBg }}>
+      <header data-edit="section:header" data-edit-label="Navbar" className={isHome ? "absolute inset-x-0 top-0 z-30" : "relative z-30 border-b border-black/12"} style={isHome ? undefined : { background: solidBg }}>
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-7 sm:px-10">
           <Link href={`/site/${config.slug}`} data-edit="logoUrl" data-edit-label="Logo" style={{ color: fg }}>
             {config.logoUrl
@@ -123,7 +123,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full">
+    <header data-edit="section:header" data-edit-label="Navbar" className="sticky top-0 z-40 w-full">
       {/* utility strip — classic light only */}
       {eff === "light" && struct === "classic" && (
         <div className="hidden w-full text-white sm:block" style={{ background: "#0f172a" }}>
@@ -177,7 +177,7 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
     const contractor = config.vertical === "CONSTRUCTION";
     const DISP = { fontFamily: "var(--font-display), 'Oswald', sans-serif", letterSpacing: "0.24em" } as const;
     return (
-      <footer className="px-6 py-12 sm:px-10" style={{ background: contractor ? "#17150f" : "#1a1714", color: "rgba(243,239,231,0.6)" }}>
+      <footer data-edit="section:footer" data-edit-label="Footer" className="px-6 py-12 sm:px-10" style={{ background: contractor ? "#17150f" : "#1a1714", color: "rgba(243,239,231,0.6)" }}>
         <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center" style={{ borderColor: "rgba(243,239,231,0.18)" }}>
           <Link href={`/site/${config.slug}`} className={contractor ? "text-[20px] font-bold uppercase tracking-wide" : "text-[19px]"} style={{ fontFamily: contractor ? "var(--font-display), 'Oswald', sans-serif" : "var(--font-serif), Georgia, serif", color: "#f3efe7" }}>{config.dealershipName}</Link>
           <nav className="flex flex-wrap gap-x-8 gap-y-2">{items.filter((i) => i.label !== "Home").map((it) => <Link key={it.href} href={it.href} className="text-[11px] uppercase transition hover:text-[#f3efe7]" style={DISP}>{it.label}</Link>)}</nav>
@@ -188,7 +188,7 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
   }
 
   return (
-    <footer className="w-full text-white" style={{ background: siteTheme(config.template).band }}>
+    <footer data-edit="section:footer" data-edit-label="Footer" className="w-full text-white" style={{ background: siteTheme(config.template).band }}>
       <div className={`mx-auto grid ${C} gap-8 px-5 py-12 sm:grid-cols-2 lg:grid-cols-4`}>
         <div>
           <p className="text-[16px] font-bold">{config.dealershipName}</p>

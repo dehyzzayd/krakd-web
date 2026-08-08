@@ -36,6 +36,7 @@ export default function WebsitePreview() {
         pages: w.pages || [], nav: w.nav || [], sidebar: w.sidebar || [], vdpButtonLabel: w.vdpButtonLabel ?? null, vdpButtonUrl: w.vdpButtonUrl ?? null,
         layout: w.layout || [],
         tree: w.tree || [],
+        cardOptions: w.cardOptions || {},
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
@@ -68,6 +69,8 @@ export default function WebsitePreview() {
         els.forEach((el) => { if (el.children.length === 0 && (el.textContent ?? "").trim() === v) tag(el, key, label); });
       }
       if (config.heroImageUrl) Array.from(document.querySelectorAll("img")).forEach((img) => { if (img.getAttribute("src") === config.heroImageUrl) tag(img, "heroImageUrl", "Hero image"); });
+      const firstSection = document.querySelector("main > section, body section");
+      if (firstSection) tag(firstSection, "section:hero", "Hero section");
     };
     autoTag();
     const retag = setTimeout(autoTag, 300); // catch late layout

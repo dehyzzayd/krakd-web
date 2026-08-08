@@ -704,6 +704,7 @@ model Website {
   domainRenewsAt DateTime?
 
   layout       Json            @default("[]") // ordered custom content sections on the homepage
+  cardOptions  Json?           // vehicle-card display toggles (finance/photoCount/specs)
   tree         Json?           // advanced-builder node tree (Elementor-class); overrides layout when present
   draft        Json?           // staged, unpublished edits overlaid on the live fields
   publishedAt  DateTime?

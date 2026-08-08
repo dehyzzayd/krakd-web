@@ -73,6 +73,7 @@ const patchSchema = z.object({
   })).max(30).optional(),
   // Advanced-builder node tree — validated loosely here; the editor sends registry-checked nodes.
   tree: z.array(z.any()).max(2000).optional(),
+  cardOptions: z.object({ finance: z.boolean().optional(), photoCount: z.boolean().optional(), specs: z.boolean().optional() }).optional(),
 });
 
 /* PATCH /api/v1/website → stage edits into the draft overlay (NOT the live site).

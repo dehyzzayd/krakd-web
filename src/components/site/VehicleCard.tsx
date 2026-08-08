@@ -15,8 +15,10 @@ const SHELL: Record<Variant, string> = {
 };
 const PHOTO: Record<Variant, string> = { sharp: "aspect-[4/3]", soft: "aspect-[4/3]", editorial: "aspect-[3/2]" };
 
-export function VehicleCard({ slug, accent, v, variant = "soft", preview, vertical: vert }: {
-  slug: string; accent: string; v: SiteVehicle; variant?: Variant; preview?: boolean; vertical?: string;
+export type CardOptions = { finance?: boolean; photoCount?: boolean; specs?: boolean };
+
+export function VehicleCard({ slug, accent, v, variant = "soft", preview, vertical: vert, card }: {
+  slug: string; accent: string; v: SiteVehicle; variant?: Variant; preview?: boolean; vertical?: string; card?: CardOptions;
 }) {
   const def = verticalDef(vert);
   const href = `/site/${slug}/inventory/${v.id}`;
@@ -29,7 +31,7 @@ export function VehicleCard({ slug, accent, v, variant = "soft", preview, vertic
   const sharp = variant === "sharp";
 
   return (
-    <div className={`group flex flex-col overflow-hidden bg-white transition ${SHELL[variant]}`}>
+    <div data-edit="section:inventory" data-edit-label="Vehicle cards" className={`group flex flex-col overflow-hidden bg-white transition ${SHELL[variant]}`}>
       <Link href={preview ? "#" : href} className={`relative block overflow-hidden bg-[#e6eaf0] ${PHOTO[variant]}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {v.image ? <img src={v.image} alt={title} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" /> : <div className="grid h-full place-items-center text-[13px] text-[#94a3b8]">Photos coming soon</div>}
@@ -38,7 +40,7 @@ export function VehicleCard({ slug, accent, v, variant = "soft", preview, vertic
             {badges.map((b, i) => <span key={b} className={`rounded px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide ${i === 0 ? "bg-emerald-600 text-white" : "bg-black/75 text-white"}`}>{b}</span>)}
           </div>
         )}
-        {(v.photoCount ?? v.photos.length) > 1 && <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white"><Camera className="h-3 w-3" />{v.photoCount ?? v.photos.length}</span>}
+        {card?.photoCount !== false && (v.photoCount ?? v.photos.length) > 1 && <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white"><Camera className="h-3 w-3" />{v.photoCount ?? v.photos.length}</span>}
       </Link>
 
       <div className={`flex flex-1 flex-col ${editorial ? "p-5" : "p-4"}`}>
@@ -47,18 +49,20 @@ export function VehicleCard({ slug, accent, v, variant = "soft", preview, vertic
           <p className="truncate text-[12.5px] text-[#64748b]">{sub || " "}</p>
         </Link>
 
-        <div className="mt-2.5 flex flex-wrap gap-x-2.5 gap-y-1 text-[11.5px] text-[#64748b]">
-          {specs.map((s, i) => (
-            <span key={s.label} className="inline-flex items-center gap-2.5">
-              {i > 0 && <span className="text-[#cbd5e1]">·</span>}{s.value}
-            </span>
-          ))}
-        </div>
+        {card?.specs !== false && (
+          <div className="mt-2.5 flex flex-wrap gap-x-2.5 gap-y-1 text-[11.5px] text-[#64748b]">
+            {specs.map((s, i) => (
+              <span key={s.label} className="inline-flex items-center gap-2.5">
+                {i > 0 && <span className="text-[#cbd5e1]">·</span>}{s.value}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="mt-auto flex items-end justify-between border-t border-black/8 pt-3" style={{ marginTop: "12px" }}>
           <div>
             <p className={`font-bold leading-none text-[#0f172a] ${editorial ? "text-[22px]" : "text-[20px]"}`}>{v.price ? `$${v.price.toLocaleString()}` : "Call"}</p>
-            {mo > 0 && <p className="mt-1 text-[11.5px] font-medium" style={{ color: accent }}>{def.finance!.label} ${mo.toLocaleString()}/mo</p>}
+            {mo > 0 && card?.finance !== false && <p className="mt-1 text-[11.5px] font-medium" style={{ color: accent }}>{def.finance!.label} ${mo.toLocaleString()}/mo</p>}
           </div>
           <LeadModalButton slug={slug} accent={accent} vehicle={v} preview={preview}
             className={`text-white ${sharp ? "rounded-md px-3.5 py-2 text-[12px] font-bold uppercase tracking-wide" : editorial ? "rounded-none border px-4 py-2 text-[11.5px] font-medium uppercase tracking-[0.12em]" : "rounded-lg px-3.5 py-2 text-[12.5px] font-semibold"}`}>
