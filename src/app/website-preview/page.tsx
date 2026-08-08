@@ -42,6 +42,7 @@ export default function WebsitePreview() {
         cardOptions: w.cardOptions || {},
         header: w.header || {},
         searchOptions: w.searchOptions || {},
+        trust: w.trust || [],
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",

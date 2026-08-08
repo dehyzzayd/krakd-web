@@ -96,7 +96,7 @@ export default function BuildPage() {
 
 function Panel({ sel, values, onPatch, onClose }: { sel: string; values: WV; onPatch: (o: WV) => Promise<void>; onClose: () => void }) {
   const title = sel.startsWith("section:")
-    ? ({ "section:header": "Navbar", "section:hero": "Hero section", "section:search": "Search bar", "section:inventory": "Vehicle cards", "section:footer": "Footer" } as Record<string, string>)[sel] ?? "Section"
+    ? ({ "section:header": "Navbar", "section:hero": "Hero section", "section:search": "Search bar", "section:trust": "Trust bar", "section:inventory": "Vehicle cards", "section:footer": "Footer" } as Record<string, string>)[sel] ?? "Section"
     : EDIT_FIELDS[sel]?.label ?? sel;
   return (
     <div className="space-y-4">
@@ -107,6 +107,7 @@ function Panel({ sel, values, onPatch, onClose }: { sel: string; values: WV; onP
       {sel === "section:hero" ? <HeroPanel values={values} onPatch={onPatch} />
         : sel === "section:header" ? <HeaderPanel values={values} onPatch={onPatch} />
         : sel === "section:search" ? <SearchPanel values={values} onPatch={onPatch} />
+        : sel === "section:trust" ? <TrustPanel values={values} onPatch={onPatch} />
         : sel === "section:footer" ? <FooterPanel values={values} onPatch={onPatch} />
         : sel === "section:inventory" ? <InventoryPanel values={values} onPatch={onPatch} />
         : <ScalarPanel field={sel} values={values} onPatch={onPatch} />}
@@ -182,6 +183,27 @@ function HeaderPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Prom
       </div>
       <p className="text-[11.5px] text-n400">Edit the menu links in Website → Navbar menu. Changes here apply to the navbar on every page.</p>
       <SaveRow saving={saving} onSave={() => save({ headerStyle, logoUrl, header: { bg, text, ctaLabel, ctaColor, ctaTextColor, ctaTargetType, ctaTargetValue } })} />
+    </div>
+  );
+}
+
+function TrustPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Promise<void> }) {
+  const init = (Array.isArray(values.trust) ? values.trust : []) as { big: string; small?: string }[];
+  const [items, setItems] = useState<{ big: string; small?: string }[]>(init);
+  const { saving, save } = useSaver(onPatch);
+  const upd = (i: number, patch: Partial<{ big: string; small: string }>) => setItems((a) => a.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+  return (
+    <div className="space-y-2.5">
+      <p className="text-[12px] text-n500">The badges across your homepage (e.g. “All credit / Financing”). Leave empty to use the template defaults.</p>
+      {items.map((it, i) => (
+        <div key={i} className="flex gap-2">
+          <input value={it.big} onChange={(e) => upd(i, { big: e.target.value })} placeholder="Big" className={`${INPUT} w-24`} />
+          <input value={it.small ?? ""} onChange={(e) => upd(i, { small: e.target.value })} placeholder="Small (optional)" className={INPUT} />
+          <button onClick={() => setItems((a) => a.filter((_, k) => k !== i))} className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-err hover:bg-err-soft"><X className="h-4 w-4" /></button>
+        </div>
+      ))}
+      {items.length < 8 && <button onClick={() => setItems((a) => [...a, { big: "", small: "" }])} className="text-[12.5px] font-semibold text-brand">+ Add badge</button>}
+      <SaveRow saving={saving} onSave={() => save({ trust: items.filter((x) => x.big.trim()) })} />
     </div>
   );
 }

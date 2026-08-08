@@ -156,7 +156,7 @@ function HomeBold({ config, vehicles, preview }: { config: SiteConfig; vehicles:
   const C = "max-w-[1320px]";
   const heroImg = config.heroImageUrl;
   const ticker = m.ticker;
-  const trust: [string, string][] = auto
+  const trust: [string, string][] = config.trust?.length ? config.trust.map((t) => [t.big, t.small ?? ""] as [string, string]) : auto
     ? [[`${vehicles.length}`, "In stock"], ["All", "Credit levels"], ["100%", "Inspected"], ["Fast", "Approvals"]]
     : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
   return (
@@ -190,7 +190,7 @@ function HomeBold({ config, vehicles, preview }: { config: SiteConfig; vehicles:
         {featured.length === 0 ? <Empty /> : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{featured.map((v) => <VehicleCard key={v.id} vertical={config.vertical} slug={config.slug} accent={accent} v={v} card={config.cardOptions} variant="sharp" preview={preview} />)}</div>}
       </section>
 
-      {show("trustBar") && <section className="w-full border-y border-white/10" style={{ background: "#0a0a0a" }}><div className={`mx-auto ${C} grid grid-cols-2 divide-x divide-white/10 lg:grid-cols-4`}>
+      {show("trustBar") && <section data-edit="section:trust" data-edit-label="Trust bar" className="w-full border-y border-white/10" style={{ background: "#0a0a0a" }}><div className={`mx-auto ${C} grid grid-cols-2 divide-x divide-white/10 lg:grid-cols-4`}>
         {trust.map(([big, small]) => (
           <div key={small} className="px-5 py-10"><p className="font-display text-[40px] font-bold uppercase leading-none text-white">{big}</p><p className="mt-2 font-display text-[12px] uppercase tracking-[0.18em] text-white/50">{small}</p></div>
         ))}
@@ -345,7 +345,7 @@ function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicl
   const C = "max-w-[1280px]"; const navy = "#10233f";
   const heroImg = config.heroImageUrl;
   const chips = auto ? ["New", "Used", "Certified"] : ["Browse all", "Newest", "Featured"];
-  const trust: [string, string][] = auto
+  const trust: [string, string][] = config.trust?.length ? config.trust.map((t) => [t.big, t.small ?? ""] as [string, string]) : auto
     ? [[`${vehicles.length}`, "Vehicles in stock"], ["All credit", "Financing"], ["Inspected", "Every vehicle"], ["Trade-ins", "Top dollar"]]
     : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
   return (
@@ -359,7 +359,7 @@ function HomeClassic({ config, vehicles, preview }: { config: SiteConfig; vehicl
           <div className="relative z-10 mt-6"><SearchBar config={config} vehicles={vehicles} accent={accent} variant="soft" preview={preview} /></div>
         </div>
       </section>
-      {show("trustBar") && <section className="w-full border-b border-black/8 bg-white"><div className={`mx-auto ${C} grid grid-cols-2 gap-4 px-5 py-6 lg:grid-cols-4`}>
+      {show("trustBar") && <section data-edit="section:trust" data-edit-label="Trust bar" className="w-full border-b border-black/8 bg-white"><div className={`mx-auto ${C} grid grid-cols-2 gap-4 px-5 py-6 lg:grid-cols-4`}>
         {trust.map(([b, s]) => (
           <div key={s} className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-white" style={{ background: accent }}><BadgeCheck className="h-5 w-5" /></span><div><p className="text-[15px] font-bold text-[#0f172a]">{b}</p><p className="text-[11.5px] text-[#64748b]">{s}</p></div></div>
         ))}
@@ -387,7 +387,7 @@ function HomeSport({ config, vehicles, preview }: { config: SiteConfig; vehicles
   const featured = vehicles.slice(0, 6);
   const C = "max-w-[1320px]"; const char = "#141416";
   const heroImg = config.heroImageUrl;
-  const trust: [string, string][] = auto
+  const trust: [string, string][] = config.trust?.length ? config.trust.map((t) => [t.big, t.small ?? ""] as [string, string]) : auto
     ? [[`${vehicles.length}`, "In the lineup"], ["Certified", "Inspection"], ["All credit", "Financing"], ["Trade", "Welcome"]]
     : [[`${vehicles.length}`, `Live ${def.plural}`], ...m.stats];
   return (
@@ -405,7 +405,7 @@ function HomeSport({ config, vehicles, preview }: { config: SiteConfig; vehicles
           </div>
         </div>
       </section>
-      {show("trustBar") && <section className="w-full" style={{ background: accent }}><div className={`mx-auto ${C} grid grid-cols-2 gap-6 px-5 py-6 text-white lg:grid-cols-4`}>
+      {show("trustBar") && <section data-edit="section:trust" data-edit-label="Trust bar" className="w-full" style={{ background: accent }}><div className={`mx-auto ${C} grid grid-cols-2 gap-6 px-5 py-6 text-white lg:grid-cols-4`}>
         {trust.map(([b, s]) => <div key={s}><p className="font-display text-[26px] font-bold uppercase italic leading-none">{b}</p><p className="mt-1 font-display text-[11px] uppercase tracking-[0.16em] text-white/70">{s}</p></div>)}
       </div></section>}
       <section className={`mx-auto ${C} px-5 py-14`}>
@@ -608,7 +608,7 @@ function HomeVelocity({ config, vehicles, preview }: { config: SiteConfig; vehic
 
       {/* capability bar */}
       <div className="w-full" style={{ background: accent }}><div className={`mx-auto ${C} flex flex-wrap items-center justify-center gap-x-10 gap-y-2 px-5 py-3.5`}>
-        {(m.ticker ?? ["Financing for every rider", "Trade-ins welcome", "Ride today"]).slice(0, 4).map((t) => <span key={t} className="inline-flex items-center gap-2 font-display text-[12.5px] font-semibold uppercase tracking-[0.12em] text-white"><ArrowUpRight className="h-4 w-4" />{t}</span>)}
+        {(config.trust?.length ? config.trust.map((t) => t.big) : (m.ticker ?? ["Financing for every rider", "Trade-ins welcome", "Ride today"])).slice(0, 4).map((t) => <span key={t} className="inline-flex items-center gap-2 font-display text-[12.5px] font-semibold uppercase tracking-[0.12em] text-white"><ArrowUpRight className="h-4 w-4" />{t}</span>)}
       </div></div>
 
       {/* search */}
