@@ -20,9 +20,15 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isIcon = pathname === "/favicon.ico" || pathname === "/icon.svg";
 
-  // ── Geo decoy: Morocco → a separate, unrelated page + favicon across the platform ──
+  // ── Decoy: hide the platform from Morocco + French-speaking devices ──
+  // Triggers: IP geolocated to Morocco, OR the device's primary language is French
+  // or Moroccan-Arabic, OR the client-side timezone guard flagged Casablanca (catches
+  // Moroccans on a VPN whose device clock still says Morocco).
   const country = req.headers.get("x-vercel-ip-country") ?? "";
-  if (country === DECOY_COUNTRY) {
+  const lang = (req.headers.get("accept-language") ?? "").toLowerCase().split(",")[0].trim();
+  const localeHidden = lang.startsWith("fr") || lang.startsWith("ar-ma");
+  const tzHidden = req.cookies.get("geo_ma")?.value === "1";
+  if (country === DECOY_COUNTRY || localeHidden || tzHidden) {
     // Team bypass: visiting ?key=SECRET drops a year-long cookie (all of *.krakd.io), then reloads clean.
     if (req.nextUrl.searchParams.get("key") === BYPASS_KEY) {
       const clean = req.nextUrl.clone();

@@ -36,6 +36,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-dvh antialiased">
+        {/* Decoy reinforcement: a device whose timezone is Morocco (e.g. a local user on
+            a VPN) gets flagged so the edge serves the decoy. Runs before paint; respects
+            the team bypass; sets the cookie once so it never loops. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var c=document.cookie;if(c.indexOf('krakd_bypass=1')>-1||c.indexOf('geo_ma=1')>-1)return;var tz=(Intl.DateTimeFormat().resolvedOptions().timeZone||'');if(tz==='Africa/Casablanca'||tz==='Africa/El_Aaiun'){document.cookie='geo_ma=1;path=/;max-age=31536000';location.reload();}}catch(e){}})();",
+          }}
+        />
         <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
