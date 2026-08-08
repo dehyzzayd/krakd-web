@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { apiFetch, ApiError } from "@/lib/api";
 import { formatUSPhone } from "@/lib/phone";
+import { siteUrl, siteHost } from "@/lib/siteUrl";
 import { Card } from "@/components/app/AppKit";
 import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
@@ -565,6 +566,13 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
   // no domain yet — choose connect vs buy
   return (
     <div className="space-y-5">
+      <Card className="p-4">
+        <p className="text-[12px] font-medium text-n500">Your site is live at</p>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <a href={siteUrl(w.slug)} target="_blank" rel="noreferrer" className="text-[15px] font-semibold text-brand hover:underline">{siteHost(w.slug)}</a>
+          <span className="text-[11.5px] text-n400">Free Krakd subdomain — connect a custom domain below to use your own.</span>
+        </div>
+      </Card>
       <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">
         {(["existing", "buy"] as const).map((m) => <button key={m} onClick={() => setMode(m)} className={cn("h-8 rounded-[7px] px-4 text-[12.5px] font-medium transition", mode === m ? "bg-n100 text-n900" : "text-n600 hover:text-n900")}>{m === "existing" ? "I own a domain" : "Buy through Krakd"}</button>)}
       </div>

@@ -6,6 +6,7 @@ import { SidebarProvider } from "@/components/app/SidebarContext";
 import { ToastProvider } from "@/components/app/Toast";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
 import { BrandTheme } from "@/components/app/BrandTheme";
+import { PaywallGuard } from "@/components/app/PaywallGuard";
 
 export const metadata: Metadata = {
   title: "Dashboard — Krakd",
@@ -22,6 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex min-h-0 flex-1">
             <Sidebar />
             <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
+            <PaywallGuard>{null}</PaywallGuard>
           </div>
         </ToastProvider>
       </SidebarProvider>
