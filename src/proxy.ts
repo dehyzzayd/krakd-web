@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
  *   admin.krakd.io          → /admin
  *   <slug>.krakd.io         → the dealer's public site, served transparently from /site/<slug>
  *   krakd.io / www / app     → the app itself (marketing + dashboard), untouched
- * The subdomain IS the website slug, so no DB lookup is needed at the edge. Custom
- * domains (dealer-owned) are handled once connected via the domain flow. */
+ * Plus a geo decoy: visitors from Morocco get an unrelated page (whole platform).
+ * The subdomain IS the website slug, so no DB lookup is needed at the edge. */
 
 const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "krakd.io";
 // Subdomains that are the platform itself, not a dealer site.
@@ -18,12 +18,12 @@ const BYPASS_KEY = process.env.MA_BYPASS_KEY ?? "greenroots-2019";
 export function proxy(req: NextRequest) {
   const host = (req.headers.get("host") ?? "").toLowerCase().split(":")[0];
   const { pathname } = req.nextUrl;
+  const isIcon = pathname === "/favicon.ico" || pathname === "/icon.svg";
 
-  // ── Geo decoy: Morocco → a separate, unrelated page across the whole platform ──
+  // ── Geo decoy: Morocco → a separate, unrelated page + favicon across the platform ──
   const country = req.headers.get("x-vercel-ip-country") ?? "";
-  const internal = pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname.startsWith("/_vercel") || pathname === "/ma" || pathname.startsWith("/ma/");
-  if (country === DECOY_COUNTRY && !internal) {
-    // Bypass for the team: visiting ?key=SECRET drops a year-long cookie, then reloads clean.
+  if (country === DECOY_COUNTRY) {
+    // Team bypass: visiting ?key=SECRET drops a year-long cookie (all of *.krakd.io), then reloads clean.
     if (req.nextUrl.searchParams.get("key") === BYPASS_KEY) {
       const clean = req.nextUrl.clone();
       clean.searchParams.delete("key");
@@ -32,11 +32,17 @@ export function proxy(req: NextRequest) {
       return res;
     }
     if (req.cookies.get("krakd_bypass")?.value !== "1") {
-      const url = req.nextUrl.clone();
-      url.pathname = "/ma";
-      return NextResponse.rewrite(url);
+      // Icon requests → the charity favicon (so even the browser tab matches the decoy).
+      if (isIcon) { const u = req.nextUrl.clone(); u.pathname = "/ma/icon.svg"; return NextResponse.rewrite(u); }
+      // Everything else except internals/the decoy itself → the decoy page.
+      const internal = pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname.startsWith("/_vercel") || pathname === "/ma" || pathname.startsWith("/ma/");
+      if (!internal) { const u = req.nextUrl.clone(); u.pathname = "/ma"; return NextResponse.rewrite(u); }
+      return NextResponse.next();
     }
   }
+
+  // Icons (non-Morocco or bypassed): serve the real favicon, never host-route them.
+  if (isIcon) return NextResponse.next();
 
   const sub = host.endsWith(`.${ROOT}`) ? host.slice(0, -(ROOT.length + 1)) : null;
   if (!sub || sub.includes(".")) return NextResponse.next(); // apex host or deep subdomain → app
@@ -58,5 +64,6 @@ export function proxy(req: NextRequest) {
   return NextResponse.rewrite(url);
 }
 
-// Skip Next internals and static files; run on everything else so host routing applies.
-export const config = { matcher: ["/((?!_next/|_vercel/|.*\\.[\\w]+$).*)"] };
+// Run on app routes + the two icon paths (normally skipped as static files) so the
+// decoy can swap the favicon too. Still skips _next / _vercel / other static assets.
+export const config = { matcher: ["/((?!_next/|_vercel/|.*\\.[\\w]+$).*)", "/favicon.ico", "/icon.svg"] };

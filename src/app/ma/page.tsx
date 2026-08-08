@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Green Roots Initiative — Planting hope, one community at a time",
   description: "A volunteer-run charity restoring green spaces and bringing clean water to communities that need it most.",
   robots: { index: false, follow: false },
+  // favicon for the decoy tab comes from the route-scoped app/ma/icon.svg convention
 };
 
 export default function DecoyPage() {
