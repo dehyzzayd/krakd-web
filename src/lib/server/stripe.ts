@@ -78,6 +78,40 @@ export async function createSubscriptionCheckout(dealershipId: string, target: B
   return session.url;
 }
 
+/** Pull the dealership's current platform subscription straight from Stripe and write
+ *  it to the Subscription row. Makes the billing page reflect reality immediately after
+ *  a checkout or plan switch, without waiting on (or depending on) the webhook. Returns
+ *  the synced Stripe subscription, or null if there's nothing to sync. Best-effort —
+ *  callers should ignore thrown errors and fall back to the stored row. */
+export async function syncPlatformFromStripe(dealershipId: string): Promise<Stripe.Subscription | null> {
+  const row = await prisma.subscription.findUnique({ where: { dealershipId } });
+  if (!row?.stripeCustomerId) return null;
+
+  const stripe = getStripe();
+  const list = await stripe.subscriptions.list({ customer: row.stripeCustomerId, status: "all", limit: 20 });
+  // Platform subs only (skip paid-integration subs, which tag a non-plan target).
+  const platform = list.data.filter((s) => {
+    const t = s.metadata?.target;
+    return !t || t === "platform" || t === "starter" || t === "growth";
+  });
+  const chosen = platform.find((s) => ["active", "trialing", "past_due"].includes(s.status)) ?? platform[0];
+  if (!chosen) return null;
+
+  await prisma.subscription.update({
+    where: { id: row.id },
+    data: {
+      status: toPlatformStatus(chosen.status),
+      stripeSubscriptionId: chosen.id,
+      currentPeriodStart: periodStart(chosen),
+      currentPeriodEnd: periodEnd(chosen),
+      cancelAtPeriodEnd: chosen.cancel_at_period_end ?? false,
+      canceledAt: chosen.canceled_at ? new Date(chosen.canceled_at * 1000) : null,
+      priceCents: chosen.items.data[0]?.price.unit_amount ?? row.priceCents,
+    },
+  });
+  return chosen;
+}
+
 /** Stripe subscription status → our platform SubscriptionStatus enum. */
 export function toPlatformStatus(s: Stripe.Subscription.Status): "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED" | "INACTIVE" {
   switch (s) {

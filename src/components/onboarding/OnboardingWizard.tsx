@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { authApi, setSession, ApiError } from "@/lib/api";
+import { authApi, apiFetch, setSession, ApiError } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
 import { Field } from "@/components/auth/AuthScaffold";
 import { VEHICLE_TYPES } from "./VehicleIcons";
@@ -304,24 +304,16 @@ function ContactStep({ form, update, onBack, onNext }: { form: Form; update: (k:
   );
 }
 
-function PlanStep({ plan, setPlan, cycle, setCycle, onBack, onNext }: {
-  plan: string; setPlan: (v: string) => void; cycle: "monthly" | "annual"; setCycle: (v: "monthly" | "annual") => void;
-  onBack: () => void; onNext: () => void;
+function PlanStep({ plan, setPlan, onBack, onNext }: {
+  plan: string; setPlan: (v: string) => void; onBack: () => void; onNext: () => void;
 }) {
   return (
     <div>
-      <StepHeader n={4} title="Choose your plan" sub="14 days free on any plan. No card charged today. Change or cancel anytime." />
-      <div className="mb-5 inline-flex rounded-full bg-[#f0f0f0] p-1">
-        {(["monthly", "annual"] as const).map((c) => (
-          <button key={c} onClick={() => setCycle(c)} className={`h-9 rounded-full px-4 text-[13.5px] font-medium capitalize transition ${cycle === c ? "bg-white text-ink shadow-[0_1px_2px_rgba(15,15,15,0.06)]" : "text-muted"}`}>
-            {c}{c === "annual" && <span className="ml-1.5 text-accent">−17%</span>}
-          </button>
-        ))}
-      </div>
+      <StepHeader n={4} title="Choose your plan" sub="Pick the plan that fits — you'll enter payment on the next step. Cancel anytime." />
       <div className="space-y-3">
         {PLANS.map((p) => {
           const selected = plan === p.id;
-          const shown = p.price == null ? "Custom" : cycle === "annual" ? `$${Math.round(p.price * 0.83)}` : `$${p.price}`;
+          const shown = p.price == null ? "Custom" : `$${p.price}`;
           return (
             <button key={p.id} onClick={() => setPlan(p.id)} className={`flex w-full items-center gap-4 rounded-[16px] border p-4 text-left transition ${selected ? "border-ink ring-1 ring-ink" : "border-[#e6e6e6] hover:border-[#cfcfcf]"}`}>
               <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${selected ? "border-ink" : "border-[#cfcfcf]"}`}>{selected && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}</span>
@@ -372,17 +364,17 @@ function ReviewStep({ form, plan, cycle, submitting, error, onEdit, onBack, onFi
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[15px] font-semibold text-ink">Krakd {p.name}</p>
-            <p className="text-[12.5px] text-muted capitalize">{cycle} billing · 14-day free trial</p>
+            <p className="text-[12.5px] text-muted capitalize">{cycle} billing</p>
           </div>
           <p className="text-[18px] font-semibold text-ink">{pr.label}</p>
         </div>
         <div className="mt-4 border-t border-[#ececec] pt-3">
           <div className="flex items-center justify-between pt-1">
             <span className="text-[14px] font-semibold text-ink">Due today</span>
-            <span className="text-[16px] font-semibold text-accent">$0.00</span>
+            <span className="text-[16px] font-semibold text-ink">{pr.monthly != null ? `$${pr.monthly}.00` : "Custom"}</span>
           </div>
           <p className="mt-1 text-[12px] text-muted">
-            {pr.monthly != null ? `Then ${pr.label} after your trial ends. Cancel anytime.` : "Our team will tailor Scale pricing with you."}
+            {pr.monthly != null ? "Billed monthly. Cancel anytime." : "Our team will tailor Scale pricing with you."}
           </p>
         </div>
       </div>
@@ -404,10 +396,10 @@ function ReviewStep({ form, plan, cycle, submitting, error, onEdit, onBack, onFi
       </div>
 
       <p className="mt-4 text-[12.5px] leading-snug text-muted">
-        No card charged today — you start on a 14-day free trial with full dashboard access. Add a plan and payment method anytime from Billing.
+        You&apos;ll continue to secure Stripe checkout to start your subscription. Cancel anytime.
       </p>
       {error && <p className="mt-3 text-[13px] font-medium text-[#dc2626]">{error}</p>}
-      <Nav onBack={onBack} onNext={onFinish} nextLabel={submitting ? "Creating account…" : "Activate account →"} />
+      <Nav onBack={onBack} onNext={onFinish} nextLabel={submitting ? "Starting checkout…" : "Continue to payment →"} />
     </div>
   );
 }
@@ -436,13 +428,14 @@ export function OnboardingWizard() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [form, setForm] = useState<Form>(EMPTY);
   const [plan, setPlan] = useState("growth");
-  const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
+  const cycle = "monthly" as const; // only monthly prices exist in Stripe today
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const otpSent = useRef(false);
+  const registered = useRef(false); // guards double-register if payment retries
   const router = useRouter();
 
   // Email the verification code once, using the address captured at sign-up.
@@ -483,28 +476,44 @@ export function OnboardingWizard() {
   const next = () => setStep((s) => Math.min(s + 1, 5));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  /** Final step: create the real dealership account, store the session, land on the dashboard. */
+  /** Final step: create the account (once), then send them to Stripe Checkout to pay
+   *  for the chosen plan. Scale (custom) or beta (no Stripe) drop straight into the app. */
   const finish = async () => {
     setError(null);
-    const raw = typeof window !== "undefined" ? sessionStorage.getItem("krakd_signup") : null;
-    if (!raw) {
-      setError("We lost your sign-up details — please start again from Sign up.");
-      return;
-    }
-    const s = JSON.parse(raw) as { firstName: string; lastName: string; email: string; password: string };
     setSubmitting(true);
     try {
-      const tokens = await authApi.register({
-        dealershipName: form.dealership || `${s.firstName}'s Business`,
-        firstName: s.firstName,
-        lastName: s.lastName,
-        email: s.email,
-        password: s.password,
-        phone: form.phone || undefined,
-        vertical: form.vertical,
-      });
-      setSession(tokens);
-      sessionStorage.removeItem("krakd_signup");
+      if (!registered.current) {
+        const raw = typeof window !== "undefined" ? sessionStorage.getItem("krakd_signup") : null;
+        if (!raw) { setError("We lost your sign-up details — please start again from Sign up."); setSubmitting(false); return; }
+        const s = JSON.parse(raw) as { firstName: string; lastName: string; email: string; password: string };
+        const tokens = await authApi.register({
+          dealershipName: form.dealership || `${s.firstName}'s Business`,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          email: s.email,
+          password: s.password,
+          phone: form.phone || undefined,
+          vertical: form.vertical,
+        });
+        setSession(tokens);
+        sessionStorage.removeItem("krakd_signup");
+        registered.current = true;
+      }
+
+      // Paid plans → Stripe Checkout. If billing isn't enabled (beta), fall through.
+      if (plan === "starter" || plan === "growth") {
+        try {
+          const res = await apiFetch<{ url?: string }>("/billing/checkout", { method: "POST", body: JSON.stringify({ plan }) });
+          if (res.url) { window.location.href = res.url; return; }
+        } catch (e) {
+          if (!(e instanceof ApiError && /not enabled/i.test(e.message))) {
+            setError(e instanceof ApiError ? e.message : "Couldn't start checkout. Please try again.");
+            setSubmitting(false);
+            return;
+          }
+          // billing not enabled → beta free activation, fall through to done
+        }
+      }
       setStep(5);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not create your account. Please try again.");
@@ -518,7 +527,7 @@ export function OnboardingWizard() {
       {step === 0 && <VerifyStep digits={otp} setDigits={setOtp} onVerify={verifyEmail} onResend={resendOtp} email={email} busy={otpBusy} error={otpError} />}
       {step === 1 && <StoreStep form={form} update={update} toggleType={toggleType} onNext={next} />}
       {step === 2 && <ContactStep form={form} update={update} onBack={back} onNext={next} />}
-      {step === 3 && <PlanStep plan={plan} setPlan={setPlan} cycle={cycle} setCycle={setCycle} onBack={back} onNext={next} />}
+      {step === 3 && <PlanStep plan={plan} setPlan={setPlan} onBack={back} onNext={next} />}
       {step === 4 && <ReviewStep form={form} plan={plan} cycle={cycle} submitting={submitting} error={error} onEdit={() => setStep(1)} onBack={back} onFinish={finish} />}
       {step === 5 && <DoneStep onGo={() => router.push("/dashboard")} />}
     </Panel>

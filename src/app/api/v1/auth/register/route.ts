@@ -39,8 +39,8 @@ export const POST = route(async (req: NextRequest) => {
         phone: dto.phone,
         email,
         vertical: dto.vertical ?? "AUTOMOTIVE",
-        // Beta (no Stripe): free + ACTIVE. Live billing: TRIALING until Checkout completes.
-        subscription: { create: { priceCents: 14900, status: stripeConfigured() ? "TRIALING" : "ACTIVE" } },
+        // Beta (no Stripe): free + ACTIVE. Live billing: INACTIVE until Checkout is paid.
+        subscription: { create: { priceCents: 14900, status: stripeConfigured() ? "INACTIVE" : "ACTIVE" } },
         aiSettings: { create: {} },
       },
     });
