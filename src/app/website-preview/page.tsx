@@ -53,20 +53,41 @@ export default function WebsitePreview() {
   useEffect(() => {
     if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("builder") !== "1") return;
     setBuilderMode(true);
+
+    // Auto-tag editable elements by matching the live config values to the rendered DOM —
+    // works across every template with no per-template markup. Leaf elements only.
+    const tag = (el: Element, key: string, label: string) => { if (!el.getAttribute("data-edit")) { el.setAttribute("data-edit", key); el.setAttribute("data-edit-label", label); } };
+    const autoTag = () => {
+      if (!config) return;
+      const textFields: [keyof SiteConfig, string][] = [["headline", "Headline"], ["intro", "Intro"], ["ctaLabel", "Button label"], ["financingText", "Financing text"], ["aboutText", "About text"]];
+      const els = Array.from(document.querySelectorAll("h1,h2,h3,h4,p,a,span,button,li")) as HTMLElement[];
+      for (const [key, label] of textFields) {
+        const val = config[key];
+        if (typeof val !== "string" || !val.trim()) continue;
+        const v = val.trim();
+        els.forEach((el) => { if (el.children.length === 0 && (el.textContent ?? "").trim() === v) tag(el, key, label); });
+      }
+      if (config.heroImageUrl) Array.from(document.querySelectorAll("img")).forEach((img) => { if (img.getAttribute("src") === config.heroImageUrl) tag(img, "heroImageUrl", "Hero image"); });
+    };
+    autoTag();
+    const retag = setTimeout(autoTag, 300); // catch late layout
+
     const closestEdit = (t: EventTarget | null) => (t as HTMLElement | null)?.closest?.("[data-edit]") as HTMLElement | null;
     const onOver = (e: MouseEvent) => {
       document.querySelectorAll(".krakd-hl").forEach((x) => x.classList.remove("krakd-hl"));
       closestEdit(e.target)?.classList.add("krakd-hl");
     };
     const onClick = (e: MouseEvent) => {
-      const el = closestEdit(e.target);
-      if (!el) return;
+      // Builder mode: NEVER navigate. Every click is captured; editable elements open their editor.
       e.preventDefault(); e.stopPropagation();
-      window.parent.postMessage({ type: "krakd:edit", key: el.dataset.edit, label: el.dataset.editLabel }, "*");
+      const el = closestEdit(e.target);
+      if (el) window.parent.postMessage({ type: "krakd:edit", key: el.dataset.edit, label: el.dataset.editLabel }, "*");
     };
+    const onSubmit = (e: Event) => e.preventDefault();
     document.addEventListener("mouseover", onOver);
-    document.addEventListener("click", onClick, true); // capture — beat <Link> navigation
-    return () => { document.removeEventListener("mouseover", onOver); document.removeEventListener("click", onClick, true); };
+    document.addEventListener("click", onClick, true); // capture — beat <Link>/<a> navigation
+    document.addEventListener("submit", onSubmit, true);
+    return () => { clearTimeout(retag); document.removeEventListener("mouseover", onOver); document.removeEventListener("click", onClick, true); document.removeEventListener("submit", onSubmit, true); };
   }, [ready]);
 
   if (!ready) return <div className="grid min-h-screen place-items-center text-[13px] text-[#94a3b8]">Loading preview…</div>;

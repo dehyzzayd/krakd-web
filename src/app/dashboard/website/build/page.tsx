@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch, getToken } from "@/lib/api";
 import { Uploader } from "@/components/app/website/panels";
-import { ArrowLeft, Loader2, Rocket, Monitor, Smartphone, Layers, Palette, X } from "lucide-react";
+import { ArrowLeft, Loader2, Rocket, Monitor, Smartphone, Palette, X } from "lucide-react";
 
 /* Real-site visual builder: opens the dealer's ACTUAL website in an iframe (builder mode).
  * Clicking any tagged element on the page opens its editor here; saves stage into the
@@ -78,7 +78,6 @@ export default function BuildPage() {
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => openField("primaryColor")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-n200 px-3 text-[12.5px] font-medium text-n700 hover:bg-n50"><Palette className="h-3.5 w-3.5" />Brand</button>
           <button onClick={() => openField("logoUrl")} className="inline-flex h-8 items-center rounded-lg border border-n200 px-3 text-[12.5px] font-medium text-n700 hover:bg-n50">Logo</button>
-          <Link href="/dashboard/website/build/advanced" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-n200 px-3 text-[12.5px] font-medium text-n700 hover:bg-n50"><Layers className="h-3.5 w-3.5" />Sections</Link>
           <div className="inline-flex rounded-lg border border-n200 p-0.5">
             <button onClick={() => setDevice("desktop")} className={`grid h-7 w-8 place-items-center rounded ${device === "desktop" ? "bg-n100 text-n900" : "text-n500"}`}><Monitor className="h-4 w-4" /></button>
             <button onClick={() => setDevice("mobile")} className={`grid h-7 w-8 place-items-center rounded ${device === "mobile" ? "bg-n100 text-n900" : "text-n500"}`}><Smartphone className="h-4 w-4" /></button>
