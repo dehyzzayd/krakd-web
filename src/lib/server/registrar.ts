@@ -42,18 +42,35 @@ export async function quoteDomain(input: string): Promise<DomainQuote> {
     const q = simQuote(domain);
     return { domain, available: q.available, costCents: q.priceCents, priceCents: q.priceCents + MARKUP_CENTS };
   }
+  const enc = encodeURIComponent(domain);
   const [status, price] = await Promise.all([
-    vercel<{ available: boolean }>(`/v4/domains/status`, {}, `name=${encodeURIComponent(domain)}`).catch(() => ({ available: false })),
-    vercel<{ price: number; period: number }>(`/v4/domains/price`, {}, `name=${encodeURIComponent(domain)}`).catch(() => null),
+    vercel<{ available: boolean }>(`/v1/registrar/domains/${enc}/availability`).catch(() => ({ available: false })),
+    vercel<{ purchasePrice: number | string }>(`/v1/registrar/domains/${enc}/price`, {}, "years=1").catch(() => null),
   ]);
-  const costCents = price ? Math.round(price.price * 100) : 0;
+  const costCents = price ? Math.round(Number(price.purchasePrice) * 100) : 0;
   return { domain, available: !!status.available && costCents > 0, costCents, priceCents: costCents + MARKUP_CENTS };
 }
 
-/** Register a domain under the Vercel account. `costCents` is the registrar price
- *  (customer price minus markup); passed as expectedPrice in dollars. */
+/** Registrant (WHOIS) contact used when Krakd buys a domain on a dealer's behalf.
+ *  Krakd's own business contact — pulled from env; throws if not fully configured. */
+function registrantContact() {
+  const c = {
+    firstName: process.env.REGISTRAR_FIRST_NAME, lastName: process.env.REGISTRAR_LAST_NAME,
+    email: process.env.REGISTRAR_EMAIL, phone: process.env.REGISTRAR_PHONE,
+    address1: process.env.REGISTRAR_ADDRESS1, city: process.env.REGISTRAR_CITY,
+    state: process.env.REGISTRAR_STATE, zip: process.env.REGISTRAR_ZIP, country: process.env.REGISTRAR_COUNTRY,
+  };
+  for (const [k, v] of Object.entries(c)) if (!v) throw new Error(`Registrant contact not configured: REGISTRAR_${k.replace(/([A-Z])/g, "_$1").toUpperCase()}`);
+  return c as Record<string, string>;
+}
+
+/** Register a domain under the Vercel account (1 year, auto-renew). `costCents` is the
+ *  registrar price (customer price minus markup); passed as expectedPrice in dollars. */
 export async function registerDomain(domain: string, costCents: number): Promise<void> {
-  await vercel(`/v4/domains/buy`, { method: "POST", body: JSON.stringify({ name: domain, expectedPrice: costCents / 100 }) });
+  await vercel(`/v1/registrar/domains/${encodeURIComponent(domain)}/buy`, {
+    method: "POST",
+    body: JSON.stringify({ autoRenew: true, years: 1, expectedPrice: costCents / 100, contactInformation: registrantContact() }),
+  });
 }
 
 /** Attach a domain to the Vercel project → provisions routing + SSL. Returns any DNS /
