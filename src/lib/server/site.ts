@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
+import type { BuilderNode } from "@/lib/builder/types";
 
 export type SiteConfig = {
   slug: string;
@@ -23,6 +24,7 @@ export type SiteConfig = {
   vdpButtonLabel: string | null;
   vdpButtonUrl: string | null;
   layout: SectionBlock[];
+  tree: BuilderNode[];
 };
 
 /** Composable homepage content sections (Phase 2 builder). Rendered in order after the
@@ -89,6 +91,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     sidebar: (Array.isArray(w.sidebar) ? w.sidebar : []) as SidebarBlock[],
     vdpButtonLabel: w.vdpButtonLabel, vdpButtonUrl: w.vdpButtonUrl,
     layout: (Array.isArray(w.layout) ? w.layout : []) as SectionBlock[],
+    tree: (Array.isArray(w.tree) ? w.tree : []) as BuilderNode[],
   };
 });
 

@@ -13,6 +13,7 @@ import { EditorialHome } from "./EditorialHome";
 import { BrokerageHome } from "./BrokerageHome";
 import { ContractorHome } from "./ContractorHome";
 import { CustomSections } from "./CustomSections";
+import { NodeRenderer } from "./NodeRenderer";
 
 const REVIEWS = [
   { name: "Jordan M.", body: "Easiest car-buying experience I've had. No pressure, straight numbers, in and out in an hour.", rating: 5 },
@@ -685,6 +686,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
     <>
       <HomeInner config={config} vehicles={vehicles} preview={preview} />
       <CustomSections config={config} preview={preview} />
+      {config.tree?.length ? <NodeRenderer nodes={config.tree} accent={accentOf(config.primaryColor)} /> : null}
     </>
   );
 }

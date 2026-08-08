@@ -4,16 +4,15 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
 import { ensureWebsite, setupProgress, mergedWebsite, hasDraft } from "@/lib/server/website";
+import { siteUrl } from "@/lib/siteUrl";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function publicUrl(req: NextRequest, slug: string, domain: string | null, status: string) {
-  if (domain && status === "LIVE") return `https://${domain}`;
-  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
-  const host = req.headers.get("host") ?? req.nextUrl.host;
-  return `${proto}://${host}/site/${slug}`;
+// The dealer's public URL: their custom domain when LIVE, otherwise <slug>.krakd.io.
+function publicUrl(_req: NextRequest, slug: string, domain: string | null, status: string) {
+  return siteUrl(slug, { domain, domainStatus: status });
 }
 
 /* GET /api/v1/website → the dealer's website config (live fields overlaid with any
@@ -72,6 +71,8 @@ const patchSchema = z.object({
     imageRight: z.boolean().optional(),
     items: z.array(z.object({ value: z.string().max(40).optional(), label: z.string().max(120).optional(), q: z.string().max(300).optional(), a: z.string().max(2000).optional() })).max(20).optional(),
   })).max(30).optional(),
+  // Advanced-builder node tree — validated loosely here; the editor sends registry-checked nodes.
+  tree: z.array(z.any()).max(2000).optional(),
 });
 
 /* PATCH /api/v1/website → stage edits into the draft overlay (NOT the live site).

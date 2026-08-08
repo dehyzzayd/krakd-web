@@ -13,11 +13,18 @@ saves stage into `draft`; the builder + preview render the merged draft; the pub
 site keeps serving the last-published columns; **Publish** materializes draft→live;
 **Discard** drops the draft. One write path, backward-compatible.
 
-## Phase 2 — Section-based page composition
-Turn fixed template pages into an ordered list of composable **sections** (hero,
-listing, financing band, reviews, staff, CTA, rich text, gallery…) with per-section
-config. A section registry (type → schema + renderer). Builder: add / reorder / remove /
-configure. Rides on the Phase-1 draft model.
+## Phase 2 — Section-based page composition  ✅
+Ordered list of composable content sections (rich text, image+text, CTA, stats, FAQ)
+with per-section config, rendered after each template's built-in blocks. Add / reorder /
+remove / configure. Rides on the Phase-1 draft model.
+
+## Phase 2.5 — Advanced Builder (Elementor/Webflow-class)  ← PRIORITY
+Full visual, drag-and-drop, click-to-edit page builder on a node-tree model so dealers
+never file a ticket to change anything. Detailed architecture in `ADVANCED_BUILDER.md`.
+Sub-phases: A) engine (node tree + registry + renderer), B) editor shell (iframe canvas
++ property panel), C) direct manipulation (inline edit + drag/drop), D) power (undo/redo,
+blocks/templates, data-bound elements), E) polish. The Phase-2 flat sections keep working
+and auto-migrate into the tree.
 
 ## Phase 3 — Form Builder
 Dealer-defined forms (multi-step, custom fields, per-field rules) replacing the single
