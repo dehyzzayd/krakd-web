@@ -703,6 +703,7 @@ model Website {
   domainPriceCents Int?        // shown/confirmed price when purchased through Krakd
   domainRenewsAt DateTime?
 
+  layout       Json            @default("[]") // ordered custom content sections on the homepage
   draft        Json?           // staged, unpublished edits overlaid on the live fields
   publishedAt  DateTime?
   createdAt    DateTime        @default(now())

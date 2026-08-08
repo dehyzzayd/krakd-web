@@ -22,7 +22,17 @@ export type SiteConfig = {
   sidebar: SidebarBlock[];
   vdpButtonLabel: string | null;
   vdpButtonUrl: string | null;
+  layout: SectionBlock[];
 };
+
+/** Composable homepage content sections (Phase 2 builder). Rendered in order after the
+ *  template's built-in blocks, styled with the site accent. */
+export type SectionBlock =
+  | { id: string; type: "richText"; heading?: string; body?: string; align?: "left" | "center" }
+  | { id: string; type: "imageText"; image?: string; heading?: string; body?: string; buttonLabel?: string; buttonUrl?: string; imageRight?: boolean }
+  | { id: string; type: "cta"; heading?: string; body?: string; buttonLabel?: string; buttonUrl?: string }
+  | { id: string; type: "stats"; heading?: string; items: { value: string; label: string }[] }
+  | { id: string; type: "faq"; heading?: string; items: { q: string; a: string }[] };
 
 export type CustomPage = { id: string; slug: string; title: string; body: string; inNav?: boolean; showSidebar?: boolean };
 export type NavItem = { id: string; label: string; type: "home" | "inventory" | "financing" | "about" | "contact" | "page" | "link"; value?: string; visible?: boolean };
@@ -78,6 +88,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     nav: (Array.isArray(w.nav) ? w.nav : []) as NavItem[],
     sidebar: (Array.isArray(w.sidebar) ? w.sidebar : []) as SidebarBlock[],
     vdpButtonLabel: w.vdpButtonLabel, vdpButtonUrl: w.vdpButtonUrl,
+    layout: (Array.isArray(w.layout) ? w.layout : []) as SectionBlock[],
   };
 });
 

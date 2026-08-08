@@ -34,6 +34,7 @@ export default function WebsitePreview() {
         phone: w.phone ?? null, email: w.email ?? null, address: w.address ?? null, city: w.city ?? null, state: w.state ?? null, zip: w.zip ?? null,
         hours: w.hours || [], socials: w.socials || {}, sections: w.sections || {},
         pages: w.pages || [], nav: w.nav || [], sidebar: w.sidebar || [], vdpButtonLabel: w.vdpButtonLabel ?? null, vdpButtonUrl: w.vdpButtonUrl ?? null,
+        layout: w.layout || [],
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",

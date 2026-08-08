@@ -23,8 +23,16 @@ export type Web = {
   domain: string | null; domainProvider: string | null;
   domainStatus: "NOT_CONNECTED" | "PENDING_PURCHASE" | "PENDING_DNS" | "PROVISIONING" | "LIVE" | "ACTION_REQUIRED";
   domainPriceCents: number | null; domainRenewsAt: string | null;
+  layout: SectionBlock[];
   liveVehicles: number; publicUrl: string; hasDraft?: boolean;
   setup: { steps: { template: boolean; details: boolean; domain: boolean; published: boolean }; done: number; total: number };
+};
+
+export type SectionBlock = {
+  id: string; type: "richText" | "imageText" | "cta" | "stats" | "faq";
+  heading?: string; body?: string; align?: "left" | "center";
+  image?: string; buttonLabel?: string; buttonUrl?: string; imageRight?: boolean;
+  items?: { value?: string; label?: string; q?: string; a?: string }[];
 };
 
 const field = "h-10 w-full rounded-md border border-n200 bg-white px-3 text-[13px] text-n900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -698,6 +706,138 @@ export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
         </div>
       </div>
       <p className="text-center text-[12px] text-n400">True-to-device preview of your saved settings and inventory. Toggle Desktop / Mobile — the mobile view is exactly what phones see.{w.status !== "PUBLISHED" && " Publishing makes it public at your URL."}</p>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Content sections (Phase 2 builder) ─────────────────────────── */
+const SECTION_TYPES: { type: SectionBlock["type"]; label: string; hint: string }[] = [
+  { type: "richText", label: "Text", hint: "A heading + paragraph" },
+  { type: "imageText", label: "Image + text", hint: "Picture beside copy" },
+  { type: "cta", label: "Call to action", hint: "Banner with a button" },
+  { type: "stats", label: "Stats", hint: "Big numbers row" },
+  { type: "faq", label: "FAQ", hint: "Q & A list" },
+];
+
+function makeBlock(type: SectionBlock["type"]): SectionBlock {
+  const id = crypto.randomUUID();
+  switch (type) {
+    case "richText": return { id, type, heading: "Section heading", body: "Tell your story here.", align: "left" };
+    case "imageText": return { id, type, heading: "Heading", body: "Describe what makes you different.", image: "", buttonLabel: "", buttonUrl: "", imageRight: false };
+    case "cta": return { id, type, heading: "Ready to get started?", body: "", buttonLabel: "Contact us", buttonUrl: "" };
+    case "stats": return { id, type, heading: "", items: [{ value: "500+", label: "Happy customers" }, { value: "20", label: "Years in business" }, { value: "4.9★", label: "Average rating" }] };
+    case "faq": return { id, type, heading: "Frequently asked questions", items: [{ q: "What are your hours?", a: "" }] };
+  }
+}
+
+export function SectionsPanel({ w, reload }: { w: Web; reload: () => void }) {
+  const s = useSave(reload);
+  const [blocks, setBlocks] = useState<SectionBlock[]>(w.layout ?? []);
+
+  const add = (type: SectionBlock["type"]) => setBlocks((b) => [...b, makeBlock(type)]);
+  const remove = (i: number) => setBlocks((b) => b.filter((_, x) => x !== i));
+  const move = (i: number, dir: -1 | 1) => setBlocks((b) => {
+    const j = i + dir; if (j < 0 || j >= b.length) return b;
+    const next = [...b]; [next[i], next[j]] = [next[j], next[i]]; return next;
+  });
+  const upd = (i: number, patch: Partial<SectionBlock>) => setBlocks((b) => b.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const items = (i: number) => blocks[i].items ?? [];
+  const setItems = (i: number, next: SectionBlock["items"]) => upd(i, { items: next });
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-[15px] font-semibold text-n900">Content sections</h2>
+        <p className="mt-0.5 text-[12.5px] text-n500">Add and reorder extra sections. They appear on your homepage, below the built-in blocks.</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {SECTION_TYPES.map((t) => (
+          <button key={t.type} onClick={() => add(t.type)} title={t.hint} className="inline-flex items-center gap-1.5 rounded-lg border border-n200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-n700 hover:bg-n50">
+            <Plus className="h-3.5 w-3.5" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {blocks.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-n200 py-10 text-center text-[13px] text-n400">No custom sections yet — add one above.</div>
+      ) : (
+        <div className="space-y-3">
+          {blocks.map((b, i) => (
+            <Card key={b.id} className="p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">{SECTION_TYPES.find((t) => t.type === b.type)?.label}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => move(i, -1)} disabled={i === 0} className="grid h-7 w-7 place-items-center rounded-md text-n500 hover:bg-n100 disabled:opacity-30">↑</button>
+                  <button onClick={() => move(i, 1)} disabled={i === blocks.length - 1} className="grid h-7 w-7 place-items-center rounded-md text-n500 hover:bg-n100 disabled:opacity-30">↓</button>
+                  <button onClick={() => remove(i)} className="grid h-7 w-7 place-items-center rounded-md text-err hover:bg-err-soft"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+
+              {(b.type === "richText" || b.type === "cta" || b.type === "imageText" || b.type === "stats" || b.type === "faq") && b.type !== "stats" && (
+                <input value={b.heading ?? ""} onChange={(e) => upd(i, { heading: e.target.value })} placeholder="Heading" className={cn(field, "mb-2")} />
+              )}
+              {b.type === "stats" && <input value={b.heading ?? ""} onChange={(e) => upd(i, { heading: e.target.value })} placeholder="Heading (optional)" className={cn(field, "mb-2")} />}
+
+              {(b.type === "richText" || b.type === "cta" || b.type === "imageText") && (
+                <textarea value={b.body ?? ""} onChange={(e) => upd(i, { body: e.target.value })} rows={3} placeholder="Body text" className={cn(textarea, "mb-2")} />
+              )}
+
+              {b.type === "richText" && (
+                <label className="flex items-center gap-2 text-[12.5px] text-n600"><input type="checkbox" checked={b.align === "center"} onChange={(e) => upd(i, { align: e.target.checked ? "center" : "left" })} />Center the text</label>
+              )}
+
+              {b.type === "imageText" && (
+                <div className="space-y-2">
+                  <Uploader value={b.image ?? ""} onChange={(v) => upd(i, { image: v })} label="Section image" aspect="wide" />
+                  <label className="flex items-center gap-2 text-[12.5px] text-n600"><input type="checkbox" checked={!!b.imageRight} onChange={(e) => upd(i, { imageRight: e.target.checked })} />Put image on the right</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={b.buttonLabel ?? ""} onChange={(e) => upd(i, { buttonLabel: e.target.value })} placeholder="Button label (optional)" className={field} />
+                    <input value={b.buttonUrl ?? ""} onChange={(e) => upd(i, { buttonUrl: e.target.value })} placeholder="Button link (/financing or https://)" className={field} />
+                  </div>
+                </div>
+              )}
+
+              {b.type === "cta" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={b.buttonLabel ?? ""} onChange={(e) => upd(i, { buttonLabel: e.target.value })} placeholder="Button label" className={field} />
+                  <input value={b.buttonUrl ?? ""} onChange={(e) => upd(i, { buttonUrl: e.target.value })} placeholder="Button link" className={field} />
+                </div>
+              )}
+
+              {b.type === "stats" && (
+                <div className="space-y-2">
+                  {items(i).map((it, k) => (
+                    <div key={k} className="flex gap-2">
+                      <input value={it.value ?? ""} onChange={(e) => setItems(i, items(i).map((x, xk) => (xk === k ? { ...x, value: e.target.value } : x)))} placeholder="500+" className={cn(field, "w-28 tnum")} />
+                      <input value={it.label ?? ""} onChange={(e) => setItems(i, items(i).map((x, xk) => (xk === k ? { ...x, label: e.target.value } : x)))} placeholder="Label" className={field} />
+                      <button onClick={() => setItems(i, items(i).filter((_, xk) => xk !== k))} className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-err hover:bg-err-soft"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
+                  ))}
+                  <button onClick={() => setItems(i, [...items(i), { value: "", label: "" }])} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add stat</button>
+                </div>
+              )}
+
+              {b.type === "faq" && (
+                <div className="space-y-2">
+                  {items(i).map((it, k) => (
+                    <div key={k} className="rounded-lg border border-n200 p-2.5">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <input value={it.q ?? ""} onChange={(e) => setItems(i, items(i).map((x, xk) => (xk === k ? { ...x, q: e.target.value } : x)))} placeholder="Question" className={field} />
+                        <button onClick={() => setItems(i, items(i).filter((_, xk) => xk !== k))} className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-err hover:bg-err-soft"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                      <textarea value={it.a ?? ""} onChange={(e) => setItems(i, items(i).map((x, xk) => (xk === k ? { ...x, a: e.target.value } : x)))} rows={2} placeholder="Answer" className={textarea} />
+                    </div>
+                  ))}
+                  <button onClick={() => setItems(i, [...items(i), { q: "", a: "" }])} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand"><Plus className="h-3.5 w-3.5" />Add question</button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <SaveBar {...s} onSave={() => s.save({ layout: blocks })} label="Save sections" />
     </div>
   );
 }

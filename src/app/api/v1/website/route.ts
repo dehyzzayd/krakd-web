@@ -60,6 +60,18 @@ const patchSchema = z.object({
   hours: z.array(z.object({ day: z.string(), open: z.string(), close: z.string() })).optional(),
   socials: z.record(z.string(), z.string()).optional(),
   sections: z.record(z.string(), z.boolean()).optional(),
+  layout: z.array(z.object({
+    id: z.string(),
+    type: z.enum(["richText", "imageText", "cta", "stats", "faq"]),
+    heading: z.string().max(200).optional(),
+    body: z.string().max(4000).optional(),
+    align: z.enum(["left", "center"]).optional(),
+    image: z.string().max(ASSET_MAX).optional(),
+    buttonLabel: z.string().max(60).optional(),
+    buttonUrl: z.string().max(500).optional(),
+    imageRight: z.boolean().optional(),
+    items: z.array(z.object({ value: z.string().max(40).optional(), label: z.string().max(120).optional(), q: z.string().max(300).optional(), a: z.string().max(2000).optional() })).max(20).optional(),
+  })).max(30).optional(),
 });
 
 /* PATCH /api/v1/website → stage edits into the draft overlay (NOT the live site).

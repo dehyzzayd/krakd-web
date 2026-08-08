@@ -4,14 +4,15 @@ import { useState } from "react";
 import { Topbar, AppMain } from "@/components/app/Topbar";
 import { useApi } from "@/lib/useApi";
 import { cn } from "@/lib/cn";
-import { OverviewPanel, TemplatePanel, BrandingPanel, HomepagePanel, ContactPanel, PagesPanel, NavbarPanel, SidebarPanel, VehiclePanel, DomainPanel, PublishPanel, type Web } from "@/components/app/website/panels";
-import { LayoutDashboard, Palette, Image as ImageIcon, Home, Menu, PanelRight, Phone, FileText, Car, Globe, Rocket } from "lucide-react";
+import { OverviewPanel, TemplatePanel, BrandingPanel, HomepagePanel, SectionsPanel, ContactPanel, PagesPanel, NavbarPanel, SidebarPanel, VehiclePanel, DomainPanel, PublishPanel, type Web } from "@/components/app/website/panels";
+import { LayoutDashboard, Palette, Image as ImageIcon, Home, Layers, Menu, PanelRight, Phone, FileText, Car, Globe, Rocket } from "lucide-react";
 
 const SECTIONS = [
   { id: "overview", label: "Overview", Icon: LayoutDashboard, group: "Set up" },
   { id: "design", label: "Template", Icon: Palette, group: "Set up" },
   { id: "branding", label: "Branding", Icon: ImageIcon, group: "Design" },
   { id: "homepage", label: "Homepage", Icon: Home, group: "Design" },
+  { id: "sections", label: "Content sections", Icon: Layers, group: "Design" },
   { id: "navbar", label: "Navbar menu", Icon: Menu, group: "Design" },
   { id: "pages", label: "Pages", Icon: FileText, group: "Design" },
   { id: "sidebar", label: "Page sidebar", Icon: PanelRight, group: "Design" },
@@ -31,6 +32,7 @@ export default function WebsitePage() {
       case "design": return <TemplatePanel w={w} reload={reload} />;
       case "branding": return <BrandingPanel w={w} reload={reload} />;
       case "homepage": return <HomepagePanel w={w} reload={reload} />;
+      case "sections": return <SectionsPanel w={w} reload={reload} />;
       case "contact": return <ContactPanel w={w} reload={reload} />;
       case "pages": return <PagesPanel w={w} reload={reload} />;
       case "navbar": return <NavbarPanel w={w} reload={reload} />;

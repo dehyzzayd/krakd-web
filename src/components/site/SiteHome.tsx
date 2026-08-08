@@ -12,6 +12,7 @@ import { vertical as verticalDef } from "./verticals";
 import { EditorialHome } from "./EditorialHome";
 import { BrokerageHome } from "./BrokerageHome";
 import { ContractorHome } from "./ContractorHome";
+import { CustomSections } from "./CustomSections";
 
 const REVIEWS = [
   { name: "Jordan M.", body: "Easiest car-buying experience I've had. No pressure, straight numbers, in and out in an hour.", rating: 5 },
@@ -663,7 +664,7 @@ function HomeVelocity({ config, vehicles, preview }: { config: SiteConfig; vehic
   );
 }
 
-export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
+function HomeInner({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
   // Some verticals are structurally their own thing — construction gets a bespoke site regardless of template.
   if (config.vertical === "CONSTRUCTION") return <ContractorHome config={config} vehicles={vehicles} preview={preview} />;
   switch (config.template) {
@@ -677,4 +678,13 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
     case "QUIET": return <HomeQuiet config={config} vehicles={vehicles} preview={preview} />;
     default: return <HomeModern config={config} vehicles={vehicles} preview={preview} />;
   }
+}
+
+export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; vehicles: SiteVehicle[]; preview?: boolean }) {
+  return (
+    <>
+      <HomeInner config={config} vehicles={vehicles} preview={preview} />
+      <CustomSections config={config} preview={preview} />
+    </>
+  );
 }
