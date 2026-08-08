@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.subscription) await reconcileById(session.subscription as string);
+        if (session.metadata?.kind === "domain") await handleDomainPurchase(session);
+        else if (session.subscription) await reconcileById(session.subscription as string);
         break;
       }
       case "customer.subscription.created":
@@ -65,6 +66,23 @@ export async function POST(req: NextRequest) {
 
 async function reconcileById(subscriptionId: string) {
   await reconcileSubscription(await getStripe().subscriptions.retrieve(subscriptionId));
+}
+
+/** A one-time domain purchase was paid → record it and mark the domain awaiting
+ *  registration (Krakd fulfills it manually from the admin panel). */
+async function handleDomainPurchase(session: Stripe.Checkout.Session) {
+  const dealershipId = session.metadata?.dealershipId;
+  const domain = session.metadata?.domain;
+  if (!dealershipId || !domain) { console.warn("Domain session missing metadata", session.id); return; }
+  const amountCents = session.amount_total ?? 0;
+
+  await prisma.payment.create({
+    data: { dealershipId, type: "DOMAIN", status: "SUCCEEDED", amountCents, stripePaymentIntentId: (session.payment_intent as string) ?? null, description: `Domain registration: ${domain}` },
+  });
+  await prisma.website.update({
+    where: { dealershipId },
+    data: { domain, domainProvider: "krakd", domainStatus: "PENDING_PURCHASE", domainPriceCents: amountCents },
+  }).catch((e) => console.error("Domain website update failed:", e));
 }
 
 /** Apply a Stripe subscription's state to our DB, routed by metadata.target.

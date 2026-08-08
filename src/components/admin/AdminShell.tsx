@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/outreach", label: "Outreach", Icon: Target, match: (p: string, q: string) => p.startsWith("/admin/outreach") },
   { href: "/admin/clients", label: "Clients", Icon: Users, match: (p: string, q: string) => p.startsWith("/admin/clients") && !q },
   { href: "/admin/campaigns", label: "Ad review", Icon: ClipboardCheck, match: (p: string, q: string) => p.startsWith("/admin/campaigns") },
+  { href: "/admin/domains", label: "Domain fulfillment", Icon: Globe, match: (p: string, q: string) => p.startsWith("/admin/domains") },
   { href: "/admin/clients?queue=onboarding", label: "Onboarding", Icon: Rocket, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "onboarding" },
   { href: "/admin/clients?queue=advertising", label: "Advertising", Icon: Megaphone, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "advertising" },
   { href: "/admin/clients?queue=domains", label: "Websites & domains", Icon: Globe, match: (p: string, q: string) => p.startsWith("/admin/clients") && q === "domains" },

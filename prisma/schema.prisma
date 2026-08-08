@@ -173,6 +173,7 @@ enum PaymentType {
   SUBSCRIPTION
   CAMPAIGN_BUDGET
   MANAGEMENT_FEE
+  DOMAIN
 }
 
 enum PaymentStatus {
@@ -644,11 +645,12 @@ enum WebsiteStatus {
 }
 
 enum DomainStatus {
-  NOT_CONNECTED   // no domain selected
-  PENDING_DNS     // waiting for DNS records
-  PROVISIONING    // SSL + routing setup
-  LIVE            // domain is active
-  ACTION_REQUIRED // connection failed
+  NOT_CONNECTED    // no domain selected
+  PENDING_PURCHASE // bought through Krakd, paid, awaiting registration by Krakd
+  PENDING_DNS      // waiting for DNS records (connected domain)
+  PROVISIONING     // SSL + routing setup
+  LIVE             // domain is active
+  ACTION_REQUIRED  // connection failed
 }
 
 model Website {

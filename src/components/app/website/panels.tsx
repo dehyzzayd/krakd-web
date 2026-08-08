@@ -20,7 +20,7 @@ export type Web = {
   phone: string | null; email: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
   hours: { day: string; open: string; close: string }[]; socials: Record<string, string>; sections: Record<string, boolean>;
   domain: string | null; domainProvider: string | null;
-  domainStatus: "NOT_CONNECTED" | "PENDING_DNS" | "PROVISIONING" | "LIVE" | "ACTION_REQUIRED";
+  domainStatus: "NOT_CONNECTED" | "PENDING_PURCHASE" | "PENDING_DNS" | "PROVISIONING" | "LIVE" | "ACTION_REQUIRED";
   domainPriceCents: number | null; domainRenewsAt: string | null;
   liveVehicles: number; publicUrl: string;
   setup: { steps: { template: boolean; details: boolean; domain: boolean; published: boolean }; done: number; total: number };
@@ -107,6 +107,7 @@ function TemplateThumb({ template, height = 240 }: { template: string; height?: 
 
 const DOMAIN_BADGE: Record<Web["domainStatus"], { label: string; cls: string }> = {
   NOT_CONNECTED: { label: "Not connected", cls: "bg-n100 text-n600" },
+  PENDING_PURCHASE: { label: "Registering", cls: "bg-brand-soft text-brand" },
   PENDING_DNS: { label: "Pending DNS", cls: "bg-warn-soft text-warn" },
   PROVISIONING: { label: "Provisioning", cls: "bg-brand-soft text-brand" },
   LIVE: { label: "Live", cls: "bg-ok-soft text-ok" },
@@ -521,9 +522,13 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
     finally { setBusy(false); }
   };
   const buy = async (d: string, priceCents: number) => {
-    if (!confirm(`Register ${d} for ${money(priceCents)}/yr? This is billed separately from your $149/mo subscription.`)) return;
+    if (!confirm(`Register ${d} for ${money(priceCents)}/yr? This is billed separately from your subscription.`)) return;
     setBusy(true);
-    try { await apiFetch("/website/domain/purchase", { method: "POST", body: JSON.stringify({ domain: d, confirmPriceCents: priceCents }) }); setResults(null); reload(); }
+    try {
+      const res = await apiFetch<{ url?: string; pending?: boolean }>("/website/domain/purchase", { method: "POST", body: JSON.stringify({ domain: d, confirmPriceCents: priceCents }) });
+      if (res.url) { window.location.href = res.url; return; } // → Stripe Checkout
+      setResults(null); reload(); // dev / beta: marked pending immediately
+    }
     catch (e) { alert(e instanceof ApiError ? e.message : "Purchase failed."); }
     finally { setBusy(false); }
   };
@@ -551,11 +556,12 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
               </div>
             </div>
           )}
+          {w.domainStatus === "PENDING_PURCHASE" && <div className="mt-4 rounded-lg bg-brand-soft/40 px-3 py-2.5 text-[12.5px] text-n700">Payment received — Krakd is registering your domain. It goes live automatically, usually within a few hours.</div>}
           {w.domainStatus === "PROVISIONING" && <div className="mt-4 rounded-lg bg-brand-soft/40 px-3 py-2.5 text-[12.5px] text-n700">DNS verified. Provisioning your SSL certificate — this usually completes in a moment.</div>}
           {w.domainStatus === "LIVE" && <div className="mt-4 rounded-lg bg-ok-soft px-3 py-2.5 text-[12.5px] text-ok">Your domain is live and served securely over HTTPS.</div>}
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {w.domainStatus !== "LIVE" && <button disabled={busy} onClick={verify} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{w.domainStatus === "PROVISIONING" ? "Check SSL status" : "Verify DNS"}</button>}
+            {w.domainProvider === "existing" && w.domainStatus !== "LIVE" && <button disabled={busy} onClick={verify} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{w.domainStatus === "PROVISIONING" ? "Check SSL status" : "Verify DNS"}</button>}
             <button disabled={busy} onClick={disconnect} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-n200 bg-white px-4 text-[12.5px] font-semibold text-err hover:bg-err-soft disabled:opacity-60"><Trash2 className="h-3.5 w-3.5" />Disconnect</button>
           </div>
         </Card>
