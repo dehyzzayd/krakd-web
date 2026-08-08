@@ -61,7 +61,9 @@ function registrantContact() {
     state: process.env.REGISTRAR_STATE, zip: process.env.REGISTRAR_ZIP, country: process.env.REGISTRAR_COUNTRY,
   };
   for (const [k, v] of Object.entries(c)) if (!v) throw new Error(`Registrant contact not configured: REGISTRAR_${k.replace(/([A-Z])/g, "_$1").toUpperCase()}`);
-  return c as Record<string, string>;
+  const out = c as Record<string, string>;
+  if (process.env.REGISTRAR_COMPANY) out.companyName = process.env.REGISTRAR_COMPANY;
+  return out;
 }
 
 /** Register a domain under the Vercel account (1 year, auto-renew). `costCents` is the

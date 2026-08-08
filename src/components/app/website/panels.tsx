@@ -6,6 +6,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { formatUSPhone } from "@/lib/phone";
 import { siteUrl, siteHost } from "@/lib/siteUrl";
 import { Card } from "@/components/app/AppKit";
+import { Sheet } from "@/components/app/Sheet";
 import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
 export type Web = {
@@ -497,6 +498,7 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<{ domain: string; available: boolean; priceCents: number }[] | null>(null);
+  const [buying, setBuying] = useState<{ domain: string; priceCents: number } | null>(null);
   const badge = DOMAIN_BADGE[w.domainStatus];
 
   const connect = async () => {
@@ -521,15 +523,15 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
     catch (e) { setErr(e instanceof ApiError ? e.message : "Search failed."); }
     finally { setBusy(false); }
   };
-  const buy = async (d: string, priceCents: number) => {
-    if (!confirm(`Register ${d} for ${money(priceCents)}/yr? This is billed separately from your subscription.`)) return;
-    setBusy(true);
+  const confirmPurchase = async () => {
+    if (!buying) return;
+    setErr(null); setBusy(true);
     try {
-      const res = await apiFetch<{ url?: string; pending?: boolean }>("/website/domain/purchase", { method: "POST", body: JSON.stringify({ domain: d, confirmPriceCents: priceCents }) });
+      const res = await apiFetch<{ url?: string; pending?: boolean }>("/website/domain/purchase", { method: "POST", body: JSON.stringify({ domain: buying.domain, confirmPriceCents: buying.priceCents }) });
       if (res.url) { window.location.href = res.url; return; } // → Stripe Checkout
-      setResults(null); reload(); // dev / beta: marked pending immediately
+      setBuying(null); setResults(null); reload();             // dev / beta: marked pending immediately
     }
-    catch (e) { alert(e instanceof ApiError ? e.message : "Purchase failed."); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Purchase failed."); }
     finally { setBusy(false); }
   };
 
@@ -601,13 +603,45 @@ export function DomainPanel({ w, reload }: { w: Web; reload: () => void }) {
               {results.map((r) => (
                 <div key={r.domain} className="flex items-center gap-3 rounded-lg border border-n200 px-3 py-2.5">
                   <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-n900">{r.domain}</span>
-                  {r.available ? <><span className="tnum text-[12.5px] font-semibold text-n700">{money(r.priceCents)}/yr</span><button disabled={busy} onClick={() => buy(r.domain, r.priceCents)} className="rounded-md bg-brand px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">Buy</button></> : <span className="text-[12px] font-medium text-n400">Taken</span>}
+                  {r.available ? <><span className="tnum text-[12.5px] font-semibold text-n700">{money(r.priceCents)}/yr</span><button disabled={busy} onClick={() => { setErr(null); setBuying({ domain: r.domain, priceCents: r.priceCents }); }} className="rounded-md bg-brand px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">Buy</button></> : <span className="text-[12px] font-medium text-n400">Taken</span>}
                 </div>
               ))}
             </div>
           )}
         </Card>
       )}
+
+      <Sheet
+        open={!!buying}
+        onClose={() => { if (!busy) setBuying(null); }}
+        width="max-w-[440px]"
+        title="Confirm domain purchase"
+        subtitle="Registered to your business and pointed at your site automatically."
+        footer={
+          <>
+            <button onClick={() => setBuying(null)} disabled={busy} className="inline-flex h-10 items-center rounded-md border border-n200 bg-white px-4 text-[13px] font-semibold text-n700 hover:bg-n50 disabled:opacity-60">Cancel</button>
+            <button onClick={confirmPurchase} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-md bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Continue to payment</button>
+          </>
+        }
+      >
+        {buying && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-xl border border-n200 p-4">
+              <Globe className="h-5 w-5 shrink-0 text-brand" />
+              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-n900">{buying.domain}</span>
+            </div>
+            <div className="rounded-xl bg-n50 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-n600">Due today</span>
+                <span className="tnum text-[18px] font-bold text-n900">{money(buying.priceCents)}</span>
+              </div>
+              <p className="mt-1 text-[11.5px] text-n500">One year, renews automatically. Billed separately from your subscription — cancel anytime.</p>
+            </div>
+            <p className="text-[12px] leading-relaxed text-n500">You&apos;ll be taken to secure Stripe checkout to complete payment. Once paid, we register the domain and connect it to your site.</p>
+            {err && <p className="text-[12.5px] font-medium text-err">{err}</p>}
+          </div>
+        )}
+      </Sheet>
     </div>
   );
 }
