@@ -7,7 +7,7 @@ import { formatUSPhone } from "@/lib/phone";
 import { siteUrl, siteHost } from "@/lib/siteUrl";
 import { Card } from "@/components/app/AppKit";
 import { Sheet } from "@/components/app/Sheet";
-import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus, Layers } from "lucide-react";
+import { Check, Loader2, Globe, ExternalLink, Trash2, Monitor, Smartphone, Upload, RefreshCw, Plus } from "lucide-react";
 
 export type Web = {
   id: string; slug: string; template: "MODERN" | "INVENTORY_FIRST" | "PREMIUM" | "CLASSIC" | "SPORT" | "MINIMAL" | "AURORA" | "QUIET" | "VELOCITY"; status: "DRAFT" | "PUBLISHED";
@@ -750,12 +750,6 @@ export function SectionsPanel({ w, reload }: { w: Web; reload: () => void }) {
         <h2 className="text-[15px] font-semibold text-n900">Content sections</h2>
         <p className="mt-0.5 text-[12.5px] text-n500">Add and reorder extra sections. They appear on your homepage, below the built-in blocks.</p>
       </div>
-
-      <a href="/dashboard/website/build" className="flex items-center gap-3 rounded-xl border border-brand/25 bg-brand-soft/40 px-4 py-3 transition hover:bg-brand-soft/60">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand text-white"><Layers className="h-4 w-4" /></span>
-        <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold text-n900">Open the Visual Builder</span><span className="block text-[12px] text-n500">Drag, click and edit your page live — full control, no tickets.</span></span>
-        <span className="shrink-0 text-[13px] font-semibold text-brand">Open →</span>
-      </a>
 
       <div className="flex flex-wrap gap-2">
         {SECTION_TYPES.map((t) => (

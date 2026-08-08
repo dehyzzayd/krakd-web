@@ -84,11 +84,11 @@ function HomeModern({ config, vehicles, preview }: { config: SiteConfig; vehicle
           <div className="relative flex flex-col justify-between overflow-hidden rounded-[28px] p-8 text-white lg:col-span-2 lg:p-11" style={{ background: `linear-gradient(140deg, ${accent}, ${accent}cc)` }}>
             <div className="relative z-10">
               <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/80">{config.dealershipName}</p>
-              <h1 className="mt-3 max-w-[15ch] text-[38px] font-extrabold leading-[1.02] tracking-tight sm:text-[54px]">{config.headline}</h1>
-              {config.intro && <p className="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-white/85">{config.intro}</p>}
+              <h1 data-edit="headline" data-edit-label="Headline" className="mt-3 max-w-[15ch] text-[38px] font-extrabold leading-[1.02] tracking-tight sm:text-[54px]">{config.headline}</h1>
+              {config.intro && <p data-edit="intro" data-edit-label="Intro" className="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-white/85">{config.intro}</p>}
             </div>
             <div className="relative z-10 mt-8 flex flex-wrap gap-3">
-              <Link href={link(`/site/${config.slug}/inventory`)} className="rounded-full bg-white px-6 py-3 text-[14px] font-semibold" style={{ color: accent }}>{config.ctaLabel}</Link>
+              <Link data-edit="ctaLabel" data-edit-label="Button label" href={link(`/site/${config.slug}/inventory`)} className="rounded-full bg-white px-6 py-3 text-[14px] font-semibold" style={{ color: accent }}>{config.ctaLabel}</Link>
               <Link href={link(`/site/${config.slug}/${m.heroSecondary.to}`)} className="rounded-full border border-white/50 px-6 py-3 text-[14px] font-semibold text-white hover:bg-white/10">{m.heroSecondary.label}</Link>
             </div>
           </div>

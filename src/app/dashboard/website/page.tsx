@@ -48,6 +48,15 @@ export default function WebsitePage() {
     <>
       <Topbar title="Website" />
       <AppMain>
+        {/* Always-visible entry to the in-place visual builder */}
+        <a href="/dashboard/website/build" className="mb-5 flex items-center gap-4 rounded-2xl border border-brand/25 bg-gradient-to-r from-brand-soft/60 to-brand-soft/20 px-5 py-4 transition hover:from-brand-soft/80">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand text-white"><Layers className="h-5 w-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold text-n900">Open the Visual Builder</span>
+            <span className="block text-[12.5px] text-n600">Edit your live site in place — click any text, image or section to change it. No tickets, ever.</span>
+          </span>
+          <span className="shrink-0 rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white">Open builder →</span>
+        </a>
         <div className="grid gap-6 lg:grid-cols-[210px_minmax(0,1fr)]">
           {/* secondary editor sidebar */}
           <aside className="lg:sticky lg:top-4 lg:self-start">

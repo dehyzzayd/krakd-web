@@ -86,7 +86,7 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
     return (
       <header className={isHome ? "absolute inset-x-0 top-0 z-30" : "relative z-30 border-b border-black/12"} style={isHome ? undefined : { background: solidBg }}>
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-7 sm:px-10">
-          <Link href={`/site/${config.slug}`} style={{ color: fg }}>
+          <Link href={`/site/${config.slug}`} data-edit="logoUrl" data-edit-label="Logo" style={{ color: fg }}>
             {config.logoUrl
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={config.logoUrl} alt={config.dealershipName} className={cn(({ sm: "h-6", md: "h-9", lg: "h-12", xl: "h-16" } as Record<string, string>)[config.logoScale] ?? "h-9", "w-auto", (isHome || contractor) && "brightness-0 invert")} />

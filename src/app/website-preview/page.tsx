@@ -47,11 +47,34 @@ export default function WebsitePreview() {
     }).catch(() => setReady(true));
   }, []);
 
+  // Builder mode (?builder=1): highlight editable elements and report clicks to the
+  // parent shell so clicking anything on the real site opens its editor.
+  const [builderMode, setBuilderMode] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("builder") !== "1") return;
+    setBuilderMode(true);
+    const closestEdit = (t: EventTarget | null) => (t as HTMLElement | null)?.closest?.("[data-edit]") as HTMLElement | null;
+    const onOver = (e: MouseEvent) => {
+      document.querySelectorAll(".krakd-hl").forEach((x) => x.classList.remove("krakd-hl"));
+      closestEdit(e.target)?.classList.add("krakd-hl");
+    };
+    const onClick = (e: MouseEvent) => {
+      const el = closestEdit(e.target);
+      if (!el) return;
+      e.preventDefault(); e.stopPropagation();
+      window.parent.postMessage({ type: "krakd:edit", key: el.dataset.edit, label: el.dataset.editLabel }, "*");
+    };
+    document.addEventListener("mouseover", onOver);
+    document.addEventListener("click", onClick, true); // capture — beat <Link> navigation
+    return () => { document.removeEventListener("mouseover", onOver); document.removeEventListener("click", onClick, true); };
+  }, [ready]);
+
   if (!ready) return <div className="grid min-h-screen place-items-center text-[13px] text-[#94a3b8]">Loading preview…</div>;
   if (!config) return <div className="grid min-h-screen place-items-center text-[13px] text-[#94a3b8]">Sign in to preview your site.</div>;
 
   return (
     <div className="min-h-screen overflow-x-clip bg-white text-[#0f172a]" style={{ ["--accent" as string]: accentOf(config.primaryColor) }}>
+      {builderMode && <style>{`.krakd-hl{outline:2px solid #2b6ba4;outline-offset:2px;border-radius:4px}[data-edit]{cursor:pointer!important}`}</style>}
       <SiteHeader config={config} />
       <SiteHome config={config} vehicles={vehicles} preview />
       <SiteFooter config={config} />
