@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
-import { ensureWebsite, setupProgress } from "@/lib/server/website";
+import { ensureWebsite, setupProgress, mergedWebsite, hasDraft } from "@/lib/server/website";
 import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -16,12 +16,15 @@ function publicUrl(req: NextRequest, slug: string, domain: string | null, status
   return `${proto}://${host}/site/${slug}`;
 }
 
-/* GET /api/v1/website → the dealer's website config, live count + setup progress */
+/* GET /api/v1/website → the dealer's website config (live fields overlaid with any
+ * staged draft), live count, setup progress, and whether there are unpublished edits. */
 export const GET = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
   const w = await ensureWebsite(dealershipId);
+  const view = mergedWebsite(w);
   const liveVehicles = await prisma.vehicle.count({ where: { dealershipId, status: { not: "SOLD" } } });
-  return json({ ...w, liveVehicles, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });
+  const { draft: _draft, ...rest } = view;
+  return json({ ...rest, hasDraft: hasDraft(w), setup: setupProgress(view), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });
 });
 
 const ASSET_MAX = 1_500_000; // ~1.5MB data URL cap for an uploaded logo/hero
@@ -59,25 +62,24 @@ const patchSchema = z.object({
   sections: z.record(z.string(), z.boolean()).optional(),
 });
 
-/* PATCH /api/v1/website → update template, branding and homepage content */
+/* PATCH /api/v1/website → stage edits into the draft overlay (NOT the live site).
+ * Edits accumulate in `draft` and only reach the public site when the dealer Publishes.
+ * The response returns the merged (draft-applied) view so the builder shows staged state. */
 export const PATCH = route(async (req: NextRequest) => {
   const { dealershipId } = await requireAuth(req);
-  await ensureWebsite(dealershipId);
+  const w = await ensureWebsite(dealershipId);
   const parsed = patchSchema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
-  const { hours, socials, whyUs, staff, reviews, sections, pages, nav, sidebar, ...rest } = parsed.data;
-  const data: Prisma.WebsiteUpdateInput = {
-    ...rest,
-    ...(hours ? { hours: hours as unknown as Prisma.InputJsonValue } : {}),
-    ...(socials ? { socials: socials as unknown as Prisma.InputJsonValue } : {}),
-    ...(whyUs ? { whyUs: whyUs as unknown as Prisma.InputJsonValue } : {}),
-    ...(staff ? { staff: staff as unknown as Prisma.InputJsonValue } : {}),
-    ...(reviews ? { reviews: reviews as unknown as Prisma.InputJsonValue } : {}),
-    ...(sections ? { sections: sections as unknown as Prisma.InputJsonValue } : {}),
-    ...(pages ? { pages: pages as unknown as Prisma.InputJsonValue } : {}),
-    ...(nav ? { nav: nav as unknown as Prisma.InputJsonValue } : {}),
-    ...(sidebar ? { sidebar: sidebar as unknown as Prisma.InputJsonValue } : {}),
-  };
-  const w = await prisma.website.update({ where: { dealershipId }, data });
-  return json({ ...w, setup: setupProgress(w), publicUrl: publicUrl(req, w.slug, w.domain, w.domainStatus) });
+
+  // Merge the incoming partial into the existing draft (plain JSON — same keys as the columns).
+  const prevDraft = (w.draft ?? {}) as Record<string, unknown>;
+  const nextDraft = { ...prevDraft, ...parsed.data };
+
+  const updated = await prisma.website.update({
+    where: { dealershipId },
+    data: { draft: nextDraft as unknown as Prisma.InputJsonValue },
+  });
+  const view = mergedWebsite(updated);
+  const { draft: _draft, ...rest } = view;
+  return json({ ...rest, hasDraft: hasDraft(updated), setup: setupProgress(view), publicUrl: publicUrl(req, updated.slug, updated.domain, updated.domainStatus) });
 });

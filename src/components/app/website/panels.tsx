@@ -23,7 +23,7 @@ export type Web = {
   domain: string | null; domainProvider: string | null;
   domainStatus: "NOT_CONNECTED" | "PENDING_PURCHASE" | "PENDING_DNS" | "PROVISIONING" | "LIVE" | "ACTION_REQUIRED";
   domainPriceCents: number | null; domainRenewsAt: string | null;
-  liveVehicles: number; publicUrl: string;
+  liveVehicles: number; publicUrl: string; hasDraft?: boolean;
   setup: { steps: { template: boolean; details: boolean; domain: boolean; published: boolean }; done: number; total: number };
 };
 
@@ -659,20 +659,36 @@ export function PublishPanel({ w, reload }: { w: Web; reload: () => void }) {
     catch (e) { setErr(e instanceof ApiError ? e.message : "Could not publish."); }
     finally { setBusy(false); }
   };
+  const discard = async () => {
+    if (!confirm("Discard your unpublished changes and revert to the live site?")) return;
+    setErr(null); setBusy(true);
+    try { await apiFetch("/website/discard", { method: "POST" }); reload(); setNonce((n) => n + 1); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Could not discard."); }
+    finally { setBusy(false); }
+  };
   const tab = (v: "desktop" | "mobile", Icon: typeof Monitor, label: string) => (
     <button onClick={() => setDevice(v)} className={cn("inline-flex h-8 items-center gap-1.5 rounded-[7px] px-3 text-[12.5px] font-medium", device === v ? "bg-n100 text-n900" : "text-n600")}><Icon className="h-4 w-4" />{label}</button>
   );
 
+  const published = w.status === "PUBLISHED";
+  const publishLabel = published ? "Publish changes" : "Publish website";
+
   return (
     <div className="space-y-4">
+      {w.hasDraft && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-brand/20 bg-brand-soft/40 px-3.5 py-2.5 text-[12.5px] text-n700">
+          <span className="h-2 w-2 rounded-full bg-brand" />
+          <b className="text-n800">You have unpublished changes.</b> The preview below shows them; your live site still shows the last published version.
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-lg border border-n200 bg-white p-0.5">{tab("desktop", Monitor, "Desktop")}{tab("mobile", Smartphone, "Mobile")}</div>
         <button onClick={() => setNonce((n) => n + 1)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-n200 bg-white px-3 text-[12.5px] font-medium text-n600 hover:bg-n100"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2.5">
           {err && <span className="text-[12.5px] font-medium text-err">{err}</span>}
-          {w.status === "PUBLISHED"
-            ? <a href={w.publicUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand-hover">View live site<ExternalLink className="h-3.5 w-3.5" /></a>
-            : <button onClick={publish} disabled={busy} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}Publish website</button>}
+          {w.hasDraft && <button onClick={discard} disabled={busy} className="inline-flex h-9 items-center rounded-lg border border-n200 bg-white px-4 text-[12.5px] font-semibold text-n700 hover:bg-n50 disabled:opacity-60">Discard</button>}
+          {published && <a href={w.publicUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-n200 bg-white px-4 text-[12.5px] font-semibold text-n800 hover:bg-n50">View live<ExternalLink className="h-3.5 w-3.5" /></a>}
+          {(!published || w.hasDraft) && <button onClick={publish} disabled={busy} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-[12.5px] font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{publishLabel}</button>}
         </div>
       </div>
 

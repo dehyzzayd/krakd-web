@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/server/auth";
 import { json, route, HttpError } from "@/lib/server/http";
-import { ensureWebsite, requireAdmin, setupProgress } from "@/lib/server/website";
+import { ensureWebsite, requireAdmin, setupProgress, mergedWebsite, hasDraft } from "@/lib/server/website";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,16 +19,20 @@ export const POST = route(async (req: NextRequest) => {
   const w = await ensureWebsite(dealershipId);
   const { status } = bodySchema.parse(await req.json().catch(() => ({})));
 
-  if (status === "PUBLISHED") {
-    // guided setup must be far enough along to publish
-    if (!(w.phone && w.address && w.city)) {
-      throw new HttpError(400, "Add your dealership contact details before publishing.");
-    }
+  if (status === "DRAFT") {
+    // Unpublish: hide the site, keep any staged draft intact.
+    const updated = await prisma.website.update({ where: { dealershipId }, data: { status: "DRAFT" } });
+    return json({ ...updated, hasDraft: hasDraft(updated), setup: setupProgress(mergedWebsite(updated)) });
   }
 
-  const updated = await prisma.website.update({
-    where: { dealershipId },
-    data: { status, publishedAt: status === "PUBLISHED" ? new Date() : w.publishedAt },
-  });
-  return json({ ...updated, setup: setupProgress(updated) });
+  // Publish: validate against the staged view, then materialize draft → live and clear it.
+  const view = mergedWebsite(w);
+  if (!(view.phone && view.address && view.city)) {
+    throw new HttpError(400, "Add your dealership contact details before publishing.");
+  }
+  const draft = (w.draft ?? {}) as Record<string, unknown>;
+  const data = { ...draft, draft: Prisma.DbNull, status: "PUBLISHED", publishedAt: new Date() } as unknown as Prisma.WebsiteUpdateInput;
+
+  const updated = await prisma.website.update({ where: { dealershipId }, data });
+  return json({ ...updated, hasDraft: false, setup: setupProgress(updated) });
 });

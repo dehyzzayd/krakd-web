@@ -54,6 +54,31 @@ export async function ensureWebsite(dealershipId: string): Promise<Website> {
   });
 }
 
+/** Editable fields that can be staged in `draft`. Mirrors the PATCH schema — these are
+ *  the only keys the builder writes, and the only ones publish materializes to live. */
+export const DRAFTABLE_KEYS = [
+  "template", "logoUrl", "heroImageUrl", "primaryColor", "headerStyle", "logoScale",
+  "headline", "intro", "ctaLabel", "aboutText", "financingText", "tradeInText",
+  "whyUs", "staff", "reviews", "pages", "nav", "sidebar", "sections",
+  "vdpButtonLabel", "vdpButtonUrl", "phone", "email", "address", "city", "state", "zip",
+  "hours", "socials",
+] as const;
+
+export type DraftPatch = Partial<Record<(typeof DRAFTABLE_KEYS)[number], unknown>>;
+
+/** The website as the builder should see it: live fields overlaid with staged draft. */
+export function mergedWebsite(w: Website): Website {
+  const d = (w.draft ?? null) as DraftPatch | null;
+  if (!d) return w;
+  return { ...w, ...(d as Partial<Website>) };
+}
+
+/** Whether there are staged edits not yet published. */
+export function hasDraft(w: Website): boolean {
+  const d = (w.draft ?? null) as DraftPatch | null;
+  return !!d && Object.keys(d).length > 0;
+}
+
 /** Guided-setup checklist derived from the current record. */
 export function setupProgress(w: Website) {
   const details = Boolean(w.phone && w.address && w.city);
