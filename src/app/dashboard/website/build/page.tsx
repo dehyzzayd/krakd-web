@@ -30,6 +30,7 @@ export default function BuildPage() {
   const [ready, setReady] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [page, setPage] = useState("home");
   const [publishing, setPublishing] = useState(false);
   const [nonce, setNonce] = useState(0);
 
@@ -61,7 +62,10 @@ export default function BuildPage() {
       <div className="flex items-center gap-3 border-b border-n200 bg-white px-4 py-2.5">
         <Link href="/dashboard/website" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-n600 hover:text-n900"><ArrowLeft className="h-4 w-4" />Exit</Link>
         <span className="text-[13px] font-semibold text-n900">Visual builder</span>
-        <span className="hidden text-[12px] text-n400 sm:inline">Click anything on your site to edit it</span>
+        <select value={page} onChange={(e) => { setPage(e.target.value); setSel(null); }} className="h-8 rounded-lg border border-n200 bg-white px-2 text-[12.5px] font-medium text-n700">
+          <option value="home">Home page</option>
+          <option value="inventory">Inventory page</option>
+        </select>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => setSel("primaryColor")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-n200 px-3 text-[12.5px] font-medium text-n700 hover:bg-n50"><Palette className="h-3.5 w-3.5" />Brand</button>
           <button onClick={() => setSel("section:footer")} className="inline-flex h-8 items-center rounded-lg border border-n200 px-3 text-[12.5px] font-medium text-n700 hover:bg-n50">Footer</button>
@@ -76,7 +80,7 @@ export default function BuildPage() {
       <div className="flex min-h-0 flex-1">
         <main className="min-h-0 flex-1 overflow-hidden bg-n100 p-4">
           <div className={`mx-auto h-full overflow-hidden rounded-xl border border-n300 bg-white shadow-sm ${device === "mobile" ? "w-[390px]" : "w-full"}`}>
-            <iframe key={nonce} src="/website-preview?builder=1" title="Your website" className="h-full w-full border-0" />
+            <iframe key={`${page}-${nonce}`} src={`/website-preview?builder=1&page=${page}`} title="Your website" className="h-full w-full border-0" />
           </div>
         </main>
 

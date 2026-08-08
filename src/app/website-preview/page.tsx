@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
 import { SiteHeader, SiteFooter } from "@/components/site/SiteChrome";
 import { SiteHome } from "@/components/site/SiteHome";
+import { InventoryBrowser } from "@/components/site/InventoryBrowser";
+import { BrokerageInventory } from "@/components/site/BrokerageInventory";
 import { accentOf, type SiteConfig, type SiteVehicle } from "@/lib/server/site";
 
 /* Standalone site preview rendered inside the admin's iframe.
@@ -14,6 +16,7 @@ export default function WebsitePreview() {
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [vehicles, setVehicles] = useState<SiteVehicle[]>([]);
   const [ready, setReady] = useState(false);
+  const [page] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("page") || "home" : "home"));
 
   useEffect(() => {
     if (!getToken()) { setReady(true); return; }
@@ -105,7 +108,11 @@ export default function WebsitePreview() {
     <div className="min-h-screen overflow-x-clip bg-white text-[#0f172a]" style={{ ["--accent" as string]: accentOf(config.primaryColor) }}>
       {builderMode && <style>{`.krakd-hl{outline:2px solid #2b6ba4;outline-offset:2px;border-radius:4px}[data-edit]{cursor:pointer!important}`}</style>}
       <SiteHeader config={config} />
-      <SiteHome config={config} vehicles={vehicles} preview />
+      {page === "inventory"
+        ? (config.template === "CLASSIC" || config.vertical === "CONSTRUCTION"
+            ? <BrokerageInventory config={config} vehicles={vehicles} initial={{}} />
+            : <InventoryBrowser config={config} vehicles={vehicles} initial={{}} />)
+        : <SiteHome config={config} vehicles={vehicles} preview />}
       <SiteFooter config={config} />
     </div>
   );
