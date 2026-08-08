@@ -182,10 +182,25 @@ function PhoneField({ value, onChange }: { value: string; onChange: (v: string) 
 
 function VerifyStep({ digits, setDigits, onVerify, onResend, email, busy, error }: { digits: string[]; setDigits: (d: string[]) => void; onVerify: () => void; onResend: () => void; email: string; busy: boolean; error: string | null }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
+  // Spread a run of digits across boxes starting at `start` (paste, or autofill that
+  // delivers the whole code into one field), then focus the next empty box.
+  const fill = (start: number, raw: string) => {
+    const only = raw.replace(/\D/g, "");
+    if (!only) return;
+    const nd = [...digits];
+    for (let k = 0; k < only.length && start + k < 6; k++) nd[start + k] = only[k];
+    setDigits(nd);
+    refs.current[Math.min(start + only.length, 5)]?.focus();
+  };
   const set = (i: number, v: string) => {
+    if (v.replace(/\D/g, "").length > 1) { fill(i, v); return; } // multi-char → spread
     const c = v.replace(/\D/g, "").slice(-1);
     setDigits(digits.map((x, idx) => (idx === i ? c : x)));
     if (c && i < 5) refs.current[i + 1]?.focus();
+  };
+  const onPaste = (i: number, e: React.ClipboardEvent) => {
+    e.preventDefault();
+    fill(i, e.clipboardData.getData("text"));
   };
   const onKey = (i: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i - 1]?.focus();
@@ -195,7 +210,7 @@ function VerifyStep({ digits, setDigits, onVerify, onResend, email, busy, error 
       <StepHeader n={1} title="Verify your email" sub={email ? `We sent a 6-digit code to ${email}. Enter it below to continue.` : "Enter the 6-digit code we emailed you."} />
       <div className="flex gap-2.5 sm:gap-3">
         {digits.map((d, i) => (
-          <input key={i} ref={(el) => { refs.current[i] = el; }} value={d} onChange={(e) => set(i, e.target.value)} onKeyDown={(e) => onKey(i, e)} inputMode="numeric" maxLength={1} aria-label={`Digit ${i + 1}`}
+          <input key={i} ref={(el) => { refs.current[i] = el; }} value={d} onChange={(e) => set(i, e.target.value)} onPaste={(e) => onPaste(i, e)} onKeyDown={(e) => onKey(i, e)} inputMode="numeric" autoComplete={i === 0 ? "one-time-code" : "off"} maxLength={6} aria-label={`Digit ${i + 1}`}
             className="h-14 w-full rounded-[12px] bg-[#f4f4f5] text-center text-[22px] font-semibold text-ink outline-none ring-1 ring-black/[0.04] transition focus:bg-white focus:ring-2 focus:ring-ink/25" />
         ))}
       </div>
@@ -289,9 +304,9 @@ function ContactStep({ form, update, onBack, onNext }: { form: Form; update: (k:
   );
 }
 
-function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, beta, applyPromo, onBack, onNext }: {
+function PlanStep({ plan, setPlan, cycle, setCycle, onBack, onNext }: {
   plan: string; setPlan: (v: string) => void; cycle: "monthly" | "annual"; setCycle: (v: "monthly" | "annual") => void;
-  promo: string; setPromo: (v: string) => void; promoOk: boolean; beta: boolean; applyPromo: () => void; onBack: () => void; onNext: () => void;
+  onBack: () => void; onNext: () => void;
 }) {
   return (
     <div>
@@ -326,25 +341,13 @@ function PlanStep({ plan, setPlan, cycle, setCycle, promo, setPromo, promoOk, be
         })}
       </div>
 
-      {/* access code — Krakd is invite-only */}
-      <div className="mt-4">
-        <label htmlFor="promo" className="mb-2 block text-[13px] font-medium text-muted">Access code</label>
-        <div className="flex gap-2">
-          <input id="promo" value={promo} onChange={(e) => setPromo(e.target.value.toUpperCase())} placeholder="Enter your access code"
-            className="h-12 flex-1 rounded-[12px] bg-[#f4f4f5] px-4 text-[15px] uppercase text-ink outline-none ring-1 ring-black/[0.04] transition placeholder:normal-case placeholder:text-muted focus:bg-white focus:ring-2 focus:ring-ink/25" />
-          <button onClick={applyPromo} className="inline-flex h-12 items-center justify-center rounded-[12px] bg-[#f0f0f0] px-5 text-[14px] font-semibold text-ink transition hover:bg-[#e7e7e7]">Apply</button>
-        </div>
-        {promoOk && <p className="mt-2 text-[13px] font-medium text-[#1e9e5a]">✓ Code entered — $0 due today. We&apos;ll confirm it in the next step.</p>}
-        <p className="mt-1.5 text-[12px] text-muted">Krakd is currently invite-only. You need an access code to continue.</p>
-      </div>
-
       <Nav onBack={onBack} onNext={onNext} />
     </div>
   );
 }
 
-function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error, onEdit, onBack, onFinish }: {
-  form: Form; plan: string; cycle: "monthly" | "annual"; promo: string; promoOk: boolean; beta: boolean;
+function ReviewStep({ form, plan, cycle, submitting, error, onEdit, onBack, onFinish }: {
+  form: Form; plan: string; cycle: "monthly" | "annual";
   submitting: boolean; error: string | null; onEdit: () => void; onBack: () => void; onFinish: () => void;
 }) {
   const p = PLANS.find((x) => x.id === plan)!;
@@ -374,12 +377,6 @@ function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error
           <p className="text-[18px] font-semibold text-ink">{pr.label}</p>
         </div>
         <div className="mt-4 border-t border-[#ececec] pt-3">
-          {promoOk && (
-            <div className="flex justify-between py-1 text-[13.5px]">
-              <span className="text-muted">Promo {promo || "code"}</span>
-              <span className="font-medium text-[#1e9e5a]">applied</span>
-            </div>
-          )}
           <div className="flex items-center justify-between pt-1">
             <span className="text-[14px] font-semibold text-ink">Due today</span>
             <span className="text-[16px] font-semibold text-accent">$0.00</span>
@@ -407,9 +404,7 @@ function ReviewStep({ form, plan, cycle, promo, promoOk, beta, submitting, error
       </div>
 
       <p className="mt-4 text-[12.5px] leading-snug text-muted">
-        {beta
-          ? "Access code entered — $0 due today and full dashboard access. Card billing kicks in later. Your code is verified when you activate."
-          : "Krakd is invite-only. Enter your access code on the plan step to continue."}
+        No card charged today — you start on a 14-day free trial with full dashboard access. Add a plan and payment method anytime from Billing.
       </p>
       {error && <p className="mt-3 text-[13px] font-medium text-[#dc2626]">{error}</p>}
       <Nav onBack={onBack} onNext={onFinish} nextLabel={submitting ? "Creating account…" : "Activate account →"} />
@@ -442,9 +437,6 @@ export function OnboardingWizard() {
   const [form, setForm] = useState<Form>(EMPTY);
   const [plan, setPlan] = useState("growth");
   const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
-  const [promo, setPromo] = useState("");
-  const [promoOk, setPromoOk] = useState(false);
-  const [beta, setBeta] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -491,20 +483,9 @@ export function OnboardingWizard() {
   const next = () => setStep((s) => Math.min(s + 1, 5));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  const applyPromo = () => {
-    // The real code is validated server-side — the client never knows its value.
-    const code = promo.trim();
-    setBeta(code.length > 0);
-    setPromoOk(code.length > 0);
-  };
-
   /** Final step: create the real dealership account, store the session, land on the dashboard. */
   const finish = async () => {
     setError(null);
-    if (!promo.trim()) {
-      setError("Enter your access code on the plan step to continue.");
-      return;
-    }
     const raw = typeof window !== "undefined" ? sessionStorage.getItem("krakd_signup") : null;
     if (!raw) {
       setError("We lost your sign-up details — please start again from Sign up.");
@@ -520,7 +501,6 @@ export function OnboardingWizard() {
         email: s.email,
         password: s.password,
         phone: form.phone || undefined,
-        accessCode: promo.trim(),
         vertical: form.vertical,
       });
       setSession(tokens);
@@ -538,8 +518,8 @@ export function OnboardingWizard() {
       {step === 0 && <VerifyStep digits={otp} setDigits={setOtp} onVerify={verifyEmail} onResend={resendOtp} email={email} busy={otpBusy} error={otpError} />}
       {step === 1 && <StoreStep form={form} update={update} toggleType={toggleType} onNext={next} />}
       {step === 2 && <ContactStep form={form} update={update} onBack={back} onNext={next} />}
-      {step === 3 && <PlanStep plan={plan} setPlan={setPlan} cycle={cycle} setCycle={setCycle} promo={promo} setPromo={setPromo} promoOk={promoOk} beta={beta} applyPromo={applyPromo} onBack={back} onNext={next} />}
-      {step === 4 && <ReviewStep form={form} plan={plan} cycle={cycle} promo={promo} promoOk={promoOk} beta={beta} submitting={submitting} error={error} onEdit={() => setStep(1)} onBack={back} onFinish={finish} />}
+      {step === 3 && <PlanStep plan={plan} setPlan={setPlan} cycle={cycle} setCycle={setCycle} onBack={back} onNext={next} />}
+      {step === 4 && <ReviewStep form={form} plan={plan} cycle={cycle} submitting={submitting} error={error} onEdit={() => setStep(1)} onBack={back} onFinish={finish} />}
       {step === 5 && <DoneStep onGo={() => router.push("/dashboard")} />}
     </Panel>
   );

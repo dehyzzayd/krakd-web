@@ -25,12 +25,6 @@ export const POST = route(async (req: NextRequest) => {
   if (!parsed.success) throw new HttpError(400, parsed.error.issues[0].message);
   const dto = parsed.data;
 
-  // Krakd is invite-only. Signup requires a valid access code (server-validated; never shipped to the client).
-  const required = (process.env.SIGNUP_ACCESS_CODE ?? "BETAACCESS").trim().toUpperCase();
-  if ((dto.accessCode ?? "").trim().toUpperCase() !== required) {
-    throw new HttpError(403, "Krakd is invite-only. A valid access code is required to sign up.");
-  }
-
   const email = dto.email.toLowerCase();
 
   if (await prisma.user.findUnique({ where: { email } })) {
