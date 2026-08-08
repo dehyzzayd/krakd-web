@@ -26,6 +26,8 @@ export type SiteConfig = {
   layout: SectionBlock[];
   tree: BuilderNode[];
   cardOptions: { finance?: boolean; photoCount?: boolean; specs?: boolean };
+  header: { bg?: string; text?: string; ctaLabel?: string; ctaColor?: string; ctaTextColor?: string; ctaTargetType?: string; ctaTargetValue?: string };
+  searchOptions: { bg?: string; buttonColor?: string };
 };
 
 /** Composable homepage content sections (Phase 2 builder). Rendered in order after the
@@ -94,6 +96,8 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     layout: (Array.isArray(w.layout) ? w.layout : []) as SectionBlock[],
     tree: (Array.isArray(w.tree) ? w.tree : []) as BuilderNode[],
     cardOptions: (w.cardOptions ?? {}) as SiteConfig["cardOptions"],
+    header: (w.header ?? {}) as SiteConfig["header"],
+    searchOptions: (w.searchOptions ?? {}) as SiteConfig["searchOptions"],
   };
 });
 

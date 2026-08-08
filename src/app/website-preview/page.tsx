@@ -37,6 +37,8 @@ export default function WebsitePreview() {
         layout: w.layout || [],
         tree: w.tree || [],
         cardOptions: w.cardOptions || {},
+        header: w.header || {},
+        searchOptions: w.searchOptions || {},
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
@@ -71,6 +73,9 @@ export default function WebsitePreview() {
       if (config.heroImageUrl) Array.from(document.querySelectorAll("img")).forEach((img) => { if (img.getAttribute("src") === config.heroImageUrl) tag(img, "heroImageUrl", "Hero image"); });
       const firstSection = document.querySelector("main > section, body section");
       if (firstSection) tag(firstSection, "section:hero", "Hero section");
+      // Whole inventory section: tag the grid that contains the vehicle cards, not each card.
+      const card = document.querySelector("[data-vcard]");
+      if (card?.parentElement) tag(card.parentElement, "section:inventory", "Vehicle cards");
     };
     autoTag();
     const retag = setTimeout(autoTag, 300); // catch late layout

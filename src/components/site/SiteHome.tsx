@@ -48,9 +48,11 @@ function SearchBar({ config, vehicles, accent, variant, preview }: { config: Sit
   const go = () => { if (preview) return; const p = new URLSearchParams(); Object.entries(q).forEach(([k, v]) => v && p.set(k, v)); router.push(`/site/${config.slug}/inventory${p.toString() ? `?${p}` : ""}`); };
   const optsFor = (f: (typeof checks)[number]) => [...new Set(vehicles.map((v) => f.value(v)).filter(Boolean))].sort();
   const sharp = variant === "sharp";
+  const so = (config.searchOptions ?? {}) as { bg?: string; buttonColor?: string };
+  const btnBg = so.buttonColor || accent;
   const sel = cn("h-12 border border-black/12 bg-white px-3 text-[14px] text-[#0f172a] outline-none", sharp ? "rounded-none" : "rounded-xl");
   return (
-    <div className={sharp ? "border border-white/15 bg-[#0a0a0a] p-2" : "rounded-3xl bg-white p-3 shadow-xl sm:p-4"}>
+    <div data-edit="section:search" data-edit-label="Search bar" className={sharp ? "border border-white/15 bg-[#0a0a0a] p-2" : "rounded-3xl bg-white p-3 shadow-xl sm:p-4"} style={so.bg ? { background: so.bg } : undefined}>
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
         <input value={q.q ?? ""} onChange={(e) => set("q", e.target.value)} placeholder={def.searchPlaceholder.replace("Search ", "").replace("…", "")} className={sel} />
         {checks.map((f) => (
@@ -62,7 +64,7 @@ function SearchBar({ config, vehicles, accent, variant, preview }: { config: Sit
         {maxFacet && (
           <select value={q[maxFacet.key] ?? ""} onChange={(e) => set(maxFacet.key, e.target.value)} className={sel}><option value="">Any price</option>{maxFacet.steps.map((p) => <option key={p} value={p}>Under {maxFacet.fmt(p)}</option>)}</select>
         )}
-        <button onClick={go} className={cn("col-span-2 inline-flex h-12 items-center justify-center gap-2 font-semibold text-white lg:col-span-1", sharp ? "rounded-none font-display uppercase tracking-[0.08em]" : "rounded-xl text-[14px]")} style={{ background: accent }}><Search className="h-4 w-4" />Search</button>
+        <button onClick={go} className={cn("col-span-2 inline-flex h-12 items-center justify-center gap-2 font-semibold text-white lg:col-span-1", sharp ? "rounded-none font-display uppercase tracking-[0.08em]" : "rounded-xl text-[14px]")} style={{ background: btnBg }}><Search className="h-4 w-4" />Search</button>
       </div>
     </div>
   );

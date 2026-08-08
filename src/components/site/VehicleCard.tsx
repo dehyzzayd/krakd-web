@@ -31,7 +31,7 @@ export function VehicleCard({ slug, accent, v, variant = "soft", preview, vertic
   const sharp = variant === "sharp";
 
   return (
-    <div data-edit="section:inventory" data-edit-label="Vehicle cards" className={`group flex flex-col overflow-hidden bg-white transition ${SHELL[variant]}`}>
+    <div data-vcard className={`group flex flex-col overflow-hidden bg-white transition ${SHELL[variant]}`}>
       <Link href={preview ? "#" : href} className={`relative block overflow-hidden bg-[#e6eaf0] ${PHOTO[variant]}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {v.image ? <img src={v.image} alt={title} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" /> : <div className="grid h-full place-items-center text-[13px] text-[#94a3b8]">Photos coming soon</div>}

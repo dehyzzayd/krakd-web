@@ -53,13 +53,14 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const accent = accentOf(config.primaryColor);
   const ui = siteTheme(config.template);
   // header color is dealer-controlled: "auto" defers to the template, else light | dark | accent
+  const hdr = (config.header ?? {}) as { bg?: string; text?: string; ctaLabel?: string; ctaColor?: string; ctaTextColor?: string; ctaTargetType?: string; ctaTargetValue?: string };
   const eff = config.headerStyle && config.headerStyle !== "auto" ? config.headerStyle : ui.header;
   const dark = eff !== "light";
-  const barBg = eff === "accent" ? accent : eff === "dark" ? "#0a0a0a" : undefined;
-  const navActive = eff === "accent" ? "#ffffff" : accent;
-  const navIdle = dark ? "rgba(255,255,255,0.82)" : "#334155";
-  const btnBg = eff === "accent" ? "#ffffff" : accent;
-  const btnColor = eff === "accent" ? accent : "#ffffff";
+  const barBg = hdr.bg || (eff === "accent" ? accent : eff === "dark" ? "#0a0a0a" : undefined);
+  const navActive = hdr.text || (eff === "accent" ? "#ffffff" : accent);
+  const navIdle = hdr.text || (dark ? "rgba(255,255,255,0.82)" : "#334155");
+  const btnBg = hdr.ctaColor || (eff === "accent" ? "#ffffff" : accent);
+  const btnColor = hdr.ctaTextColor || (eff === "accent" ? accent : "#ffffff");
   const struct = config.template === "INVENTORY_FIRST" || config.template === "SPORT" ? "bold"
     : config.template === "PREMIUM" ? "editorial"
     : config.template === "MINIMAL" ? "minimal"
@@ -68,8 +69,10 @@ export function SiteHeader({ config }: { config: SiteConfig }) {
   const [open, setOpen] = useState(false);
   const items = navItems(config);
   const market = verticalDef(config.vertical).market;
-  const financeBtn = market.financeBtn;
-  const ctaHref = `/site/${config.slug}/${market.headerCtaTo}`;
+  const financeBtn = hdr.ctaLabel || market.financeBtn;
+  const ctaHref = hdr.ctaTargetType === "link" ? (hdr.ctaTargetValue || "#")
+    : hdr.ctaTargetType ? `/site/${config.slug}/${hdr.ctaTargetType}`
+    : `/site/${config.slug}/${market.headerCtaTo}`;
   const cityLine = [config.city, config.state].filter(Boolean).join(", ");
 
   // ─── Bespoke overlay chrome — transparent over the hero on the home, solid on inner pages.

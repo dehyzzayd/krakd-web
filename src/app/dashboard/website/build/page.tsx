@@ -92,7 +92,7 @@ export default function BuildPage() {
 
 function Panel({ sel, values, onPatch, onClose }: { sel: string; values: WV; onPatch: (o: WV) => Promise<void>; onClose: () => void }) {
   const title = sel.startsWith("section:")
-    ? ({ "section:header": "Navbar", "section:hero": "Hero section", "section:inventory": "Vehicle cards", "section:footer": "Footer" } as Record<string, string>)[sel] ?? "Section"
+    ? ({ "section:header": "Navbar", "section:hero": "Hero section", "section:search": "Search bar", "section:inventory": "Vehicle cards", "section:footer": "Footer" } as Record<string, string>)[sel] ?? "Section"
     : EDIT_FIELDS[sel]?.label ?? sel;
   return (
     <div className="space-y-4">
@@ -102,6 +102,7 @@ function Panel({ sel, values, onPatch, onClose }: { sel: string; values: WV; onP
       </div>
       {sel === "section:hero" ? <HeroPanel values={values} onPatch={onPatch} />
         : sel === "section:header" ? <HeaderPanel values={values} onPatch={onPatch} />
+        : sel === "section:search" ? <SearchPanel values={values} onPatch={onPatch} />
         : sel === "section:footer" ? <FooterPanel values={values} onPatch={onPatch} />
         : sel === "section:inventory" ? <InventoryPanel values={values} onPatch={onPatch} />
         : <ScalarPanel field={sel} values={values} onPatch={onPatch} />}
@@ -145,17 +146,52 @@ function HeroPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Promis
 }
 
 function HeaderPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Promise<void> }) {
-  const [headerStyle, setHeaderStyle] = useState(typeof values.headerStyle === "string" ? (values.headerStyle as string) : "auto");
-  const [primaryColor, setColor] = useState(typeof values.primaryColor === "string" ? (values.primaryColor as string) : "#2b6ba4");
-  const [logoUrl, setLogo] = useState(typeof values.logoUrl === "string" ? (values.logoUrl as string) : "");
+  const h = (values.header && typeof values.header === "object" ? values.header : {}) as Record<string, string>;
+  const gs = (k: string, d = "") => (typeof values[k] === "string" ? (values[k] as string) : d);
+  const [headerStyle, setHeaderStyle] = useState(gs("headerStyle", "auto"));
+  const [logoUrl, setLogo] = useState(gs("logoUrl"));
+  const [bg, setBg] = useState(h.bg ?? "");
+  const [text, setText] = useState(h.text ?? "");
+  const [ctaLabel, setCtaLabel] = useState(h.ctaLabel ?? "");
+  const [ctaColor, setCtaColor] = useState(h.ctaColor ?? "");
+  const [ctaTextColor, setCtaTextColor] = useState(h.ctaTextColor ?? "");
+  const [ctaTargetType, setTt] = useState(h.ctaTargetType ?? "");
+  const [ctaTargetValue, setTv] = useState(h.ctaTargetValue ?? "");
   const { saving, save } = useSaver(onPatch);
   return (
     <div className="space-y-3">
-      <L label="Header style"><select value={headerStyle} onChange={(e) => setHeaderStyle(e.target.value)} className={INPUT}>{["auto", "light", "dark", "accent"].map((o) => <option key={o} value={o}>{o[0].toUpperCase() + o.slice(1)}</option>)}</select></L>
-      <L label="Brand color"><Field type="color" value={primaryColor} onChange={setColor} /></L>
+      <L label="Preset style"><select value={headerStyle} onChange={(e) => setHeaderStyle(e.target.value)} className={INPUT}>{["auto", "light", "dark", "accent"].map((o) => <option key={o} value={o}>{o[0].toUpperCase() + o.slice(1)}</option>)}</select></L>
+      <L label="Background color (overrides preset)"><Field type="color" value={bg} onChange={setBg} /></L>
+      <L label="Text / links color"><Field type="color" value={text} onChange={setText} /></L>
       <L label="Logo"><Uploader value={logoUrl} onChange={setLogo} label="" aspect="wide" /></L>
-      <p className="text-[11.5px] text-n400">Edit the menu links themselves in Website → Navbar menu.</p>
-      <SaveRow saving={saving} onSave={() => save({ headerStyle, primaryColor, logoUrl })} />
+      <div className="rounded-lg border border-n200 p-3">
+        <p className="mb-2 text-[11.5px] font-semibold text-n700">Button</p>
+        <div className="space-y-2.5">
+          <L label="Label"><Field type="text" value={ctaLabel} onChange={setCtaLabel} /></L>
+          <div className="grid grid-cols-2 gap-2">
+            <L label="Button color"><Field type="color" value={ctaColor} onChange={setCtaColor} /></L>
+            <L label="Text color"><Field type="color" value={ctaTextColor} onChange={setCtaTextColor} /></L>
+          </div>
+          <L label="Goes to"><select value={ctaTargetType} onChange={(e) => setTt(e.target.value)} className={INPUT}><option value="">Default</option><option value="inventory">Inventory page</option><option value="financing">Financing page</option><option value="about">About page</option><option value="contact">Contact page</option><option value="link">Custom link</option></select></L>
+          {ctaTargetType === "link" && <L label="Link URL"><Field type="text" value={ctaTargetValue} onChange={setTv} /></L>}
+        </div>
+      </div>
+      <p className="text-[11.5px] text-n400">Edit the menu links in Website → Navbar menu. Changes here apply to the navbar on every page.</p>
+      <SaveRow saving={saving} onSave={() => save({ headerStyle, logoUrl, header: { bg, text, ctaLabel, ctaColor, ctaTextColor, ctaTargetType, ctaTargetValue } })} />
+    </div>
+  );
+}
+
+function SearchPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Promise<void> }) {
+  const so = (values.searchOptions && typeof values.searchOptions === "object" ? values.searchOptions : {}) as Record<string, string>;
+  const [bg, setBg] = useState(so.bg ?? "");
+  const [buttonColor, setBtn] = useState(so.buttonColor ?? "");
+  const { saving, save } = useSaver(onPatch);
+  return (
+    <div className="space-y-3">
+      <L label="Search bar background"><Field type="color" value={bg} onChange={setBg} /></L>
+      <L label="Search button color"><Field type="color" value={buttonColor} onChange={setBtn} /></L>
+      <SaveRow saving={saving} onSave={() => save({ searchOptions: { bg, buttonColor } })} />
     </div>
   );
 }
