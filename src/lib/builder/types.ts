@@ -4,7 +4,8 @@
 
 export type NodeType =
   | "section" | "columns" | "column"
-  | "heading" | "text" | "richText" | "image" | "button" | "spacer" | "divider";
+  | "heading" | "text" | "richText" | "image" | "button" | "spacer" | "divider"
+  | "inventoryGrid";
 
 export type BuilderNode = {
   id: string;

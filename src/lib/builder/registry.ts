@@ -66,6 +66,11 @@ export const ELEMENTS: ElementDef[] = [
     controls: [{ key: "label", label: "Label", type: "text" }, { key: "href", label: "Link", type: "link", placeholder: "/financing or https://…" }, ALIGN],
   },
   {
+    type: "inventoryGrid", label: "Inventory grid", icon: "LayoutGrid", category: "content",
+    defaultProps: { heading: "Featured inventory", count: 4 },
+    controls: [{ key: "heading", label: "Heading", type: "text" }, { key: "count", label: "How many to show", type: "number", min: 2, max: 12 }],
+  },
+  {
     type: "spacer", label: "Spacer", icon: "MoveVertical", category: "layout",
     defaultProps: { height: 40 },
     controls: [{ key: "height", label: "Height", type: "number", min: 0, max: 240 }],

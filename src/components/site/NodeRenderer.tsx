@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { BuilderNode } from "@/lib/builder/types";
+import type { SiteVehicle } from "@/lib/server/site";
+import { VehicleCard } from "./VehicleCard";
 
 /* Renders an advanced-builder node tree to React. Used for the public site now and (with
  * selection wrappers) the editor canvas later. Pure + stateless so the public render stays
  * fast, SEO-clean and cacheable. Unknown node types render nothing. */
 
-type Ctx = { accent: string };
+type Ctx = { accent: string; vehicles?: SiteVehicle[]; slug?: string; vertical?: string };
 
 const num = (v: unknown, d: number) => (typeof v === "number" ? v : d);
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);
@@ -38,6 +40,17 @@ function NodeView({ node, ctx }: { node: BuilderNode; ctx: Ctx }) {
         ? <a href={href} target="_blank" rel="noreferrer" className={cls} style={{ background: ctx.accent }}>{str(p.label) ?? "Learn more"}</a>
         : <Link href={href} className={cls} style={{ background: ctx.accent }}>{str(p.label) ?? "Learn more"}</Link>;
     }
+    case "inventoryGrid": {
+      const vehicles = (ctx.vehicles ?? []).slice(0, num(p.count, 4));
+      return (
+        <section className="mx-auto max-w-6xl px-5 py-10">
+          {str(p.heading) && <h2 className="mb-6 text-[26px] font-bold tracking-tight text-[#0f172a]">{str(p.heading)}</h2>}
+          {vehicles.length === 0
+            ? <div className="rounded-2xl border border-dashed border-black/10 py-14 text-center text-[14px] text-[#64748b]">Fresh listings are on the way.</div>
+            : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{vehicles.map((v) => <VehicleCard key={v.id} vertical={ctx.vertical ?? "AUTOMOTIVE"} slug={ctx.slug ?? ""} accent={ctx.accent} v={v} variant="soft" />)}</div>}
+        </section>
+      );
+    }
     case "spacer":
       return <div style={{ height: num(p.height, 32) }} />;
     case "divider":
@@ -47,7 +60,7 @@ function NodeView({ node, ctx }: { node: BuilderNode; ctx: Ctx }) {
   }
 }
 
-export function NodeRenderer({ nodes, accent }: { nodes: BuilderNode[]; accent: string }) {
+export function NodeRenderer({ nodes, accent, vehicles, slug, vertical }: { nodes: BuilderNode[]; accent: string; vehicles?: SiteVehicle[]; slug?: string; vertical?: string }) {
   if (!nodes?.length) return null;
-  return <div>{nodes.map((n) => <NodeView key={n.id} node={n} ctx={{ accent }} />)}</div>;
+  return <div>{nodes.map((n) => <NodeView key={n.id} node={n} ctx={{ accent, vehicles, slug, vertical }} />)}</div>;
 }

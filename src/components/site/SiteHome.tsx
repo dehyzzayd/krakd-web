@@ -686,7 +686,7 @@ export function SiteHome({ config, vehicles, preview }: { config: SiteConfig; ve
     <>
       <HomeInner config={config} vehicles={vehicles} preview={preview} />
       <CustomSections config={config} preview={preview} />
-      {config.tree?.length ? <NodeRenderer nodes={config.tree} accent={accentOf(config.primaryColor)} /> : null}
+      {config.tree?.length ? <NodeRenderer nodes={config.tree} accent={accentOf(config.primaryColor)} vehicles={vehicles} slug={config.slug} vertical={config.vertical} /> : null}
     </>
   );
 }
