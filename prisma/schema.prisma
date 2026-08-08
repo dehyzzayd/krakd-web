@@ -708,6 +708,7 @@ model Website {
   header       Json?           // navbar overrides (bg/text colors, CTA label/color/target)
   searchOptions Json?          // hero search-bar styling (bg, button color)
   trust        Json?           // editable trust-bar items [{big, small}]
+  shopHeading  String?         // override for the shop-by-type / "Explore the lineup" heading
   tree         Json?           // advanced-builder node tree (Elementor-class); overrides layout when present
   draft        Json?           // staged, unpublished edits overlaid on the live fields
   publishedAt  DateTime?

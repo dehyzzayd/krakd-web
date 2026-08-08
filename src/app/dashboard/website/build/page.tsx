@@ -96,7 +96,7 @@ export default function BuildPage() {
 
 function Panel({ sel, values, onPatch, onClose }: { sel: string; values: WV; onPatch: (o: WV) => Promise<void>; onClose: () => void }) {
   const title = sel.startsWith("section:")
-    ? ({ "section:header": "Navbar", "section:hero": "Hero section", "section:search": "Search bar", "section:trust": "Trust bar", "section:inventory": "Vehicle cards", "section:footer": "Footer" } as Record<string, string>)[sel] ?? "Section"
+    ? ({ "section:header": "Navbar", "section:hero": "Hero section", "section:search": "Search bar", "section:trust": "Trust bar", "section:shop": "Shop by type", "section:inventory": "Vehicle cards", "section:footer": "Footer" } as Record<string, string>)[sel] ?? "Section"
     : EDIT_FIELDS[sel]?.label ?? sel;
   return (
     <div className="space-y-4">
@@ -108,6 +108,7 @@ function Panel({ sel, values, onPatch, onClose }: { sel: string; values: WV; onP
         : sel === "section:header" ? <HeaderPanel values={values} onPatch={onPatch} />
         : sel === "section:search" ? <SearchPanel values={values} onPatch={onPatch} />
         : sel === "section:trust" ? <TrustPanel values={values} onPatch={onPatch} />
+        : sel === "section:shop" ? <ShopPanel values={values} onPatch={onPatch} />
         : sel === "section:footer" ? <FooterPanel values={values} onPatch={onPatch} />
         : sel === "section:inventory" ? <InventoryPanel values={values} onPatch={onPatch} />
         : <ScalarPanel field={sel} values={values} onPatch={onPatch} />}
@@ -183,6 +184,18 @@ function HeaderPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Prom
       </div>
       <p className="text-[11.5px] text-n400">Edit the menu links in Website → Navbar menu. Changes here apply to the navbar on every page.</p>
       <SaveRow saving={saving} onSave={() => save({ headerStyle, logoUrl, header: { bg, text, ctaLabel, ctaColor, ctaTextColor, ctaTargetType, ctaTargetValue } })} />
+    </div>
+  );
+}
+
+function ShopPanel({ values, onPatch }: { values: WV; onPatch: (o: WV) => Promise<void> }) {
+  const [heading, setHeading] = useState(typeof values.shopHeading === "string" ? (values.shopHeading as string) : "");
+  const { saving, save } = useSaver(onPatch);
+  return (
+    <div className="space-y-3">
+      <L label="Section heading"><Field type="text" value={heading} onChange={setHeading} /></L>
+      <p className="text-[11.5px] text-n400">Leave blank to use the template default (e.g. “Shop by make”, “Explore the lineup”).</p>
+      <SaveRow saving={saving} onSave={() => save({ shopHeading: heading })} />
     </div>
   );
 }

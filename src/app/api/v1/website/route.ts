@@ -77,6 +77,7 @@ const patchSchema = z.object({
   header: z.object({ bg: z.string().optional(), text: z.string().optional(), ctaLabel: z.string().max(40).optional(), ctaColor: z.string().optional(), ctaTextColor: z.string().optional(), ctaTargetType: z.string().optional(), ctaTargetValue: z.string().max(400).optional() }).optional(),
   searchOptions: z.object({ bg: z.string().optional(), buttonColor: z.string().optional() }).optional(),
   trust: z.array(z.object({ big: z.string().max(40), small: z.string().max(60).optional() })).max(8).optional(),
+  shopHeading: z.string().max(80).optional(),
 });
 
 /* PATCH /api/v1/website → stage edits into the draft overlay (NOT the live site).

@@ -29,6 +29,7 @@ export type SiteConfig = {
   header: { bg?: string; text?: string; ctaLabel?: string; ctaColor?: string; ctaTextColor?: string; ctaTargetType?: string; ctaTargetValue?: string };
   searchOptions: { bg?: string; buttonColor?: string };
   trust: { big: string; small?: string }[];
+  shopHeading: string | null;
 };
 
 /** Composable homepage content sections (Phase 2 builder). Rendered in order after the
@@ -100,6 +101,7 @@ export const getSite = cache(async (slug: string): Promise<SiteConfig | null> =>
     header: (w.header ?? {}) as SiteConfig["header"],
     searchOptions: (w.searchOptions ?? {}) as SiteConfig["searchOptions"],
     trust: (Array.isArray(w.trust) ? w.trust : []) as SiteConfig["trust"],
+    shopHeading: w.shopHeading ?? null,
   };
 });
 

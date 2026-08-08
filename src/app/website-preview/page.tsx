@@ -43,6 +43,7 @@ export default function WebsitePreview() {
         header: w.header || {},
         searchOptions: w.searchOptions || {},
         trust: w.trust || [],
+        shopHeading: w.shopHeading ?? null,
       });
       setVehicles((inv.items || []).filter((v) => v.status !== "SOLD").map((v) => ({
         id: v.id, year: v.year, make: v.make, model: v.model, trim: v.trim, body: v.body ?? "",
@@ -80,6 +81,10 @@ export default function WebsitePreview() {
       // Whole inventory section: tag the grid that contains the vehicle cards, not each card.
       const card = document.querySelector("[data-vcard]");
       if (card?.parentElement) tag(card.parentElement, "section:inventory", "Vehicle cards");
+      // Shop-by-type section: find a body/make link and tag its section.
+      const shopLink = document.querySelector('a[href*="/inventory?body="], a[href*="/inventory?make="], a[href*="/inventory?propertyType="]');
+      const shopSection = shopLink?.closest("section");
+      if (shopSection) tag(shopSection, "section:shop", "Shop by type");
     };
     autoTag();
     const retag = setTimeout(autoTag, 300); // catch late layout
